@@ -1,0 +1,66 @@
+{
+ "script_sha": "ecb402e9cf8922992314ab572740d5dabd670da46c937a95bc5d663b246b1a9e",
+ "matlab": "R2025b",
+ "script": "G = tf(1, [1 6 11 6]); C = tf([10 5], [1 0]);\nL = C*G; T = feedback(G*C, 1);\n[gm, pm, wcg, wcp] = margin(L);\nout.gm = gm; out.pm = pm; out.wcg = wcg; out.wcp = wcp;\nam = allmargin(L); out.stable = double(am.Stable);\nS = stepinfo(T);\nout.rise = S.RiseTime; out.settling = S.SettlingTime; out.overshoot = S.Overshoot;\nout.peak = S.Peak; out.peaktime = S.PeakTime;\nout.bw = bandwidth(T); out.dc = dcgain(T);\nTs = 0.1;\nLd = c2d(C, Ts, 'zoh') * c2d(G, Ts, 'zoh');\n[gm, pm, wcg, wcp] = margin(Ld);\nout.dgm = gm; out.dpm = pm; out.dwcg = wcg; out.dwcp = wcp;\nTd = feedback(c2d(G, Ts, 'zoh') * c2d(C, Ts, 'zoh'), 1);\nSd = stepinfo(Td);\nout.drise = Sd.RiseTime; out.dsettling = Sd.SettlingTime; out.dovershoot = Sd.Overshoot;\n[wn, z, p] = damp(G);\nout.wn = wn; out.zeta = z; out.p = spt_c(p);\nS = feedback(1, L); KS = C*S;\nk = stepinfo(KS);\nout.ks_rise = k.RiseTime; out.ks_settling = k.SettlingTime; out.ks_overshoot = k.Overshoot;\nout.ks_peak = k.Peak; out.ks_peaktime = k.PeakTime; out.ks_dc = dcgain(KS);\nq = stepinfo(S);\nout.s_rise = q.RiseTime; out.s_settling = q.SettlingTime; out.s_overshoot = q.Overshoot;\nout.s_peak = q.Peak; out.s_peaktime = q.PeakTime; out.s_bw = bandwidth(S); out.s_dc = dcgain(S);\nout.damp_u = evalc('damp(tf(1, [1 -1 4]))');\nout.damp_i = evalc('damp(tf(1, [1 2 0]))');\nout.damp_d = evalc('damp(tf([1 0.5], [1 -0.5 0 0], 0.1))');",
+ "out": {
+  "gm": 4.415463995405134,
+  "pm": 58.27802320722121,
+  "wcg": 2.8912152811917196,
+  "wcp": 1.1134146715679223,
+  "stable": 1,
+  "rise": 1.144925508846662,
+  "settling": 5.742380043292542,
+  "overshoot": 7.887714505954668,
+  "peak": 1.0788771450595467,
+  "peaktime": 2.375065245591359,
+  "bw": 2.0373438516444415,
+  "dc": 1,
+  "dgm": 3.576930198712187,
+  "dpm": 55.61818765299727,
+  "dwcg": 2.5693165451340563,
+  "dwcp": 1.0912822725015614,
+  "drise": 1.2000000000000002,
+  "dsettling": 5.800000000000001,
+  "dovershoot": 10.930185302141492,
+  "wn": [
+   1.0000000000000002,
+   1.999999999999998,
+   3.0000000000000018
+  ],
+  "zeta": [
+   1,
+   1,
+   1
+  ],
+  "p": [
+   [
+    -1.0000000000000002,
+    0
+   ],
+   [
+    -1.999999999999998,
+    0
+   ],
+   [
+    -3.0000000000000018,
+    0
+   ]
+  ],
+  "ks_rise": 0,
+  "ks_settling": 6.8337158702773095,
+  "ks_overshoot": 89.31128828052559,
+  "ks_peak": 11.358677296831535,
+  "ks_peaktime": 0.45758137759099693,
+  "ks_dc": 6,
+  "s_rise": 0,
+  "s_settling": NaN,
+  "s_overshoot": Infinity,
+  "s_peak": 1,
+  "s_peaktime": 0,
+  "s_bw": Infinity,
+  "s_dc": 0,
+  "damp_u": "                                                                       \n         Pole              Damping       Frequency      Time Constant  \n                                       (rad/seconds)      (seconds)    \n                                                                       \n  5.00e-01 + 1.94e+00i    -2.50e-01       2.00e+00        -2.00e+00    \n  5.00e-01 - 1.94e+00i    -2.50e-01       2.00e+00        -2.00e+00    \n",
+  "damp_i": "                                                           \n   Pole        Damping       Frequency      Time Constant  \n                           (rad/seconds)      (seconds)    \n                                                           \n  0.00e+00    -1.00e+00       0.00e+00              Inf    \n -2.00e+00     1.00e+00       2.00e+00         5.00e-01    \n",
+  "damp_d": "                                                                        \n   Pole       Magnitude     Damping       Frequency      Time Constant  \n                                        (rad/seconds)      (seconds)    \n                                                                        \n  5.00e-01     5.00e-01     1.00e+00       6.93e+00         1.44e-01    \n  0.00e+00     0.00e+00     1.00e+00            Inf         0.00e+00    \n  0.00e+00     0.00e+00     1.00e+00            Inf         0.00e+00    \n"
+ }
+}

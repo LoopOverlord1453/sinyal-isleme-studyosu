@@ -1,0 +1,633 @@
+{
+ "script_sha": "3a339e91aa5a635721a16e4ee638fa259d82ce531945284bd29963c237442af7",
+ "matlab": "R2025b",
+ "script": "warning('off', 'all');\ntry\n  mdl = 'lin_pid_closed';\n  new_system(mdl);\n  add_block('simulink/Sources/Step', [mdl '/b1'], 'Time', '1', 'Before', '0', 'After', '1', 'SampleTime', '0');\n  add_block('simulink/Continuous/PID Controller', [mdl '/b2'], 'Controller', 'PID', 'Form', 'Parallel', 'TimeDomain', 'Continuous-time', 'P', '2', 'I', '1.5', 'D', '0.29999999999999999', 'N', '40', 'UseFilter', 'on', 'InitialConditionForIntegrator', '0', 'InitialConditionForFilter', '0', 'LimitOutput', 'off', 'UpperSaturationLimit', 'inf', 'LowerSaturationLimit', '-inf', 'AntiWindupMode', 'none', 'Kb', '1', 'TrackingMode', 'off', 'Kt', '1');\n  add_block('simulink/Continuous/Transfer Fcn', [mdl '/b3'], 'Numerator', '[1 2]', 'Denominator', '[1 3 4 1]');\n  add_block('simulink/Math Operations/Sum', [mdl '/b4'], 'Inputs', '+-');\n  add_line(mdl, 'b1/1', 'b4/1');\n  add_line(mdl, 'b4/1', 'b2/1');\n  add_line(mdl, 'b2/1', 'b3/1');\n  add_line(mdl, 'b3/1', 'b4/2');\n  io(1) = linio([mdl '/b1'], 1, 'input');\n  io(2) = linio([mdl '/b3'], 1, 'output');\n  opt = linearizeOptions('SampleTime', -1, 'RateConversionMethod', 'zoh');\n  L = linearize(mdl, io, opt);\n  out.lin_pid_closed_A = L.A; out.lin_pid_closed_B = L.B; out.lin_pid_closed_C = L.C; out.lin_pid_closed_D = L.D;\n  out.lin_pid_closed_Ts = L.Ts; out.lin_pid_closed_dims = [size(L.A, 1), size(L.B, 2), size(L.C, 1)];\n  clear io; close_system(mdl, 0);\ncatch e\n  out.lin_pid_closed_err = e.message;\n  try close_system('lin_pid_closed', 0); catch; end\n  clear io;\nend\ntry\n  mdl = 'lin_pid_looptransfer';\n  new_system(mdl);\n  add_block('simulink/Sources/Step', [mdl '/b1'], 'Time', '1', 'Before', '0', 'After', '1', 'SampleTime', '0');\n  add_block('simulink/Continuous/PID Controller', [mdl '/b2'], 'Controller', 'PID', 'Form', 'Ideal', 'TimeDomain', 'Continuous-time', 'P', '2', 'I', '1.5', 'D', '0.29999999999999999', 'N', '40', 'UseFilter', 'on', 'InitialConditionForIntegrator', '0', 'InitialConditionForFilter', '0', 'LimitOutput', 'off', 'UpperSaturationLimit', 'inf', 'LowerSaturationLimit', '-inf', 'AntiWindupMode', 'none', 'Kb', '1', 'TrackingMode', 'off', 'Kt', '1');\n  add_block('simulink/Continuous/Transfer Fcn', [mdl '/b3'], 'Numerator', '[1 2]', 'Denominator', '[1 3 4 1]');\n  add_block('simulink/Math Operations/Sum', [mdl '/b4'], 'Inputs', '+-');\n  add_line(mdl, 'b1/1', 'b4/1');\n  add_line(mdl, 'b4/1', 'b2/1');\n  add_line(mdl, 'b2/1', 'b3/1');\n  add_line(mdl, 'b3/1', 'b4/2');\n  io(1) = linio([mdl '/b2'], 1, 'looptransfer');\n  opt = linearizeOptions('SampleTime', -1, 'RateConversionMethod', 'zoh');\n  L = linearize(mdl, io, opt);\n  out.lin_pid_looptransfer_A = L.A; out.lin_pid_looptransfer_B = L.B; out.lin_pid_looptransfer_C = L.C; out.lin_pid_looptransfer_D = L.D;\n  out.lin_pid_looptransfer_Ts = L.Ts; out.lin_pid_looptransfer_dims = [size(L.A, 1), size(L.B, 2), size(L.C, 1)];\n  clear io; close_system(mdl, 0);\ncatch e\n  out.lin_pid_looptransfer_err = e.message;\n  try close_system('lin_pid_looptransfer', 0); catch; end\n  clear io;\nend\ntry\n  mdl = 'lin_pid_sat_inout';\n  new_system(mdl);\n  add_block('simulink/Sources/Step', [mdl '/b1'], 'Time', '1', 'Before', '0', 'After', '1', 'SampleTime', '0');\n  add_block('simulink/Continuous/PID Controller', [mdl '/b2'], 'Controller', 'PID', 'Form', 'Parallel', 'TimeDomain', 'Continuous-time', 'P', '2', 'I', '1.5', 'D', '0.29999999999999999', 'N', '40', 'UseFilter', 'on', 'InitialConditionForIntegrator', '0', 'InitialConditionForFilter', '0', 'LimitOutput', 'on', 'UpperSaturationLimit', '1', 'LowerSaturationLimit', '-1', 'AntiWindupMode', 'back-calculation', 'Kb', '2', 'TrackingMode', 'off', 'Kt', '1');\n  add_block('simulink/Continuous/Transfer Fcn', [mdl '/b3'], 'Numerator', '[1 2]', 'Denominator', '[1 3 4 1]');\n  add_block('simulink/Math Operations/Sum', [mdl '/b4'], 'Inputs', '+-');\n  add_line(mdl, 'b1/1', 'b4/1');\n  add_line(mdl, 'b4/1', 'b2/1');\n  add_line(mdl, 'b2/1', 'b3/1');\n  add_line(mdl, 'b3/1', 'b4/2');\n  io(1) = linio([mdl '/b4'], 1, 'inout');\n  io(2) = linio([mdl '/b2'], 1, 'outin');\n  opt = linearizeOptions('SampleTime', -1, 'RateConversionMethod', 'zoh');\n  L = linearize(mdl, io, opt);\n  out.lin_pid_sat_inout_A = L.A; out.lin_pid_sat_inout_B = L.B; out.lin_pid_sat_inout_C = L.C; out.lin_pid_sat_inout_D = L.D;\n  out.lin_pid_sat_inout_Ts = L.Ts; out.lin_pid_sat_inout_dims = [size(L.A, 1), size(L.B, 2), size(L.C, 1)];\n  clear io; close_system(mdl, 0);\ncatch e\n  out.lin_pid_sat_inout_err = e.message;\n  try close_system('lin_pid_sat_inout', 0); catch; end\n  clear io;\nend\ntry\n  mdl = 'lin_disc_pid_sampled';\n  new_system(mdl);\n  add_block('simulink/Sources/Step', [mdl '/b1'], 'Time', '1', 'Before', '0', 'After', '1', 'SampleTime', '0');\n  add_block('simulink/Continuous/PID Controller', [mdl '/b2'], 'Controller', 'PID', 'Form', 'Parallel', 'TimeDomain', 'Discrete-time', 'P', '2', 'I', '1.5', 'D', '0.29999999999999999', 'N', '20', 'UseFilter', 'on', 'InitialConditionForIntegrator', '0', 'InitialConditionForFilter', '0', 'LimitOutput', 'off', 'UpperSaturationLimit', 'inf', 'LowerSaturationLimit', '-inf', 'AntiWindupMode', 'none', 'Kb', '1', 'TrackingMode', 'off', 'Kt', '1', 'SampleTime', '0.10000000000000001', 'IntegratorMethod', 'Backward Euler', 'FilterMethod', 'Trapezoidal');\n  add_block('simulink/Continuous/Transfer Fcn', [mdl '/b3'], 'Numerator', '[1 2]', 'Denominator', '[1 3 4 1]');\n  add_block('simulink/Math Operations/Sum', [mdl '/b4'], 'Inputs', '+-');\n  add_line(mdl, 'b1/1', 'b4/1');\n  add_line(mdl, 'b4/1', 'b2/1');\n  add_line(mdl, 'b2/1', 'b3/1');\n  add_line(mdl, 'b3/1', 'b4/2');\n  io(1) = linio([mdl '/b1'], 1, 'input');\n  io(2) = linio([mdl '/b3'], 1, 'output');\n  opt = linearizeOptions('SampleTime', -1, 'RateConversionMethod', 'zoh');\n  L = linearize(mdl, io, opt);\n  out.lin_disc_pid_sampled_A = L.A; out.lin_disc_pid_sampled_B = L.B; out.lin_disc_pid_sampled_C = L.C; out.lin_disc_pid_sampled_D = L.D;\n  out.lin_disc_pid_sampled_Ts = L.Ts; out.lin_disc_pid_sampled_dims = [size(L.A, 1), size(L.B, 2), size(L.C, 1)];\n  clear io; close_system(mdl, 0);\ncatch e\n  out.lin_disc_pid_sampled_err = e.message;\n  try close_system('lin_disc_pid_sampled', 0); catch; end\n  clear io;\nend\ntry\n  mdl = 'lin_two_rates';\n  new_system(mdl);\n  add_block('simulink/Sources/Step', [mdl '/b1'], 'Time', '1', 'Before', '0', 'After', '1', 'SampleTime', '0');\n  add_block('simulink/Discrete/Discrete Transfer Fcn', [mdl '/b2'], 'Numerator', '[2 -1.6000000000000001]', 'Denominator', '[1 -1]', 'SampleTime', '0.10000000000000001');\n  add_block('simulink/Discrete/Discrete Transfer Fcn', [mdl '/b3'], 'Numerator', '[1 -0.5]', 'Denominator', '[1 0.20000000000000001]', 'SampleTime', '0.02');\n  add_block('simulink/Continuous/Transfer Fcn', [mdl '/b4'], 'Numerator', '1', 'Denominator', '[1 1.2 1]');\n  add_block('simulink/Math Operations/Sum', [mdl '/b5'], 'Inputs', '+-');\n  add_line(mdl, 'b1/1', 'b5/1');\n  add_line(mdl, 'b5/1', 'b2/1');\n  add_line(mdl, 'b2/1', 'b3/1');\n  add_line(mdl, 'b3/1', 'b4/1');\n  add_line(mdl, 'b4/1', 'b5/2');\n  io(1) = linio([mdl '/b1'], 1, 'input');\n  io(2) = linio([mdl '/b4'], 1, 'output');\n  opt = linearizeOptions('SampleTime', -1, 'RateConversionMethod', 'zoh');\n  L = linearize(mdl, io, opt);\n  out.lin_two_rates_A = L.A; out.lin_two_rates_B = L.B; out.lin_two_rates_C = L.C; out.lin_two_rates_D = L.D;\n  out.lin_two_rates_Ts = L.Ts; out.lin_two_rates_dims = [size(L.A, 1), size(L.B, 2), size(L.C, 1)];\n  clear io; close_system(mdl, 0);\ncatch e\n  out.lin_two_rates_err = e.message;\n  try close_system('lin_two_rates', 0); catch; end\n  clear io;\nend\ntry\n  mdl = 'lin_series_zoh_chain';\n  new_system(mdl);\n  add_block('simulink/Sources/In1', [mdl '/b1'], 'Port', '1');\n  add_block('simulink/Discrete/Zero-Order Hold', [mdl '/b2'], 'SampleTime', '0.10000000000000001');\n  add_block('simulink/Continuous/Transfer Fcn', [mdl '/b3'], 'Numerator', '1', 'Denominator', '[1 1]');\n  add_block('simulink/Math Operations/Gain', [mdl '/b4'], 'Gain', '3', 'Multiplication', 'Element-wise(K.*u)', 'SampleTime', '-1');\n  add_block('simulink/Continuous/Transfer Fcn', [mdl '/b5'], 'Numerator', '[1 0.5]', 'Denominator', '[1 2 5]');\n  add_block('simulink/Sinks/Out1', [mdl '/b6'], 'Port', '1');\n  add_line(mdl, 'b1/1', 'b2/1');\n  add_line(mdl, 'b2/1', 'b3/1');\n  add_line(mdl, 'b3/1', 'b4/1');\n  add_line(mdl, 'b4/1', 'b5/1');\n  add_line(mdl, 'b5/1', 'b6/1');\n  io(1) = linio([mdl '/b1'], 1, 'input');\n  io(2) = linio([mdl '/b5'], 1, 'output');\n  opt = linearizeOptions('SampleTime', -1, 'RateConversionMethod', 'zoh');\n  L = linearize(mdl, io, opt);\n  out.lin_series_zoh_chain_A = L.A; out.lin_series_zoh_chain_B = L.B; out.lin_series_zoh_chain_C = L.C; out.lin_series_zoh_chain_D = L.D;\n  out.lin_series_zoh_chain_Ts = L.Ts; out.lin_series_zoh_chain_dims = [size(L.A, 1), size(L.B, 2), size(L.C, 1)];\n  clear io; close_system(mdl, 0);\ncatch e\n  out.lin_series_zoh_chain_err = e.message;\n  try close_system('lin_series_zoh_chain', 0); catch; end\n  clear io;\nend\ntry\n  mdl = 'lin_disc_to_cont_zoh';\n  new_system(mdl);\n  add_block('simulink/Sources/In1', [mdl '/b1'], 'Port', '1');\n  add_block('simulink/Discrete/Discrete Transfer Fcn', [mdl '/b2'], 'Numerator', '[0.29999999999999999 0.10000000000000001]', 'Denominator', '[1 -0.59999999999999998]', 'SampleTime', '0.050000000000000003');\n  add_block('simulink/Discrete/Discrete State-Space', [mdl '/b3'], 'A', '[0.80000000000000004 0.10000000000000001; 0 0.69999999999999996]', 'B', '[1; 0.5]', 'C', '[1 1]', 'D', '0', 'InitialCondition', '0', 'SampleTime', '0.050000000000000003');\n  add_block('simulink/Sinks/Out1', [mdl '/b4'], 'Port', '1');\n  add_line(mdl, 'b1/1', 'b2/1');\n  add_line(mdl, 'b2/1', 'b3/1');\n  add_line(mdl, 'b3/1', 'b4/1');\n  io(1) = linio([mdl '/b1'], 1, 'input');\n  io(2) = linio([mdl '/b3'], 1, 'output');\n  opt = linearizeOptions('SampleTime', 0, 'RateConversionMethod', 'zoh');\n  L = linearize(mdl, io, opt);\n  out.lin_disc_to_cont_zoh_A = L.A; out.lin_disc_to_cont_zoh_B = L.B; out.lin_disc_to_cont_zoh_C = L.C; out.lin_disc_to_cont_zoh_D = L.D;\n  out.lin_disc_to_cont_zoh_Ts = L.Ts; out.lin_disc_to_cont_zoh_dims = [size(L.A, 1), size(L.B, 2), size(L.C, 1)];\n  clear io; close_system(mdl, 0);\ncatch e\n  out.lin_disc_to_cont_zoh_err = e.message;\n  try close_system('lin_disc_to_cont_zoh', 0); catch; end\n  clear io;\nend\ntry\n  mdl = 'lin_disc_to_cont_tustin';\n  new_system(mdl);\n  add_block('simulink/Sources/In1', [mdl '/b1'], 'Port', '1');\n  add_block('simulink/Discrete/Discrete Transfer Fcn', [mdl '/b2'], 'Numerator', '[0.29999999999999999 0.10000000000000001]', 'Denominator', '[1 -0.59999999999999998]', 'SampleTime', '0.050000000000000003');\n  add_block('simulink/Discrete/Discrete State-Space', [mdl '/b3'], 'A', '[0.80000000000000004 0.10000000000000001; 0 0.69999999999999996]', 'B', '[1; 0.5]', 'C', '[1 1]', 'D', '0', 'InitialCondition', '0', 'SampleTime', '0.050000000000000003');\n  add_block('simulink/Sinks/Out1', [mdl '/b4'], 'Port', '1');\n  add_line(mdl, 'b1/1', 'b2/1');\n  add_line(mdl, 'b2/1', 'b3/1');\n  add_line(mdl, 'b3/1', 'b4/1');\n  io(1) = linio([mdl '/b1'], 1, 'input');\n  io(2) = linio([mdl '/b3'], 1, 'output');\n  opt = linearizeOptions('SampleTime', 0, 'RateConversionMethod', 'tustin');\n  L = linearize(mdl, io, opt);\n  out.lin_disc_to_cont_tustin_A = L.A; out.lin_disc_to_cont_tustin_B = L.B; out.lin_disc_to_cont_tustin_C = L.C; out.lin_disc_to_cont_tustin_D = L.D;\n  out.lin_disc_to_cont_tustin_Ts = L.Ts; out.lin_disc_to_cont_tustin_dims = [size(L.A, 1), size(L.B, 2), size(L.C, 1)];\n  clear io; close_system(mdl, 0);\ncatch e\n  out.lin_disc_to_cont_tustin_err = e.message;\n  try close_system('lin_disc_to_cont_tustin', 0); catch; end\n  clear io;\nend\ntry\n  mdl = 'lin_upsample_zoh';\n  new_system(mdl);\n  add_block('simulink/Sources/In1', [mdl '/b1'], 'Port', '1');\n  add_block('simulink/Discrete/Discrete Transfer Fcn', [mdl '/b2'], 'Numerator', '0.20000000000000001', 'Denominator', '[1 -0.80000000000000004]', 'SampleTime', '0.02');\n  add_block('simulink/Discrete/Discrete Transfer Fcn', [mdl '/b3'], 'Numerator', '[1 0.29999999999999999]', 'Denominator', '[1 -0.5]', 'SampleTime', '0.10000000000000001');\n  add_block('simulink/Sinks/Out1', [mdl '/b4'], 'Port', '1');\n  add_line(mdl, 'b1/1', 'b2/1');\n  add_line(mdl, 'b2/1', 'b3/1');\n  add_line(mdl, 'b3/1', 'b4/1');\n  io(1) = linio([mdl '/b1'], 1, 'input');\n  io(2) = linio([mdl '/b3'], 1, 'output');\n  opt = linearizeOptions('SampleTime', -1, 'RateConversionMethod', 'zoh');\n  L = linearize(mdl, io, opt);\n  out.lin_upsample_zoh_A = L.A; out.lin_upsample_zoh_B = L.B; out.lin_upsample_zoh_C = L.C; out.lin_upsample_zoh_D = L.D;\n  out.lin_upsample_zoh_Ts = L.Ts; out.lin_upsample_zoh_dims = [size(L.A, 1), size(L.B, 2), size(L.C, 1)];\n  clear io; close_system(mdl, 0);\ncatch e\n  out.lin_upsample_zoh_err = e.message;\n  try close_system('lin_upsample_zoh', 0); catch; end\n  clear io;\nend\ntry\n  mdl = 'lin_delay_pade';\n  new_system(mdl);\n  add_block('simulink/Sources/Step', [mdl '/b1'], 'Time', '1', 'Before', '0', 'After', '1', 'SampleTime', '0');\n  add_block('simulink/Continuous/PID Controller', [mdl '/b2'], 'Controller', 'PI', 'Form', 'Parallel', 'TimeDomain', 'Continuous-time', 'P', '0.80000000000000004', 'I', '0.5', 'D', '0', 'N', '100', 'UseFilter', 'on', 'InitialConditionForIntegrator', '0', 'InitialConditionForFilter', '0', 'LimitOutput', 'off', 'UpperSaturationLimit', 'inf', 'LowerSaturationLimit', '-inf', 'AntiWindupMode', 'none', 'Kb', '1', 'TrackingMode', 'off', 'Kt', '1');\n  add_block('simulink/Continuous/Transport Delay', [mdl '/b3'], 'DelayTime', '0.37', 'InitialOutput', '0', 'PadeOrder', '3');\n  add_block('simulink/Continuous/Transfer Fcn', [mdl '/b4'], 'Numerator', '1', 'Denominator', '[2 1]');\n  add_block('simulink/Math Operations/Sum', [mdl '/b5'], 'Inputs', '+-');\n  add_line(mdl, 'b1/1', 'b5/1');\n  add_line(mdl, 'b5/1', 'b2/1');\n  add_line(mdl, 'b2/1', 'b3/1');\n  add_line(mdl, 'b3/1', 'b4/1');\n  add_line(mdl, 'b4/1', 'b5/2');\n  io(1) = linio([mdl '/b1'], 1, 'input');\n  io(2) = linio([mdl '/b4'], 1, 'output');\n  opt = linearizeOptions('SampleTime', -1, 'RateConversionMethod', 'zoh');\n  L = linearize(mdl, io, opt);\n  out.lin_delay_pade_A = L.A; out.lin_delay_pade_B = L.B; out.lin_delay_pade_C = L.C; out.lin_delay_pade_D = L.D;\n  out.lin_delay_pade_Ts = L.Ts; out.lin_delay_pade_dims = [size(L.A, 1), size(L.B, 2), size(L.C, 1)];\n  clear io; close_system(mdl, 0);\ncatch e\n  out.lin_delay_pade_err = e.message;\n  try close_system('lin_delay_pade', 0); catch; end\n  clear io;\nend\ntry\n  mdl = 'lin_nl_op_high';\n  new_system(mdl);\n  add_block('simulink/Sources/In1', [mdl '/b1'], 'Port', '1');\n  add_block('simulink/Discontinuities/Saturation', [mdl '/b2'], 'UpperLimit', '0.5', 'LowerLimit', '-0.5', 'LinearizeAsGain', 'off');\n  add_block('simulink/Discontinuities/Dead Zone', [mdl '/b3'], 'LowerValue', '-0.5', 'UpperValue', '0.5', 'LinearizeAsGain', 'off');\n  add_block('simulink/Lookup Tables/1-D Lookup Table', [mdl '/b4'], 'Table', '[2 0 1 -1]', 'BreakpointsForDimension1', '[-1 0 0.5 1.2]', 'InterpMethod', 'Linear point-slope', 'ExtrapMethod', 'Linear');\n  add_block('simulink/Signal Routing/Switch', [mdl '/b5'], 'Criteria', 'u2 >= Threshold', 'Threshold', '0.29999999999999999');\n  add_block('simulink/Math Operations/MinMax', [mdl '/b6'], 'Function', 'max', 'Inputs', '2');\n  add_block('simulink/Sources/Constant', [mdl '/b7'], 'Value', '0.25', 'SampleTime', 'inf');\n  add_block('simulink/Math Operations/Product', [mdl '/b8'], 'Inputs', '**');\n  add_block('simulink/User-Defined Functions/Fcn', [mdl '/b9'], 'Expr', 'u^2*cos(u) + atan2(u, 2)');\n  add_block('simulink/Sinks/Out1', [mdl '/b10'], 'Port', '1');\n  add_block('simulink/Sinks/Out1', [mdl '/b11'], 'Port', '2');\n  add_block('simulink/Sinks/Out1', [mdl '/b12'], 'Port', '3');\n  add_block('simulink/Sinks/Out1', [mdl '/b13'], 'Port', '4');\n  add_block('simulink/Sinks/Out1', [mdl '/b14'], 'Port', '5');\n  add_block('simulink/Sinks/Out1', [mdl '/b15'], 'Port', '6');\n  add_line(mdl, 'b1/1', 'b2/1');\n  add_line(mdl, 'b1/1', 'b3/1');\n  add_line(mdl, 'b1/1', 'b4/1');\n  add_line(mdl, 'b1/1', 'b9/1');\n  add_line(mdl, 'b1/1', 'b5/1');\n  add_line(mdl, 'b1/1', 'b5/2');\n  add_line(mdl, 'b7/1', 'b5/3');\n  add_line(mdl, 'b1/1', 'b6/1');\n  add_line(mdl, 'b7/1', 'b6/2');\n  add_line(mdl, 'b1/1', 'b8/1');\n  add_line(mdl, 'b9/1', 'b8/2');\n  add_line(mdl, 'b2/1', 'b10/1');\n  add_line(mdl, 'b3/1', 'b11/1');\n  add_line(mdl, 'b4/1', 'b12/1');\n  add_line(mdl, 'b5/1', 'b13/1');\n  add_line(mdl, 'b6/1', 'b14/1');\n  add_line(mdl, 'b8/1', 'b15/1');\n  io(1) = linio([mdl '/b1'], 1, 'input');\n  io(2) = linio([mdl '/b2'], 1, 'output');\n  io(3) = linio([mdl '/b3'], 1, 'output');\n  io(4) = linio([mdl '/b4'], 1, 'output');\n  io(5) = linio([mdl '/b5'], 1, 'output');\n  io(6) = linio([mdl '/b6'], 1, 'output');\n  io(7) = linio([mdl '/b8'], 1, 'output');\n  opt = linearizeOptions('SampleTime', -1, 'RateConversionMethod', 'zoh');\n  op = operpoint(mdl);\n  op.Inputs(1).u = 0.69999999999999996;\n  L = linearize(mdl, io, op, opt);\n  out.lin_nl_op_high_A = L.A; out.lin_nl_op_high_B = L.B; out.lin_nl_op_high_C = L.C; out.lin_nl_op_high_D = L.D;\n  out.lin_nl_op_high_Ts = L.Ts; out.lin_nl_op_high_dims = [size(L.A, 1), size(L.B, 2), size(L.C, 1)];\n  clear io; close_system(mdl, 0);\ncatch e\n  out.lin_nl_op_high_err = e.message;\n  try close_system('lin_nl_op_high', 0); catch; end\n  clear io;\nend\ntry\n  mdl = 'lin_nl_op_low';\n  new_system(mdl);\n  add_block('simulink/Sources/In1', [mdl '/b1'], 'Port', '1');\n  add_block('simulink/Discontinuities/Saturation', [mdl '/b2'], 'UpperLimit', '0.5', 'LowerLimit', '-0.5', 'LinearizeAsGain', 'off');\n  add_block('simulink/Discontinuities/Dead Zone', [mdl '/b3'], 'LowerValue', '-0.5', 'UpperValue', '0.5', 'LinearizeAsGain', 'off');\n  add_block('simulink/Lookup Tables/1-D Lookup Table', [mdl '/b4'], 'Table', '[2 0 1 -1]', 'BreakpointsForDimension1', '[-1 0 0.5 1.2]', 'InterpMethod', 'Linear point-slope', 'ExtrapMethod', 'Linear');\n  add_block('simulink/Signal Routing/Switch', [mdl '/b5'], 'Criteria', 'u2 >= Threshold', 'Threshold', '0.29999999999999999');\n  add_block('simulink/Math Operations/MinMax', [mdl '/b6'], 'Function', 'max', 'Inputs', '2');\n  add_block('simulink/Sources/Constant', [mdl '/b7'], 'Value', '0.25', 'SampleTime', 'inf');\n  add_block('simulink/Math Operations/Product', [mdl '/b8'], 'Inputs', '**');\n  add_block('simulink/User-Defined Functions/Fcn', [mdl '/b9'], 'Expr', 'u^2*cos(u) + atan2(u, 2)');\n  add_block('simulink/Sinks/Out1', [mdl '/b10'], 'Port', '1');\n  add_block('simulink/Sinks/Out1', [mdl '/b11'], 'Port', '2');\n  add_block('simulink/Sinks/Out1', [mdl '/b12'], 'Port', '3');\n  add_block('simulink/Sinks/Out1', [mdl '/b13'], 'Port', '4');\n  add_block('simulink/Sinks/Out1', [mdl '/b14'], 'Port', '5');\n  add_block('simulink/Sinks/Out1', [mdl '/b15'], 'Port', '6');\n  add_line(mdl, 'b1/1', 'b2/1');\n  add_line(mdl, 'b1/1', 'b3/1');\n  add_line(mdl, 'b1/1', 'b4/1');\n  add_line(mdl, 'b1/1', 'b9/1');\n  add_line(mdl, 'b1/1', 'b5/1');\n  add_line(mdl, 'b1/1', 'b5/2');\n  add_line(mdl, 'b7/1', 'b5/3');\n  add_line(mdl, 'b1/1', 'b6/1');\n  add_line(mdl, 'b7/1', 'b6/2');\n  add_line(mdl, 'b1/1', 'b8/1');\n  add_line(mdl, 'b9/1', 'b8/2');\n  add_line(mdl, 'b2/1', 'b10/1');\n  add_line(mdl, 'b3/1', 'b11/1');\n  add_line(mdl, 'b4/1', 'b12/1');\n  add_line(mdl, 'b5/1', 'b13/1');\n  add_line(mdl, 'b6/1', 'b14/1');\n  add_line(mdl, 'b8/1', 'b15/1');\n  io(1) = linio([mdl '/b1'], 1, 'input');\n  io(2) = linio([mdl '/b2'], 1, 'output');\n  io(3) = linio([mdl '/b3'], 1, 'output');\n  io(4) = linio([mdl '/b4'], 1, 'output');\n  io(5) = linio([mdl '/b5'], 1, 'output');\n  io(6) = linio([mdl '/b6'], 1, 'output');\n  io(7) = linio([mdl '/b8'], 1, 'output');\n  opt = linearizeOptions('SampleTime', -1, 'RateConversionMethod', 'zoh');\n  op = operpoint(mdl);\n  op.Inputs(1).u = 0.20000000000000001;\n  L = linearize(mdl, io, op, opt);\n  out.lin_nl_op_low_A = L.A; out.lin_nl_op_low_B = L.B; out.lin_nl_op_low_C = L.C; out.lin_nl_op_low_D = L.D;\n  out.lin_nl_op_low_Ts = L.Ts; out.lin_nl_op_low_dims = [size(L.A, 1), size(L.B, 2), size(L.C, 1)];\n  clear io; close_system(mdl, 0);\ncatch e\n  out.lin_nl_op_low_err = e.message;\n  try close_system('lin_nl_op_low', 0); catch; end\n  clear io;\nend\ntry\n  mdl = 'lin_rl_quant_gain_off';\n  new_system(mdl);\n  add_block('simulink/Sources/In1', [mdl '/b1'], 'Port', '1');\n  add_block('simulink/Discontinuities/Rate Limiter', [mdl '/b2'], 'RisingSlewLimit', '1', 'FallingSlewLimit', '-1', 'InitialCondition', '0', 'SampleTimeMode', 'continuous', 'LinearizeAsGain', 'off');\n  add_block('simulink/Discontinuities/Quantizer', [mdl '/b3'], 'QuantizationInterval', '0.25', 'LinearizeAsGain', 'off');\n  add_block('simulink/Sinks/Out1', [mdl '/b4'], 'Port', '1');\n  add_block('simulink/Sinks/Out1', [mdl '/b5'], 'Port', '2');\n  add_line(mdl, 'b1/1', 'b2/1');\n  add_line(mdl, 'b1/1', 'b3/1');\n  add_line(mdl, 'b2/1', 'b4/1');\n  add_line(mdl, 'b3/1', 'b5/1');\n  io(1) = linio([mdl '/b1'], 1, 'input');\n  io(2) = linio([mdl '/b2'], 1, 'output');\n  io(3) = linio([mdl '/b3'], 1, 'output');\n  opt = linearizeOptions('SampleTime', -1, 'RateConversionMethod', 'zoh');\n  op = operpoint(mdl);\n  op.Inputs(1).u = 0.29999999999999999;\n  L = linearize(mdl, io, op, opt);\n  out.lin_rl_quant_gain_off_A = L.A; out.lin_rl_quant_gain_off_B = L.B; out.lin_rl_quant_gain_off_C = L.C; out.lin_rl_quant_gain_off_D = L.D;\n  out.lin_rl_quant_gain_off_Ts = L.Ts; out.lin_rl_quant_gain_off_dims = [size(L.A, 1), size(L.B, 2), size(L.C, 1)];\n  clear io; close_system(mdl, 0);\ncatch e\n  out.lin_rl_quant_gain_off_err = e.message;\n  try close_system('lin_rl_quant_gain_off', 0); catch; end\n  clear io;\nend\ntry\n  mdl = 'lin_2dof_pid';\n  new_system(mdl);\n  add_block('simulink/Sources/Step', [mdl '/b1'], 'Time', '1', 'Before', '0', 'After', '1', 'SampleTime', '0');\n  add_block('simulink/Continuous/PID Controller (2DOF)', [mdl '/b2'], 'Controller', 'PID', 'Form', 'Parallel', 'TimeDomain', 'Continuous-time', 'P', '3', 'I', '2', 'D', '0.40000000000000002', 'N', '30', 'UseFilter', 'on', 'InitialConditionForIntegrator', '0', 'InitialConditionForFilter', '0', 'LimitOutput', 'off', 'UpperSaturationLimit', 'inf', 'LowerSaturationLimit', '-inf', 'AntiWindupMode', 'none', 'Kb', '1', 'TrackingMode', 'off', 'Kt', '1', 'b', '0.59999999999999998', 'c', '0.20000000000000001');\n  add_block('simulink/Continuous/Transfer Fcn', [mdl '/b3'], 'Numerator', '1', 'Denominator', '[1 1 0]');\n  add_line(mdl, 'b1/1', 'b2/1');\n  add_line(mdl, 'b2/1', 'b3/1');\n  add_line(mdl, 'b3/1', 'b2/2');\n  io(1) = linio([mdl '/b1'], 1, 'input');\n  io(2) = linio([mdl '/b3'], 1, 'output');\n  io(3) = linio([mdl '/b2'], 1, 'output');\n  opt = linearizeOptions('SampleTime', -1, 'RateConversionMethod', 'zoh');\n  L = linearize(mdl, io, opt);\n  out.lin_2dof_pid_A = L.A; out.lin_2dof_pid_B = L.B; out.lin_2dof_pid_C = L.C; out.lin_2dof_pid_D = L.D;\n  out.lin_2dof_pid_Ts = L.Ts; out.lin_2dof_pid_dims = [size(L.A, 1), size(L.B, 2), size(L.C, 1)];\n  clear io; close_system(mdl, 0);\ncatch e\n  out.lin_2dof_pid_err = e.message;\n  try close_system('lin_2dof_pid', 0); catch; end\n  clear io;\nend\ntry\n  mdl = 'trim_pend';\n  new_system(mdl);\n  add_block('simulink/Sources/In1', [mdl '/b1'], 'Port', '1');\n  add_block('simulink/Math Operations/Sum', [mdl '/b2'], 'Inputs', '+--');\n  add_block('simulink/Continuous/Integrator', [mdl '/b3'], 'InitialCondition', '0.10000000000000001', 'LimitOutput', 'off', 'UpperSaturationLimit', 'inf', 'LowerSaturationLimit', '-inf');\n  add_block('simulink/Continuous/Integrator', [mdl '/b4'], 'InitialCondition', '0.20000000000000001', 'LimitOutput', 'off', 'UpperSaturationLimit', 'inf', 'LowerSaturationLimit', '-inf');\n  add_block('simulink/User-Defined Functions/Fcn', [mdl '/b5'], 'Expr', '9.81*sin(u)');\n  add_block('simulink/Math Operations/Gain', [mdl '/b6'], 'Gain', '0.40000000000000002', 'Multiplication', 'Element-wise(K.*u)', 'SampleTime', '-1');\n  add_block('simulink/Sinks/Out1', [mdl '/b7'], 'Port', '1');\n  add_line(mdl, 'b1/1', 'b2/1');\n  add_line(mdl, 'b5/1', 'b2/2');\n  add_line(mdl, 'b6/1', 'b2/3');\n  add_line(mdl, 'b2/1', 'b3/1');\n  add_line(mdl, 'b3/1', 'b4/1');\n  add_line(mdl, 'b3/1', 'b6/1');\n  add_line(mdl, 'b4/1', 'b5/1');\n  add_line(mdl, 'b4/1', 'b7/1');\n  spec = operspec(mdl);\n  spec.Outputs(1).y = 0.5;\n  spec.Outputs(1).Known = true;\n  fo = findopOptions('DisplayReport', 'off');\n  [op, rep] = findop(mdl, spec, fo);\n  out.trim_u = op.Inputs(1).u;\n  out.trim_blocks = {op.States.Block};\n  out.trim_x = [op.States.x];\n  io(1) = linio([mdl '/b1'], 1, 'input'); io(2) = linio([mdl '/b4'], 1, 'output');\n  L = linearize(mdl, io, op);\n  out.trim_A = L.A; out.trim_B = L.B; out.trim_C = L.C; out.trim_D = L.D;\n  clear io; close_system(mdl, 0);\ncatch e\n  out.trim_err = e.message;\n  try close_system('trim_pend', 0); catch; end\nend",
+ "out": {
+  "lin_pid_closed_A": [
+   [
+    -3,
+    -18,
+    -29,
+    -40,
+    1
+   ],
+   [
+    1,
+    0,
+    0,
+    0,
+    0
+   ],
+   [
+    0,
+    1,
+    0,
+    0,
+    0
+   ],
+   [
+    0,
+    -12,
+    -24,
+    -40,
+    0
+   ],
+   [
+    0,
+    -1.5,
+    -3,
+    0,
+    0
+   ]
+  ],
+  "lin_pid_closed_B": [
+   14,
+   0,
+   0,
+   12,
+   1.5
+  ],
+  "lin_pid_closed_C": [
+   0,
+   1,
+   2,
+   0,
+   0
+  ],
+  "lin_pid_closed_D": 0,
+  "lin_pid_closed_Ts": 0,
+  "lin_pid_closed_dims": [
+   5,
+   1,
+   1
+  ],
+  "lin_pid_looptransfer_A": [
+   [
+    -3,
+    -4,
+    -1,
+    0,
+    0
+   ],
+   [
+    1,
+    0,
+    0,
+    0,
+    0
+   ],
+   [
+    0,
+    1,
+    0,
+    0,
+    0
+   ],
+   [
+    0,
+    -1.5,
+    -3,
+    0,
+    0
+   ],
+   [
+    0,
+    -12,
+    -24,
+    0,
+    -40
+   ]
+  ],
+  "lin_pid_looptransfer_B": [
+   1,
+   0,
+   0,
+   0,
+   0
+  ],
+  "lin_pid_looptransfer_C": [
+   0,
+   -26,
+   -52,
+   2,
+   -80
+  ],
+  "lin_pid_looptransfer_D": 0,
+  "lin_pid_looptransfer_Ts": 0,
+  "lin_pid_looptransfer_dims": [
+   5,
+   1,
+   1
+  ],
+  "lin_pid_sat_inout_A": [
+   [
+    -3,
+    -18,
+    -29,
+    1,
+    -40
+   ],
+   [
+    1,
+    0,
+    0,
+    0,
+    0
+   ],
+   [
+    0,
+    1,
+    0,
+    0,
+    0
+   ],
+   [
+    0,
+    -1.5,
+    -3,
+    0,
+    0
+   ],
+   [
+    0,
+    -12,
+    -24,
+    0,
+    -40
+   ]
+  ],
+  "lin_pid_sat_inout_B": [
+   [
+    14,
+    1
+   ],
+   [
+    0,
+    0
+   ],
+   [
+    0,
+    0
+   ],
+   [
+    1.5,
+    0
+   ],
+   [
+    12,
+    0
+   ]
+  ],
+  "lin_pid_sat_inout_C": [
+   [
+    0,
+    -1,
+    -2,
+    0,
+    0
+   ],
+   [
+    0,
+    -14,
+    -28,
+    1,
+    -40
+   ]
+  ],
+  "lin_pid_sat_inout_D": [
+   [
+    1,
+    0
+   ],
+   [
+    14,
+    0
+   ]
+  ],
+  "lin_pid_sat_inout_Ts": 0,
+  "lin_pid_sat_inout_dims": [
+   5,
+   2,
+   2
+  ],
+  "lin_disc_pid_sampled_A": [
+   [
+    0.7243145929163752,
+    -0.7897395018142492,
+    -0.9697240211249455,
+    -0.8581628505530491,
+    0.0858162850553049
+   ],
+   [
+    0.0858162850553049,
+    0.9584829062575121,
+    -0.051081577207765155,
+    -0.045204935582093056,
+    0.004520493558209306
+   ],
+   [
+    0.004520493558209306,
+    0.09858169065283806,
+    0.9982532721609377,
+    -0.001545776848727678,
+    0.0001545776848727678
+   ],
+   [
+    0,
+    -0.3,
+    -0.6,
+    0,
+    0
+   ],
+   [
+    0,
+    -0.15000000000000002,
+    -0.30000000000000004,
+    0,
+    1
+   ]
+  ],
+  "lin_disc_pid_sampled_B": [
+   0.4419538680348203,
+   0.023280541824777925,
+   0.0007960750770947542,
+   0.3,
+   0.15000000000000002
+  ],
+  "lin_disc_pid_sampled_C": [
+   0,
+   1,
+   2,
+   0,
+   0
+  ],
+  "lin_disc_pid_sampled_D": 0,
+  "lin_disc_pid_sampled_Ts": 0.1,
+  "lin_disc_pid_sampled_dims": [
+   5,
+   1,
+   1
+  ],
+  "lin_two_rates_A": [
+   [
+    0.8823068756427652,
+    -0.18978451450788109,
+    -0.010387075027670542,
+    0.019141696778474743
+   ],
+   [
+    0.09407603061550737,
+    0.9894819455325335,
+    -0.0010287562999914154,
+    0.0011432333697681334
+   ],
+   [
+    0,
+    -1.6672000000000002,
+    -0.0003200000000000002,
+    0.33343999999999996
+   ],
+   [
+    0,
+    -1,
+    0,
+    1
+   ]
+  ],
+  "lin_two_rates_B": [
+   0.09570848389237373,
+   0.005716166848840669,
+   1.6672000000000002,
+   1
+  ],
+  "lin_two_rates_C": [
+   0,
+   1,
+   0,
+   0
+  ],
+  "lin_two_rates_D": 0,
+  "lin_two_rates_Ts": 0.1,
+  "lin_two_rates_dims": [
+   4,
+   1,
+   1
+  ],
+  "lin_series_zoh_chain_A": [
+   [
+    0.7969191896374404,
+    -0.4494086107988378,
+    0.25611778680023894
+   ],
+   [
+    0.08988172215976756,
+    0.9766826339569754,
+    0.013527379679063777
+   ],
+   [
+    0,
+    0,
+    0.9048374180359595
+   ]
+  ],
+  "lin_series_zoh_chain_B": [
+   0.01352737967906378,
+   0.00046303994675095747,
+   0.09516258196404043
+  ],
+  "lin_series_zoh_chain_C": [
+   1,
+   0.5,
+   0
+  ],
+  "lin_series_zoh_chain_D": 0,
+  "lin_series_zoh_chain_Ts": 0.1,
+  "lin_series_zoh_chain_dims": [
+   3,
+   1,
+   1
+  ],
+  "lin_disc_to_cont_zoh_A": [
+   [
+    -4.462871026284194,
+    2.6706278524904525,
+    7.766428007811556
+   ],
+   [
+    0,
+    -7.133498878774649,
+    4.3162190351632335
+   ],
+   [
+    0,
+    0,
+    -10.216512475319814
+   ]
+  ],
+  "lin_disc_to_cont_zoh_B": [
+   2.1662978796448313,
+   1.0986172100497211,
+   25.541281188299497
+  ],
+  "lin_disc_to_cont_zoh_C": [
+   1,
+   1,
+   0
+  ],
+  "lin_disc_to_cont_zoh_D": 0,
+  "lin_disc_to_cont_zoh_Ts": 0,
+  "lin_disc_to_cont_zoh_dims": [
+   3,
+   1,
+   1
+  ],
+  "lin_disc_to_cont_tustin_A": [
+   [
+    -4.444444444444444,
+    2.6143790849673203,
+    7.549019607843138
+   ],
+   [
+    0,
+    -7.058823529411766,
+    4.11764705882353
+   ],
+   [
+    0,
+    0,
+    -10
+   ]
+  ],
+  "lin_disc_to_cont_tustin_B": [
+   2.6960784313725483,
+   1.4705882352941175,
+   25
+  ],
+  "lin_disc_to_cont_tustin_C": [
+   1.1111111111111112,
+   1.111111111111111,
+   -0.29166666666666663
+  ],
+  "lin_disc_to_cont_tustin_D": -0.10416666666666666,
+  "lin_disc_to_cont_tustin_Ts": 0,
+  "lin_disc_to_cont_tustin_dims": [
+   3,
+   1,
+   1
+  ],
+  "lin_upsample_zoh_A": [
+   [
+    0.3276800000000002,
+    0
+   ],
+   [
+    0.2,
+    0.5
+   ]
+  ],
+  "lin_upsample_zoh_B": [
+   3.3616000000000006,
+   0
+  ],
+  "lin_upsample_zoh_C": [
+   0.2,
+   0.8
+  ],
+  "lin_upsample_zoh_D": 0,
+  "lin_upsample_zoh_Ts": 0.1,
+  "lin_upsample_zoh_dims": [
+   2,
+   1,
+   1
+  ],
+  "lin_delay_pade_A": [
+   [
+    -0.09999999999999998,
+    -1,
+    64.86486486486487,
+    0,
+    4738.120150830159
+   ],
+   [
+    -0.25,
+    0,
+    0,
+    0,
+    0
+   ],
+   [
+    -0.4,
+    1,
+    -32.432432432432435,
+    -438.2761139517896,
+    -2369.0600754150796
+   ],
+   [
+    0,
+    0,
+    1,
+    0,
+    0
+   ],
+   [
+    0,
+    0,
+    0,
+    1,
+    0
+   ]
+  ],
+  "lin_delay_pade_B": [
+   -0.8,
+   0.5,
+   0.8,
+   0,
+   0
+  ],
+  "lin_delay_pade_C": [
+   0.5,
+   0,
+   0,
+   0,
+   0
+  ],
+  "lin_delay_pade_D": 0,
+  "lin_delay_pade_Ts": 0,
+  "lin_delay_pade_dims": [
+   5,
+   1,
+   1
+  ],
+  "lin_nl_op_high_A": [],
+  "lin_nl_op_high_B": [],
+  "lin_nl_op_high_C": [],
+  "lin_nl_op_high_D": [
+   0,
+   1,
+   -2.857142857150846,
+   1,
+   1,
+   1.5518301766515017
+  ],
+  "lin_nl_op_high_Ts": 0,
+  "lin_nl_op_high_dims": [
+   0,
+   1,
+   6
+  ],
+  "lin_nl_op_low_A": [],
+  "lin_nl_op_low_B": [],
+  "lin_nl_op_low_C": [],
+  "lin_nl_op_low_D": [
+   1,
+   0,
+   2.000000000002,
+   0,
+   0,
+   0.31469718816375325
+  ],
+  "lin_nl_op_low_Ts": 0,
+  "lin_nl_op_low_dims": [
+   0,
+   1,
+   6
+  ],
+  "lin_rl_quant_gain_off_A": [],
+  "lin_rl_quant_gain_off_B": [],
+  "lin_rl_quant_gain_off_C": [],
+  "lin_rl_quant_gain_off_D": [
+   1,
+   0
+  ],
+  "lin_rl_quant_gain_off_Ts": 0,
+  "lin_rl_quant_gain_off_dims": [
+   0,
+   1,
+   2
+  ],
+  "lin_2dof_pid_A": [
+   [
+    -1,
+    -15,
+    1,
+    -30
+   ],
+   [
+    1,
+    0,
+    0,
+    0
+   ],
+   [
+    0,
+    -2,
+    0,
+    0
+   ],
+   [
+    0,
+    -12,
+    0,
+    -30
+   ]
+  ],
+  "lin_2dof_pid_B": [
+   4.2,
+   0,
+   2,
+   2.4000000000000004
+  ],
+  "lin_2dof_pid_C": [
+   [
+    0,
+    1,
+    0,
+    0
+   ],
+   [
+    0,
+    -15,
+    1,
+    -30
+   ]
+  ],
+  "lin_2dof_pid_D": [
+   0,
+   4.2
+  ],
+  "lin_2dof_pid_Ts": 0,
+  "lin_2dof_pid_dims": [
+   4,
+   1,
+   2
+  ],
+  "trim_u": 4.703164533312606,
+  "trim_blocks": [
+   "trim_pend/b3",
+   "trim_pend/b4"
+  ],
+  "trim_x": [
+   0,
+   0.5
+  ],
+  "trim_A": [
+   [
+    -0.4,
+    -8.609084931817296
+   ],
+   [
+    1,
+    0
+   ]
+  ],
+  "trim_B": [
+   1,
+   0
+  ],
+  "trim_C": [
+   0,
+   1
+  ],
+  "trim_D": 0
+ }
+}

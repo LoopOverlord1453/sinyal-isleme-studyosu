@@ -1,0 +1,5 @@
+PyQt6>=6.11
+pyqtgraph>=0.14
+numpy>=2.4
+scipy>=1.18
+qtawesome>=1.4

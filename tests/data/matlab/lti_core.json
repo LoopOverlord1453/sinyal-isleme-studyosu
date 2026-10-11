@@ -1,0 +1,6765 @@
+{
+ "script_sha": "b26e7463c9914499b97bd0783cfd25197b3951ddf66c6885be57a9474516d4a1",
+ "matlab": "R2025b",
+ "script": "out.errs = {};\ntry; w_c = [0.13 0.7 1.9 4.3 11.0];; catch e_; out.errs{end+1} = sprintf('satir 0: %s', e_.message); end\ntry; G = tf([1.0 2.0],[1.0 3.0 5.0 7.0],0.0); w = [0.13 0.7 1.9 4.3 11.0];; catch e_; out.errs{end+1} = sprintf('satir 1: %s', e_.message); end\ntry; out.c1.re = real(freqresp(G, w)); out.c1.im = imag(freqresp(G, w));; catch e_; out.errs{end+1} = sprintf('satir 2: %s', e_.message); end\ntry; [n_, d_] = tfdata(tf(G(1,1)), 'v'); out.c1.tf00.n = n_; out.c1.tf00.d = d_;; catch e_; out.errs{end+1} = sprintf('satir 3: %s', e_.message); end\ntry; [z_, p_, k_] = zpkdata(zpk(G(1,1)), 'v'); out.c1.zpk00.z = spt_c(z_); out.c1.zpk00.p = spt_c(p_); out.c1.zpk00.k = k_;; catch e_; out.errs{end+1} = sprintf('satir 4: %s', e_.message); end\ntry; S = ss(G); out.c1.n = order(S); mk = zeros(size(S.D,1), size(S.D,2), 7); mk(:,:,1) = S.D; for q = 1:6, mk(:,:,q+1) = S.C*S.A^(q-1)*S.B; end; out.c1.mk = mk; out.c1.eig = spt_c(eig(S.A)); out.c1.pole = spt_c(pole(G)); out.c1.tzero = spt_c(tzero(G));; catch e_; out.errs{end+1} = sprintf('satir 5: %s', e_.message); end\ntry; G = tf([2.0 0.0 -1.0],[1.0 0.5 3.0 1.2 0.4],0.0); w = [0.13 0.7 1.9 4.3 11.0];; catch e_; out.errs{end+1} = sprintf('satir 6: %s', e_.message); end\ntry; out.c2.re = real(freqresp(G, w)); out.c2.im = imag(freqresp(G, w));; catch e_; out.errs{end+1} = sprintf('satir 7: %s', e_.message); end\ntry; [n_, d_] = tfdata(tf(G(1,1)), 'v'); out.c2.tf00.n = n_; out.c2.tf00.d = d_;; catch e_; out.errs{end+1} = sprintf('satir 8: %s', e_.message); end\ntry; [z_, p_, k_] = zpkdata(zpk(G(1,1)), 'v'); out.c2.zpk00.z = spt_c(z_); out.c2.zpk00.p = spt_c(p_); out.c2.zpk00.k = k_;; catch e_; out.errs{end+1} = sprintf('satir 9: %s', e_.message); end\ntry; S = ss(G); out.c2.n = order(S); mk = zeros(size(S.D,1), size(S.D,2), 7); mk(:,:,1) = S.D; for q = 1:6, mk(:,:,q+1) = S.C*S.A^(q-1)*S.B; end; out.c2.mk = mk; out.c2.eig = spt_c(eig(S.A)); out.c2.pole = spt_c(pole(G)); out.c2.tzero = spt_c(tzero(G));; catch e_; out.errs{end+1} = sprintf('satir 10: %s', e_.message); end\ntry; G = tf([3.0 1.0 2.0],[1.0 4.0 6.0 4.0],0.0); w = [0.13 0.7 1.9 4.3 11.0];; catch e_; out.errs{end+1} = sprintf('satir 11: %s', e_.message); end\ntry; out.c3.re = real(freqresp(G, w)); out.c3.im = imag(freqresp(G, w));; catch e_; out.errs{end+1} = sprintf('satir 12: %s', e_.message); end\ntry; [n_, d_] = tfdata(tf(G(1,1)), 'v'); out.c3.tf00.n = n_; out.c3.tf00.d = d_;; catch e_; out.errs{end+1} = sprintf('satir 13: %s', e_.message); end\ntry; [z_, p_, k_] = zpkdata(zpk(G(1,1)), 'v'); out.c3.zpk00.z = spt_c(z_); out.c3.zpk00.p = spt_c(p_); out.c3.zpk00.k = k_;; catch e_; out.errs{end+1} = sprintf('satir 14: %s', e_.message); end\ntry; S = ss(G); out.c3.n = order(S); mk = zeros(size(S.D,1), size(S.D,2), 7); mk(:,:,1) = S.D; for q = 1:6, mk(:,:,q+1) = S.C*S.A^(q-1)*S.B; end; out.c3.mk = mk; out.c3.eig = spt_c(eig(S.A)); out.c3.pole = spt_c(pole(G)); out.c3.tzero = spt_c(tzero(G));; catch e_; out.errs{end+1} = sprintf('satir 15: %s', e_.message); end\ntry; G = zpk([complex(-1.5,0.0) complex(2.0,1.0) complex(2.0,-1.0)],[complex(-0.5,3.0) complex(-0.5,-3.0) complex(-1.0,1.0) complex(-1.0,-1.0) complex(-2.0,0.0) complex(-3.0,0.0) complex(-4.0,0.5) complex(-4.0,-0.5)],7.0,0.0); w = [0.13 0.7 1.9 4.3 11.0];; catch e_; out.errs{end+1} = sprintf('satir 16: %s', e_.message); end\ntry; out.c4.re = real(freqresp(G, w)); out.c4.im = imag(freqresp(G, w));; catch e_; out.errs{end+1} = sprintf('satir 17: %s', e_.message); end\ntry; [n_, d_] = tfdata(tf(G(1,1)), 'v'); out.c4.tf00.n = n_; out.c4.tf00.d = d_;; catch e_; out.errs{end+1} = sprintf('satir 18: %s', e_.message); end\ntry; [z_, p_, k_] = zpkdata(zpk(G(1,1)), 'v'); out.c4.zpk00.z = spt_c(z_); out.c4.zpk00.p = spt_c(p_); out.c4.zpk00.k = k_;; catch e_; out.errs{end+1} = sprintf('satir 19: %s', e_.message); end\ntry; S = ss(G); out.c4.n = order(S); mk = zeros(size(S.D,1), size(S.D,2), 7); mk(:,:,1) = S.D; for q = 1:6, mk(:,:,q+1) = S.C*S.A^(q-1)*S.B; end; out.c4.mk = mk; out.c4.eig = spt_c(eig(S.A)); out.c4.pole = spt_c(pole(G)); out.c4.tzero = spt_c(tzero(G));; catch e_; out.errs{end+1} = sprintf('satir 20: %s', e_.message); end\ntry; G = tf([0.2 -0.1 0.05],[1.0 -1.3 0.8 -0.2],0.05); w = [2.6 13.999999999999998 37.99999999999999 62.0];; catch e_; out.errs{end+1} = sprintf('satir 21: %s', e_.message); end\ntry; out.c5.re = real(freqresp(G, w)); out.c5.im = imag(freqresp(G, w));; catch e_; out.errs{end+1} = sprintf('satir 22: %s', e_.message); end\ntry; [n_, d_] = tfdata(tf(G(1,1)), 'v'); out.c5.tf00.n = n_; out.c5.tf00.d = d_;; catch e_; out.errs{end+1} = sprintf('satir 23: %s', e_.message); end\ntry; [z_, p_, k_] = zpkdata(zpk(G(1,1)), 'v'); out.c5.zpk00.z = spt_c(z_); out.c5.zpk00.p = spt_c(p_); out.c5.zpk00.k = k_;; catch e_; out.errs{end+1} = sprintf('satir 24: %s', e_.message); end\ntry; S = ss(G); out.c5.n = order(S); mk = zeros(size(S.D,1), size(S.D,2), 7); mk(:,:,1) = S.D; for q = 1:6, mk(:,:,q+1) = S.C*S.A^(q-1)*S.B; end; out.c5.mk = mk; out.c5.eig = spt_c(eig(S.A)); out.c5.pole = spt_c(pole(G)); out.c5.tzero = spt_c(tzero(G));; catch e_; out.errs{end+1} = sprintf('satir 25: %s', e_.message); end\ntry; G = tf({[1.0],[1.0 2.0];[2.0 0.0],[1.0]},{[1.0 1.0],[1.0 3.0 2.0];[1.0 2.0 5.0],[1.0 0.0]},0.0); w = [0.13 0.7 1.9 4.3 11.0];; catch e_; out.errs{end+1} = sprintf('satir 26: %s', e_.message); end\ntry; out.c6.re = real(freqresp(G, w)); out.c6.im = imag(freqresp(G, w));; catch e_; out.errs{end+1} = sprintf('satir 27: %s', e_.message); end\ntry; [n_, d_] = tfdata(tf(G(1,1)), 'v'); out.c6.tf00.n = n_; out.c6.tf00.d = d_;; catch e_; out.errs{end+1} = sprintf('satir 28: %s', e_.message); end\ntry; [z_, p_, k_] = zpkdata(zpk(G(1,1)), 'v'); out.c6.zpk00.z = spt_c(z_); out.c6.zpk00.p = spt_c(p_); out.c6.zpk00.k = k_;; catch e_; out.errs{end+1} = sprintf('satir 29: %s', e_.message); end\ntry; [n_, d_] = tfdata(tf(G(1,2)), 'v'); out.c6.tf01.n = n_; out.c6.tf01.d = d_;; catch e_; out.errs{end+1} = sprintf('satir 30: %s', e_.message); end\ntry; [z_, p_, k_] = zpkdata(zpk(G(1,2)), 'v'); out.c6.zpk01.z = spt_c(z_); out.c6.zpk01.p = spt_c(p_); out.c6.zpk01.k = k_;; catch e_; out.errs{end+1} = sprintf('satir 31: %s', e_.message); end\ntry; [n_, d_] = tfdata(tf(G(2,1)), 'v'); out.c6.tf10.n = n_; out.c6.tf10.d = d_;; catch e_; out.errs{end+1} = sprintf('satir 32: %s', e_.message); end\ntry; [z_, p_, k_] = zpkdata(zpk(G(2,1)), 'v'); out.c6.zpk10.z = spt_c(z_); out.c6.zpk10.p = spt_c(p_); out.c6.zpk10.k = k_;; catch e_; out.errs{end+1} = sprintf('satir 33: %s', e_.message); end\ntry; [n_, d_] = tfdata(tf(G(2,2)), 'v'); out.c6.tf11.n = n_; out.c6.tf11.d = d_;; catch e_; out.errs{end+1} = sprintf('satir 34: %s', e_.message); end\ntry; [z_, p_, k_] = zpkdata(zpk(G(2,2)), 'v'); out.c6.zpk11.z = spt_c(z_); out.c6.zpk11.p = spt_c(p_); out.c6.zpk11.k = k_;; catch e_; out.errs{end+1} = sprintf('satir 35: %s', e_.message); end\ntry; S = ss(G); out.c6.n = order(S); mk = zeros(size(S.D,1), size(S.D,2), 7); mk(:,:,1) = S.D; for q = 1:6, mk(:,:,q+1) = S.C*S.A^(q-1)*S.B; end; out.c6.mk = mk; out.c6.eig = spt_c(eig(S.A)); out.c6.pole = spt_c(pole(G)); out.c6.tzero = spt_c(tzero(G));; catch e_; out.errs{end+1} = sprintf('satir 36: %s', e_.message); end\ntry; G = tf({[0.5],[1.0 -0.3],[0.2];[1.0 0.0],[0.1],[1.0 0.5]},{[1.0 -0.5],[1.0 -0.9 0.2],[1.0 -0.1];[1.0 -0.7],[1.0 0.4],[1.0 -0.5]},0.1); w = [1.3 6.999999999999999 18.999999999999996 31.0];; catch e_; out.errs{end+1} = sprintf('satir 37: %s', e_.message); end\ntry; out.c7.re = real(freqresp(G, w)); out.c7.im = imag(freqresp(G, w));; catch e_; out.errs{end+1} = sprintf('satir 38: %s', e_.message); end\ntry; [n_, d_] = tfdata(tf(G(1,1)), 'v'); out.c7.tf00.n = n_; out.c7.tf00.d = d_;; catch e_; out.errs{end+1} = sprintf('satir 39: %s', e_.message); end\ntry; [z_, p_, k_] = zpkdata(zpk(G(1,1)), 'v'); out.c7.zpk00.z = spt_c(z_); out.c7.zpk00.p = spt_c(p_); out.c7.zpk00.k = k_;; catch e_; out.errs{end+1} = sprintf('satir 40: %s', e_.message); end\ntry; [n_, d_] = tfdata(tf(G(1,2)), 'v'); out.c7.tf01.n = n_; out.c7.tf01.d = d_;; catch e_; out.errs{end+1} = sprintf('satir 41: %s', e_.message); end\ntry; [z_, p_, k_] = zpkdata(zpk(G(1,2)), 'v'); out.c7.zpk01.z = spt_c(z_); out.c7.zpk01.p = spt_c(p_); out.c7.zpk01.k = k_;; catch e_; out.errs{end+1} = sprintf('satir 42: %s', e_.message); end\ntry; [n_, d_] = tfdata(tf(G(1,3)), 'v'); out.c7.tf02.n = n_; out.c7.tf02.d = d_;; catch e_; out.errs{end+1} = sprintf('satir 43: %s', e_.message); end\ntry; [z_, p_, k_] = zpkdata(zpk(G(1,3)), 'v'); out.c7.zpk02.z = spt_c(z_); out.c7.zpk02.p = spt_c(p_); out.c7.zpk02.k = k_;; catch e_; out.errs{end+1} = sprintf('satir 44: %s', e_.message); end\ntry; [n_, d_] = tfdata(tf(G(2,1)), 'v'); out.c7.tf10.n = n_; out.c7.tf10.d = d_;; catch e_; out.errs{end+1} = sprintf('satir 45: %s', e_.message); end\ntry; [z_, p_, k_] = zpkdata(zpk(G(2,1)), 'v'); out.c7.zpk10.z = spt_c(z_); out.c7.zpk10.p = spt_c(p_); out.c7.zpk10.k = k_;; catch e_; out.errs{end+1} = sprintf('satir 46: %s', e_.message); end\ntry; [n_, d_] = tfdata(tf(G(2,2)), 'v'); out.c7.tf11.n = n_; out.c7.tf11.d = d_;; catch e_; out.errs{end+1} = sprintf('satir 47: %s', e_.message); end\ntry; [z_, p_, k_] = zpkdata(zpk(G(2,2)), 'v'); out.c7.zpk11.z = spt_c(z_); out.c7.zpk11.p = spt_c(p_); out.c7.zpk11.k = k_;; catch e_; out.errs{end+1} = sprintf('satir 48: %s', e_.message); end\ntry; [n_, d_] = tfdata(tf(G(2,3)), 'v'); out.c7.tf12.n = n_; out.c7.tf12.d = d_;; catch e_; out.errs{end+1} = sprintf('satir 49: %s', e_.message); end\ntry; [z_, p_, k_] = zpkdata(zpk(G(2,3)), 'v'); out.c7.zpk12.z = spt_c(z_); out.c7.zpk12.p = spt_c(p_); out.c7.zpk12.k = k_;; catch e_; out.errs{end+1} = sprintf('satir 50: %s', e_.message); end\ntry; S = ss(G); out.c7.n = order(S); mk = zeros(size(S.D,1), size(S.D,2), 7); mk(:,:,1) = S.D; for q = 1:6, mk(:,:,q+1) = S.C*S.A^(q-1)*S.B; end; out.c7.mk = mk; out.c7.eig = spt_c(eig(S.A)); out.c7.pole = spt_c(pole(G)); out.c7.tzero = spt_c(tzero(G));; catch e_; out.errs{end+1} = sprintf('satir 51: %s', e_.message); end\ntry; G = ss([0.0 1.0 0.0;0.0 0.0 1.0;-6.0 -11.0 -6.0],[0.0 1.0;1.0 0.0;0.0 2.0],[1.0 0.0 0.0;0.0 1.0 1.0],[0.0 0.5;0.0 0.0],0.0); w = [0.13 0.7 1.9 4.3 11.0];; catch e_; out.errs{end+1} = sprintf('satir 52: %s', e_.message); end\ntry; out.c8.re = real(freqresp(G, w)); out.c8.im = imag(freqresp(G, w));; catch e_; out.errs{end+1} = sprintf('satir 53: %s', e_.message); end\ntry; [n_, d_] = tfdata(tf(G(1,1)), 'v'); out.c8.tf00.n = n_; out.c8.tf00.d = d_;; catch e_; out.errs{end+1} = sprintf('satir 54: %s', e_.message); end\ntry; [z_, p_, k_] = zpkdata(zpk(G(1,1)), 'v'); out.c8.zpk00.z = spt_c(z_); out.c8.zpk00.p = spt_c(p_); out.c8.zpk00.k = k_;; catch e_; out.errs{end+1} = sprintf('satir 55: %s', e_.message); end\ntry; [n_, d_] = tfdata(tf(G(1,2)), 'v'); out.c8.tf01.n = n_; out.c8.tf01.d = d_;; catch e_; out.errs{end+1} = sprintf('satir 56: %s', e_.message); end\ntry; [z_, p_, k_] = zpkdata(zpk(G(1,2)), 'v'); out.c8.zpk01.z = spt_c(z_); out.c8.zpk01.p = spt_c(p_); out.c8.zpk01.k = k_;; catch e_; out.errs{end+1} = sprintf('satir 57: %s', e_.message); end\ntry; [n_, d_] = tfdata(tf(G(2,1)), 'v'); out.c8.tf10.n = n_; out.c8.tf10.d = d_;; catch e_; out.errs{end+1} = sprintf('satir 58: %s', e_.message); end\ntry; [z_, p_, k_] = zpkdata(zpk(G(2,1)), 'v'); out.c8.zpk10.z = spt_c(z_); out.c8.zpk10.p = spt_c(p_); out.c8.zpk10.k = k_;; catch e_; out.errs{end+1} = sprintf('satir 59: %s', e_.message); end\ntry; [n_, d_] = tfdata(tf(G(2,2)), 'v'); out.c8.tf11.n = n_; out.c8.tf11.d = d_;; catch e_; out.errs{end+1} = sprintf('satir 60: %s', e_.message); end\ntry; [z_, p_, k_] = zpkdata(zpk(G(2,2)), 'v'); out.c8.zpk11.z = spt_c(z_); out.c8.zpk11.p = spt_c(p_); out.c8.zpk11.k = k_;; catch e_; out.errs{end+1} = sprintf('satir 61: %s', e_.message); end\ntry; S = ss(G); out.c8.n = order(S); mk = zeros(size(S.D,1), size(S.D,2), 7); mk(:,:,1) = S.D; for q = 1:6, mk(:,:,q+1) = S.C*S.A^(q-1)*S.B; end; out.c8.mk = mk; out.c8.eig = spt_c(eig(S.A)); out.c8.pole = spt_c(pole(G)); out.c8.tzero = spt_c(tzero(G));; catch e_; out.errs{end+1} = sprintf('satir 62: %s', e_.message); end\ntry; G = zpk({[],[-3.0]},{[-1.0],[-1.0]},[1.0 2.0],0.0); w = [0.13 0.7 1.9 4.3 11.0];; catch e_; out.errs{end+1} = sprintf('satir 63: %s', e_.message); end\ntry; out.c9.re = real(freqresp(G, w)); out.c9.im = imag(freqresp(G, w));; catch e_; out.errs{end+1} = sprintf('satir 64: %s', e_.message); end\ntry; [n_, d_] = tfdata(tf(G(1,1)), 'v'); out.c9.tf00.n = n_; out.c9.tf00.d = d_;; catch e_; out.errs{end+1} = sprintf('satir 65: %s', e_.message); end\ntry; [z_, p_, k_] = zpkdata(zpk(G(1,1)), 'v'); out.c9.zpk00.z = spt_c(z_); out.c9.zpk00.p = spt_c(p_); out.c9.zpk00.k = k_;; catch e_; out.errs{end+1} = sprintf('satir 66: %s', e_.message); end\ntry; [n_, d_] = tfdata(tf(G(1,2)), 'v'); out.c9.tf01.n = n_; out.c9.tf01.d = d_;; catch e_; out.errs{end+1} = sprintf('satir 67: %s', e_.message); end\ntry; [z_, p_, k_] = zpkdata(zpk(G(1,2)), 'v'); out.c9.zpk01.z = spt_c(z_); out.c9.zpk01.p = spt_c(p_); out.c9.zpk01.k = k_;; catch e_; out.errs{end+1} = sprintf('satir 68: %s', e_.message); end\ntry; S = ss(G); out.c9.n = order(S); mk = zeros(size(S.D,1), size(S.D,2), 7); mk(:,:,1) = S.D; for q = 1:6, mk(:,:,q+1) = S.C*S.A^(q-1)*S.B; end; out.c9.mk = mk; out.c9.eig = spt_c(eig(S.A)); out.c9.pole = spt_c(pole(G)); out.c9.tzero = spt_c(tzero(G));; catch e_; out.errs{end+1} = sprintf('satir 69: %s', e_.message); end\ntry; G = tf([1.0 1.0000001],[1.0 3.0 2.0],0.0); w = [0.13 0.7 1.9 4.3 11.0];; catch e_; out.errs{end+1} = sprintf('satir 70: %s', e_.message); end\ntry; out.c10.re = real(freqresp(G, w)); out.c10.im = imag(freqresp(G, w));; catch e_; out.errs{end+1} = sprintf('satir 71: %s', e_.message); end\ntry; [n_, d_] = tfdata(tf(G(1,1)), 'v'); out.c10.tf00.n = n_; out.c10.tf00.d = d_;; catch e_; out.errs{end+1} = sprintf('satir 72: %s', e_.message); end\ntry; [z_, p_, k_] = zpkdata(zpk(G(1,1)), 'v'); out.c10.zpk00.z = spt_c(z_); out.c10.zpk00.p = spt_c(p_); out.c10.zpk00.k = k_;; catch e_; out.errs{end+1} = sprintf('satir 73: %s', e_.message); end\ntry; S = ss(G); out.c10.n = order(S); mk = zeros(size(S.D,1), size(S.D,2), 7); mk(:,:,1) = S.D; for q = 1:6, mk(:,:,q+1) = S.C*S.A^(q-1)*S.B; end; out.c10.mk = mk; out.c10.eig = spt_c(eig(S.A)); out.c10.pole = spt_c(pole(G)); out.c10.tzero = spt_c(tzero(G));; catch e_; out.errs{end+1} = sprintf('satir 74: %s', e_.message); end\ntry; G = tf([2.0 3.0 1.0],[1.0 5.0 6.0],0.0); w = [0.13 0.7 1.9 4.3 11.0];; catch e_; out.errs{end+1} = sprintf('satir 75: %s', e_.message); end\ntry; out.c11.re = real(freqresp(G, w)); out.c11.im = imag(freqresp(G, w));; catch e_; out.errs{end+1} = sprintf('satir 76: %s', e_.message); end\ntry; [n_, d_] = tfdata(tf(G(1,1)), 'v'); out.c11.tf00.n = n_; out.c11.tf00.d = d_;; catch e_; out.errs{end+1} = sprintf('satir 77: %s', e_.message); end\ntry; [z_, p_, k_] = zpkdata(zpk(G(1,1)), 'v'); out.c11.zpk00.z = spt_c(z_); out.c11.zpk00.p = spt_c(p_); out.c11.zpk00.k = k_;; catch e_; out.errs{end+1} = sprintf('satir 78: %s', e_.message); end\ntry; S = ss(G); out.c11.n = order(S); mk = zeros(size(S.D,1), size(S.D,2), 7); mk(:,:,1) = S.D; for q = 1:6, mk(:,:,q+1) = S.C*S.A^(q-1)*S.B; end; out.c11.mk = mk; out.c11.eig = spt_c(eig(S.A)); out.c11.pole = spt_c(pole(G)); out.c11.tzero = spt_c(tzero(G));; catch e_; out.errs{end+1} = sprintf('satir 79: %s', e_.message); end\ntry; G = tf([1.0 -1.0],[1.0 -2.0 5.0],0.0); w = [0.13 0.7 1.9 4.3 11.0];; catch e_; out.errs{end+1} = sprintf('satir 80: %s', e_.message); end\ntry; out.c12.re = real(freqresp(G, w)); out.c12.im = imag(freqresp(G, w));; catch e_; out.errs{end+1} = sprintf('satir 81: %s', e_.message); end\ntry; [n_, d_] = tfdata(tf(G(1,1)), 'v'); out.c12.tf00.n = n_; out.c12.tf00.d = d_;; catch e_; out.errs{end+1} = sprintf('satir 82: %s', e_.message); end\ntry; [z_, p_, k_] = zpkdata(zpk(G(1,1)), 'v'); out.c12.zpk00.z = spt_c(z_); out.c12.zpk00.p = spt_c(p_); out.c12.zpk00.k = k_;; catch e_; out.errs{end+1} = sprintf('satir 83: %s', e_.message); end\ntry; S = ss(G); out.c12.n = order(S); mk = zeros(size(S.D,1), size(S.D,2), 7); mk(:,:,1) = S.D; for q = 1:6, mk(:,:,q+1) = S.C*S.A^(q-1)*S.B; end; out.c12.mk = mk; out.c12.eig = spt_c(eig(S.A)); out.c12.pole = spt_c(pole(G)); out.c12.tzero = spt_c(tzero(G));; catch e_; out.errs{end+1} = sprintf('satir 84: %s', e_.message); end\ntry; G = ss([0.5 0.1 0.0 0.0;0.0 0.8 0.2 0.0;0.0 0.0 -0.3 1.0;0.0 0.0 -0.2 0.1],[1.0 0.0;0.0 1.0;0.5 0.0;0.0 0.3],[1.0 0.0 1.0 0.0],[0.0 0.1],0.2); w = [0.65 3.4999999999999996 9.499999999999998 15.5];; catch e_; out.errs{end+1} = sprintf('satir 85: %s', e_.message); end\ntry; out.c13.re = real(freqresp(G, w)); out.c13.im = imag(freqresp(G, w));; catch e_; out.errs{end+1} = sprintf('satir 86: %s', e_.message); end\ntry; [n_, d_] = tfdata(tf(G(1,1)), 'v'); out.c13.tf00.n = n_; out.c13.tf00.d = d_;; catch e_; out.errs{end+1} = sprintf('satir 87: %s', e_.message); end\ntry; [z_, p_, k_] = zpkdata(zpk(G(1,1)), 'v'); out.c13.zpk00.z = spt_c(z_); out.c13.zpk00.p = spt_c(p_); out.c13.zpk00.k = k_;; catch e_; out.errs{end+1} = sprintf('satir 88: %s', e_.message); end\ntry; [n_, d_] = tfdata(tf(G(1,2)), 'v'); out.c13.tf01.n = n_; out.c13.tf01.d = d_;; catch e_; out.errs{end+1} = sprintf('satir 89: %s', e_.message); end\ntry; [z_, p_, k_] = zpkdata(zpk(G(1,2)), 'v'); out.c13.zpk01.z = spt_c(z_); out.c13.zpk01.p = spt_c(p_); out.c13.zpk01.k = k_;; catch e_; out.errs{end+1} = sprintf('satir 90: %s', e_.message); end\ntry; S = ss(G); out.c13.n = order(S); mk = zeros(size(S.D,1), size(S.D,2), 7); mk(:,:,1) = S.D; for q = 1:6, mk(:,:,q+1) = S.C*S.A^(q-1)*S.B; end; out.c13.mk = mk; out.c13.eig = spt_c(eig(S.A)); out.c13.pole = spt_c(pole(G)); out.c13.tzero = spt_c(tzero(G));; catch e_; out.errs{end+1} = sprintf('satir 91: %s', e_.message); end\ntry; G = zpk([complex(-0.05,2.0) complex(-0.05,-2.0)],[complex(-1.0,0.0) complex(-0.2,2.2) complex(-0.2,-2.2)],-3.0,0.0); w = [0.13 0.7 1.9 4.3 11.0];; catch e_; out.errs{end+1} = sprintf('satir 92: %s', e_.message); end\ntry; out.c14.re = real(freqresp(G, w)); out.c14.im = imag(freqresp(G, w));; catch e_; out.errs{end+1} = sprintf('satir 93: %s', e_.message); end\ntry; [n_, d_] = tfdata(tf(G(1,1)), 'v'); out.c14.tf00.n = n_; out.c14.tf00.d = d_;; catch e_; out.errs{end+1} = sprintf('satir 94: %s', e_.message); end\ntry; [z_, p_, k_] = zpkdata(zpk(G(1,1)), 'v'); out.c14.zpk00.z = spt_c(z_); out.c14.zpk00.p = spt_c(p_); out.c14.zpk00.k = k_;; catch e_; out.errs{end+1} = sprintf('satir 95: %s', e_.message); end\ntry; S = ss(G); out.c14.n = order(S); mk = zeros(size(S.D,1), size(S.D,2), 7); mk(:,:,1) = S.D; for q = 1:6, mk(:,:,q+1) = S.C*S.A^(q-1)*S.B; end; out.c14.mk = mk; out.c14.eig = spt_c(eig(S.A)); out.c14.pole = spt_c(pole(G)); out.c14.tzero = spt_c(tzero(G));; catch e_; out.errs{end+1} = sprintf('satir 96: %s', e_.message); end\ntry; G = tf({[1.0],[2.0];[3.0],[4.0]},{[1.0 1.0],[1.0 1.0];[1.0 1.0],[1.0 1.0]},0.0); w = [0.13 0.7 1.9 4.3 11.0];; catch e_; out.errs{end+1} = sprintf('satir 97: %s', e_.message); end\ntry; out.c15.re = real(freqresp(G, w)); out.c15.im = imag(freqresp(G, w));; catch e_; out.errs{end+1} = sprintf('satir 98: %s', e_.message); end\ntry; [n_, d_] = tfdata(tf(G(1,1)), 'v'); out.c15.tf00.n = n_; out.c15.tf00.d = d_;; catch e_; out.errs{end+1} = sprintf('satir 99: %s', e_.message); end\ntry; [z_, p_, k_] = zpkdata(zpk(G(1,1)), 'v'); out.c15.zpk00.z = spt_c(z_); out.c15.zpk00.p = spt_c(p_); out.c15.zpk00.k = k_;; catch e_; out.errs{end+1} = sprintf('satir 100: %s', e_.message); end\ntry; [n_, d_] = tfdata(tf(G(1,2)), 'v'); out.c15.tf01.n = n_; out.c15.tf01.d = d_;; catch e_; out.errs{end+1} = sprintf('satir 101: %s', e_.message); end\ntry; [z_, p_, k_] = zpkdata(zpk(G(1,2)), 'v'); out.c15.zpk01.z = spt_c(z_); out.c15.zpk01.p = spt_c(p_); out.c15.zpk01.k = k_;; catch e_; out.errs{end+1} = sprintf('satir 102: %s', e_.message); end\ntry; [n_, d_] = tfdata(tf(G(2,1)), 'v'); out.c15.tf10.n = n_; out.c15.tf10.d = d_;; catch e_; out.errs{end+1} = sprintf('satir 103: %s', e_.message); end\ntry; [z_, p_, k_] = zpkdata(zpk(G(2,1)), 'v'); out.c15.zpk10.z = spt_c(z_); out.c15.zpk10.p = spt_c(p_); out.c15.zpk10.k = k_;; catch e_; out.errs{end+1} = sprintf('satir 104: %s', e_.message); end\ntry; [n_, d_] = tfdata(tf(G(2,2)), 'v'); out.c15.tf11.n = n_; out.c15.tf11.d = d_;; catch e_; out.errs{end+1} = sprintf('satir 105: %s', e_.message); end\ntry; [z_, p_, k_] = zpkdata(zpk(G(2,2)), 'v'); out.c15.zpk11.z = spt_c(z_); out.c15.zpk11.p = spt_c(p_); out.c15.zpk11.k = k_;; catch e_; out.errs{end+1} = sprintf('satir 106: %s', e_.message); end\ntry; S = ss(G); out.c15.n = order(S); mk = zeros(size(S.D,1), size(S.D,2), 7); mk(:,:,1) = S.D; for q = 1:6, mk(:,:,q+1) = S.C*S.A^(q-1)*S.B; end; out.c15.mk = mk; out.c15.eig = spt_c(eig(S.A)); out.c15.pole = spt_c(pole(G)); out.c15.tzero = spt_c(tzero(G));; catch e_; out.errs{end+1} = sprintf('satir 107: %s', e_.message); end\ntry; G = tf({[1.0 1.0];[1.0]},{[1.0 2.0 1.0];[1.0 1.0]},0.0); w = [0.13 0.7 1.9 4.3 11.0];; catch e_; out.errs{end+1} = sprintf('satir 108: %s', e_.message); end\ntry; out.c16.re = real(freqresp(G, w)); out.c16.im = imag(freqresp(G, w));; catch e_; out.errs{end+1} = sprintf('satir 109: %s', e_.message); end\ntry; [n_, d_] = tfdata(tf(G(1,1)), 'v'); out.c16.tf00.n = n_; out.c16.tf00.d = d_;; catch e_; out.errs{end+1} = sprintf('satir 110: %s', e_.message); end\ntry; [z_, p_, k_] = zpkdata(zpk(G(1,1)), 'v'); out.c16.zpk00.z = spt_c(z_); out.c16.zpk00.p = spt_c(p_); out.c16.zpk00.k = k_;; catch e_; out.errs{end+1} = sprintf('satir 111: %s', e_.message); end\ntry; [n_, d_] = tfdata(tf(G(2,1)), 'v'); out.c16.tf10.n = n_; out.c16.tf10.d = d_;; catch e_; out.errs{end+1} = sprintf('satir 112: %s', e_.message); end\ntry; [z_, p_, k_] = zpkdata(zpk(G(2,1)), 'v'); out.c16.zpk10.z = spt_c(z_); out.c16.zpk10.p = spt_c(p_); out.c16.zpk10.k = k_;; catch e_; out.errs{end+1} = sprintf('satir 113: %s', e_.message); end\ntry; S = ss(G); out.c16.n = order(S); mk = zeros(size(S.D,1), size(S.D,2), 7); mk(:,:,1) = S.D; for q = 1:6, mk(:,:,q+1) = S.C*S.A^(q-1)*S.B; end; out.c16.mk = mk; out.c16.eig = spt_c(eig(S.A)); out.c16.pole = spt_c(pole(G)); out.c16.tzero = spt_c(tzero(G));; catch e_; out.errs{end+1} = sprintf('satir 114: %s', e_.message); end\ntry; G1 = tf([1.0 2.0],[1.0 3.0 5.0 7.0],0.0);; catch e_; out.errs{end+1} = sprintf('satir 115: %s', e_.message); end\ntry; G2 = tf([1.0],[1.0 1.0],0.0);; catch e_; out.errs{end+1} = sprintf('satir 116: %s', e_.message); end\ntry; G3 = tf([2.0 3.0 1.0],[1.0 5.0 6.0],0.0);; catch e_; out.errs{end+1} = sprintf('satir 117: %s', e_.message); end\ntry; Z1 = zpk([-2.0],[complex(-1.0,0.0) complex(-3.0,4.0) complex(-3.0,-4.0)],5.0,0.0);; catch e_; out.errs{end+1} = sprintf('satir 118: %s', e_.message); end\ntry; Z2 = zpk([],[-1.0 -2.0],1.0,0.0);; catch e_; out.errs{end+1} = sprintf('satir 119: %s', e_.message); end\ntry; S1 = ss([-1.0 2.0;-3.0 -4.0],[1.0;0.5],[1.0 -1.0],[0.2],0.0);; catch e_; out.errs{end+1} = sprintf('satir 120: %s', e_.message); end\ntry; T2 = tf({[1.0],[1.0 2.0];[2.0 0.0],[1.0]},{[1.0 1.0],[1.0 3.0 2.0];[1.0 2.0 5.0],[1.0 4.0]},0.0);; catch e_; out.errs{end+1} = sprintf('satir 121: %s', e_.message); end\ntry; M2 = ss([-1.0 0.5 0.0;0.0 -2.0 1.0;0.3 0.0 -3.0],[1.0 0.0;0.0 1.0;1.0 1.0],[1.0 0.0 1.0;0.0 1.0 0.0],[0.0 0.1;0.0 0.0],0.0);; catch e_; out.errs{end+1} = sprintf('satir 122: %s', e_.message); end\ntry; D1 = tf([0.5 0.1],[1.0 -0.6 0.08],0.1);; catch e_; out.errs{end+1} = sprintf('satir 123: %s', e_.message); end\ntry; D2 = tf([1.0],[1.0 -0.5],0.1,'IODelay',[2.0]);; catch e_; out.errs{end+1} = sprintf('satir 124: %s', e_.message); end\ntry; D3 = tf([0.3],[1.0 -0.2],0.1,'InputDelay',[1.0]);; catch e_; out.errs{end+1} = sprintf('satir 125: %s', e_.message); end\ntry; L1 = tf([1.0],[1.0 1.0],0.0,'InputDelay',[0.1]);; catch e_; out.errs{end+1} = sprintf('satir 126: %s', e_.message); end\ntry; L2 = tf([1.0],[1.0 2.0],0.0,'OutputDelay',[0.2]);; catch e_; out.errs{end+1} = sprintf('satir 127: %s', e_.message); end\ntry; L3 = tf([1.0],[1.0 1.0],0.0,'IODelay',[0.1]);; catch e_; out.errs{end+1} = sprintf('satir 128: %s', e_.message); end\ntry; L4 = tf([1.0],[1.0 2.0],0.0,'IODelay',[0.2]);; catch e_; out.errs{end+1} = sprintf('satir 129: %s', e_.message); end\ntry; SL = ss([-1.0 0.0;0.0 -2.0],[1.0 0.0;0.0 1.0],[1.0 1.0;0.0 1.0],[0.0 0.0;0.0 0.0],0.0,'InputDelay',[0.3 0.3]);; catch e_; out.errs{end+1} = sprintf('satir 130: %s', e_.message); end\ntry; G = G1 + G2; w = w_c; if G.Ts > 0, w = [0.13 0.7 1.9 3.1] / G.Ts; end; out.a_add.re = real(freqresp(G, w)); out.a_add.im = imag(freqresp(G, w)); out.a_add.cls = class(G); out.a_add.n = order(G); out.a_add.size = size(G);; catch e_; out.errs{end+1} = sprintf('satir 131: %s', e_.message); end\ntry; if isa(G, 'tf') && isequal(size(G), [1 1]), [n_, d_] = tfdata(G, 'v'); out.a_add.tn = n_; out.a_add.td = d_; out.a_add.io = G.IODelay; out.a_add.ind = G.InputDelay; out.a_add.outd = G.OutputDelay; end; catch e_; out.errs{end+1} = sprintf('satir 132: %s', e_.message); end\ntry; if isa(G, 'zpk') && isequal(size(G), [1 1]), [z_, p_, k_] = zpkdata(G, 'v'); out.a_add.zz = spt_c(z_); out.a_add.zp = spt_c(p_); out.a_add.zk = k_; end; catch e_; out.errs{end+1} = sprintf('satir 133: %s', e_.message); end\ntry; G = G1 * G2; w = w_c; if G.Ts > 0, w = [0.13 0.7 1.9 3.1] / G.Ts; end; out.a_mul.re = real(freqresp(G, w)); out.a_mul.im = imag(freqresp(G, w)); out.a_mul.cls = class(G); out.a_mul.n = order(G); out.a_mul.size = size(G);; catch e_; out.errs{end+1} = sprintf('satir 134: %s', e_.message); end\ntry; if isa(G, 'tf') && isequal(size(G), [1 1]), [n_, d_] = tfdata(G, 'v'); out.a_mul.tn = n_; out.a_mul.td = d_; out.a_mul.io = G.IODelay; out.a_mul.ind = G.InputDelay; out.a_mul.outd = G.OutputDelay; end; catch e_; out.errs{end+1} = sprintf('satir 135: %s', e_.message); end\ntry; if isa(G, 'zpk') && isequal(size(G), [1 1]), [z_, p_, k_] = zpkdata(G, 'v'); out.a_mul.zz = spt_c(z_); out.a_mul.zp = spt_c(p_); out.a_mul.zk = k_; end; catch e_; out.errs{end+1} = sprintf('satir 136: %s', e_.message); end\ntry; G = G1 / G2; w = w_c; if G.Ts > 0, w = [0.13 0.7 1.9 3.1] / G.Ts; end; out.a_div.re = real(freqresp(G, w)); out.a_div.im = imag(freqresp(G, w)); out.a_div.cls = class(G); out.a_div.n = order(G); out.a_div.size = size(G);; catch e_; out.errs{end+1} = sprintf('satir 137: %s', e_.message); end\ntry; if isa(G, 'tf') && isequal(size(G), [1 1]), [n_, d_] = tfdata(G, 'v'); out.a_div.tn = n_; out.a_div.td = d_; out.a_div.io = G.IODelay; out.a_div.ind = G.InputDelay; out.a_div.outd = G.OutputDelay; end; catch e_; out.errs{end+1} = sprintf('satir 138: %s', e_.message); end\ntry; if isa(G, 'zpk') && isequal(size(G), [1 1]), [z_, p_, k_] = zpkdata(G, 'v'); out.a_div.zz = spt_c(z_); out.a_div.zp = spt_c(p_); out.a_div.zk = k_; end; catch e_; out.errs{end+1} = sprintf('satir 139: %s', e_.message); end\ntry; G = G1 - G1; w = w_c; if G.Ts > 0, w = [0.13 0.7 1.9 3.1] / G.Ts; end; out.a_sub0.re = real(freqresp(G, w)); out.a_sub0.im = imag(freqresp(G, w)); out.a_sub0.cls = class(G); out.a_sub0.n = order(G); out.a_sub0.size = size(G);; catch e_; out.errs{end+1} = sprintf('satir 140: %s', e_.message); end\ntry; if isa(G, 'tf') && isequal(size(G), [1 1]), [n_, d_] = tfdata(G, 'v'); out.a_sub0.tn = n_; out.a_sub0.td = d_; out.a_sub0.io = G.IODelay; out.a_sub0.ind = G.InputDelay; out.a_sub0.outd = G.OutputDelay; end; catch e_; out.errs{end+1} = sprintf('satir 141: %s', e_.message); end\ntry; if isa(G, 'zpk') && isequal(size(G), [1 1]), [z_, p_, k_] = zpkdata(G, 'v'); out.a_sub0.zz = spt_c(z_); out.a_sub0.zp = spt_c(p_); out.a_sub0.zk = k_; end; catch e_; out.errs{end+1} = sprintf('satir 142: %s', e_.message); end\ntry; G = 3 * G1 + 2; w = w_c; if G.Ts > 0, w = [0.13 0.7 1.9 3.1] / G.Ts; end; out.a_lin.re = real(freqresp(G, w)); out.a_lin.im = imag(freqresp(G, w)); out.a_lin.cls = class(G); out.a_lin.n = order(G); out.a_lin.size = size(G);; catch e_; out.errs{end+1} = sprintf('satir 143: %s', e_.message); end\ntry; if isa(G, 'tf') && isequal(size(G), [1 1]), [n_, d_] = tfdata(G, 'v'); out.a_lin.tn = n_; out.a_lin.td = d_; out.a_lin.io = G.IODelay; out.a_lin.ind = G.InputDelay; out.a_lin.outd = G.OutputDelay; end; catch e_; out.errs{end+1} = sprintf('satir 144: %s', e_.message); end\ntry; if isa(G, 'zpk') && isequal(size(G), [1 1]), [z_, p_, k_] = zpkdata(G, 'v'); out.a_lin.zz = spt_c(z_); out.a_lin.zp = spt_c(p_); out.a_lin.zk = k_; end; catch e_; out.errs{end+1} = sprintf('satir 145: %s', e_.message); end\ntry; G = G2^3; w = w_c; if G.Ts > 0, w = [0.13 0.7 1.9 3.1] / G.Ts; end; out.a_pow3.re = real(freqresp(G, w)); out.a_pow3.im = imag(freqresp(G, w)); out.a_pow3.cls = class(G); out.a_pow3.n = order(G); out.a_pow3.size = size(G);; catch e_; out.errs{end+1} = sprintf('satir 146: %s', e_.message); end\ntry; if isa(G, 'tf') && isequal(size(G), [1 1]), [n_, d_] = tfdata(G, 'v'); out.a_pow3.tn = n_; out.a_pow3.td = d_; out.a_pow3.io = G.IODelay; out.a_pow3.ind = G.InputDelay; out.a_pow3.outd = G.OutputDelay; end; catch e_; out.errs{end+1} = sprintf('satir 147: %s', e_.message); end\ntry; if isa(G, 'zpk') && isequal(size(G), [1 1]), [z_, p_, k_] = zpkdata(G, 'v'); out.a_pow3.zz = spt_c(z_); out.a_pow3.zp = spt_c(p_); out.a_pow3.zk = k_; end; catch e_; out.errs{end+1} = sprintf('satir 148: %s', e_.message); end\ntry; G = G2^-2; w = w_c; if G.Ts > 0, w = [0.13 0.7 1.9 3.1] / G.Ts; end; out.a_powm2.re = real(freqresp(G, w)); out.a_powm2.im = imag(freqresp(G, w)); out.a_powm2.cls = class(G); out.a_powm2.n = order(G); out.a_powm2.size = size(G);; catch e_; out.errs{end+1} = sprintf('satir 149: %s', e_.message); end\ntry; if isa(G, 'tf') && isequal(size(G), [1 1]), [n_, d_] = tfdata(G, 'v'); out.a_powm2.tn = n_; out.a_powm2.td = d_; out.a_powm2.io = G.IODelay; out.a_powm2.ind = G.InputDelay; out.a_powm2.outd = G.OutputDelay; end; catch e_; out.errs{end+1} = sprintf('satir 150: %s', e_.message); end\ntry; if isa(G, 'zpk') && isequal(size(G), [1 1]), [z_, p_, k_] = zpkdata(G, 'v'); out.a_powm2.zz = spt_c(z_); out.a_powm2.zp = spt_c(p_); out.a_powm2.zk = k_; end; catch e_; out.errs{end+1} = sprintf('satir 151: %s', e_.message); end\ntry; G = inv(G3); w = w_c; if G.Ts > 0, w = [0.13 0.7 1.9 3.1] / G.Ts; end; out.a_inv.re = real(freqresp(G, w)); out.a_inv.im = imag(freqresp(G, w)); out.a_inv.cls = class(G); out.a_inv.n = order(G); out.a_inv.size = size(G);; catch e_; out.errs{end+1} = sprintf('satir 152: %s', e_.message); end\ntry; if isa(G, 'tf') && isequal(size(G), [1 1]), [n_, d_] = tfdata(G, 'v'); out.a_inv.tn = n_; out.a_inv.td = d_; out.a_inv.io = G.IODelay; out.a_inv.ind = G.InputDelay; out.a_inv.outd = G.OutputDelay; end; catch e_; out.errs{end+1} = sprintf('satir 153: %s', e_.message); end\ntry; if isa(G, 'zpk') && isequal(size(G), [1 1]), [z_, p_, k_] = zpkdata(G, 'v'); out.a_inv.zz = spt_c(z_); out.a_inv.zp = spt_c(p_); out.a_inv.zk = k_; end; catch e_; out.errs{end+1} = sprintf('satir 154: %s', e_.message); end\ntry; G = Z1 + Z2; w = w_c; if G.Ts > 0, w = [0.13 0.7 1.9 3.1] / G.Ts; end; out.a_zadd.re = real(freqresp(G, w)); out.a_zadd.im = imag(freqresp(G, w)); out.a_zadd.cls = class(G); out.a_zadd.n = order(G); out.a_zadd.size = size(G);; catch e_; out.errs{end+1} = sprintf('satir 155: %s', e_.message); end\ntry; if isa(G, 'tf') && isequal(size(G), [1 1]), [n_, d_] = tfdata(G, 'v'); out.a_zadd.tn = n_; out.a_zadd.td = d_; out.a_zadd.io = G.IODelay; out.a_zadd.ind = G.InputDelay; out.a_zadd.outd = G.OutputDelay; end; catch e_; out.errs{end+1} = sprintf('satir 156: %s', e_.message); end\ntry; if isa(G, 'zpk') && isequal(size(G), [1 1]), [z_, p_, k_] = zpkdata(G, 'v'); out.a_zadd.zz = spt_c(z_); out.a_zadd.zp = spt_c(p_); out.a_zadd.zk = k_; end; catch e_; out.errs{end+1} = sprintf('satir 157: %s', e_.message); end\ntry; G = Z1 * G2; w = w_c; if G.Ts > 0, w = [0.13 0.7 1.9 3.1] / G.Ts; end; out.a_zmul.re = real(freqresp(G, w)); out.a_zmul.im = imag(freqresp(G, w)); out.a_zmul.cls = class(G); out.a_zmul.n = order(G); out.a_zmul.size = size(G);; catch e_; out.errs{end+1} = sprintf('satir 158: %s', e_.message); end\ntry; if isa(G, 'tf') && isequal(size(G), [1 1]), [n_, d_] = tfdata(G, 'v'); out.a_zmul.tn = n_; out.a_zmul.td = d_; out.a_zmul.io = G.IODelay; out.a_zmul.ind = G.InputDelay; out.a_zmul.outd = G.OutputDelay; end; catch e_; out.errs{end+1} = sprintf('satir 159: %s', e_.message); end\ntry; if isa(G, 'zpk') && isequal(size(G), [1 1]), [z_, p_, k_] = zpkdata(G, 'v'); out.a_zmul.zz = spt_c(z_); out.a_zmul.zp = spt_c(p_); out.a_zmul.zk = k_; end; catch e_; out.errs{end+1} = sprintf('satir 160: %s', e_.message); end\ntry; G = Z1 / Z2; w = w_c; if G.Ts > 0, w = [0.13 0.7 1.9 3.1] / G.Ts; end; out.a_zdiv.re = real(freqresp(G, w)); out.a_zdiv.im = imag(freqresp(G, w)); out.a_zdiv.cls = class(G); out.a_zdiv.n = order(G); out.a_zdiv.size = size(G);; catch e_; out.errs{end+1} = sprintf('satir 161: %s', e_.message); end\ntry; if isa(G, 'tf') && isequal(size(G), [1 1]), [n_, d_] = tfdata(G, 'v'); out.a_zdiv.tn = n_; out.a_zdiv.td = d_; out.a_zdiv.io = G.IODelay; out.a_zdiv.ind = G.InputDelay; out.a_zdiv.outd = G.OutputDelay; end; catch e_; out.errs{end+1} = sprintf('satir 162: %s', e_.message); end\ntry; if isa(G, 'zpk') && isequal(size(G), [1 1]), [z_, p_, k_] = zpkdata(G, 'v'); out.a_zdiv.zz = spt_c(z_); out.a_zdiv.zp = spt_c(p_); out.a_zdiv.zk = k_; end; catch e_; out.errs{end+1} = sprintf('satir 163: %s', e_.message); end\ntry; G = S1 + G1; w = w_c; if G.Ts > 0, w = [0.13 0.7 1.9 3.1] / G.Ts; end; out.a_ss_tf.re = real(freqresp(G, w)); out.a_ss_tf.im = imag(freqresp(G, w)); out.a_ss_tf.cls = class(G); out.a_ss_tf.n = order(G); out.a_ss_tf.size = size(G);; catch e_; out.errs{end+1} = sprintf('satir 164: %s', e_.message); end\ntry; if isa(G, 'tf') && isequal(size(G), [1 1]), [n_, d_] = tfdata(G, 'v'); out.a_ss_tf.tn = n_; out.a_ss_tf.td = d_; out.a_ss_tf.io = G.IODelay; out.a_ss_tf.ind = G.InputDelay; out.a_ss_tf.outd = G.OutputDelay; end; catch e_; out.errs{end+1} = sprintf('satir 165: %s', e_.message); end\ntry; if isa(G, 'zpk') && isequal(size(G), [1 1]), [z_, p_, k_] = zpkdata(G, 'v'); out.a_ss_tf.zz = spt_c(z_); out.a_ss_tf.zp = spt_c(p_); out.a_ss_tf.zk = k_; end; catch e_; out.errs{end+1} = sprintf('satir 166: %s', e_.message); end\ntry; G = S1 * G1 * S1; w = w_c; if G.Ts > 0, w = [0.13 0.7 1.9 3.1] / G.Ts; end; out.a_ss_mul.re = real(freqresp(G, w)); out.a_ss_mul.im = imag(freqresp(G, w)); out.a_ss_mul.cls = class(G); out.a_ss_mul.n = order(G); out.a_ss_mul.size = size(G);; catch e_; out.errs{end+1} = sprintf('satir 167: %s', e_.message); end\ntry; if isa(G, 'tf') && isequal(size(G), [1 1]), [n_, d_] = tfdata(G, 'v'); out.a_ss_mul.tn = n_; out.a_ss_mul.td = d_; out.a_ss_mul.io = G.IODelay; out.a_ss_mul.ind = G.InputDelay; out.a_ss_mul.outd = G.OutputDelay; end; catch e_; out.errs{end+1} = sprintf('satir 168: %s', e_.message); end\ntry; if isa(G, 'zpk') && isequal(size(G), [1 1]), [z_, p_, k_] = zpkdata(G, 'v'); out.a_ss_mul.zz = spt_c(z_); out.a_ss_mul.zp = spt_c(p_); out.a_ss_mul.zk = k_; end; catch e_; out.errs{end+1} = sprintf('satir 169: %s', e_.message); end\ntry; G = T2 * T2; w = w_c; if G.Ts > 0, w = [0.13 0.7 1.9 3.1] / G.Ts; end; out.a_mimo_mul.re = real(freqresp(G, w)); out.a_mimo_mul.im = imag(freqresp(G, w)); out.a_mimo_mul.cls = class(G); out.a_mimo_mul.n = order(G); out.a_mimo_mul.size = size(G);; catch e_; out.errs{end+1} = sprintf('satir 170: %s', e_.message); end\ntry; if isa(G, 'tf') && isequal(size(G), [1 1]), [n_, d_] = tfdata(G, 'v'); out.a_mimo_mul.tn = n_; out.a_mimo_mul.td = d_; out.a_mimo_mul.io = G.IODelay; out.a_mimo_mul.ind = G.InputDelay; out.a_mimo_mul.outd = G.OutputDelay; end; catch e_; out.errs{end+1} = sprintf('satir 171: %s', e_.message); end\ntry; if isa(G, 'zpk') && isequal(size(G), [1 1]), [z_, p_, k_] = zpkdata(G, 'v'); out.a_mimo_mul.zz = spt_c(z_); out.a_mimo_mul.zp = spt_c(p_); out.a_mimo_mul.zk = k_; end; catch e_; out.errs{end+1} = sprintf('satir 172: %s', e_.message); end\ntry; G = T2 + M2; w = w_c; if G.Ts > 0, w = [0.13 0.7 1.9 3.1] / G.Ts; end; out.a_mimo_add.re = real(freqresp(G, w)); out.a_mimo_add.im = imag(freqresp(G, w)); out.a_mimo_add.cls = class(G); out.a_mimo_add.n = order(G); out.a_mimo_add.size = size(G);; catch e_; out.errs{end+1} = sprintf('satir 173: %s', e_.message); end\ntry; if isa(G, 'tf') && isequal(size(G), [1 1]), [n_, d_] = tfdata(G, 'v'); out.a_mimo_add.tn = n_; out.a_mimo_add.td = d_; out.a_mimo_add.io = G.IODelay; out.a_mimo_add.ind = G.InputDelay; out.a_mimo_add.outd = G.OutputDelay; end; catch e_; out.errs{end+1} = sprintf('satir 174: %s', e_.message); end\ntry; if isa(G, 'zpk') && isequal(size(G), [1 1]), [z_, p_, k_] = zpkdata(G, 'v'); out.a_mimo_add.zz = spt_c(z_); out.a_mimo_add.zp = spt_c(p_); out.a_mimo_add.zk = k_; end; catch e_; out.errs{end+1} = sprintf('satir 175: %s', e_.message); end\ntry; G = M2 * T2 - 2 * M2; w = w_c; if G.Ts > 0, w = [0.13 0.7 1.9 3.1] / G.Ts; end; out.a_mimo_ss.re = real(freqresp(G, w)); out.a_mimo_ss.im = imag(freqresp(G, w)); out.a_mimo_ss.cls = class(G); out.a_mimo_ss.n = order(G); out.a_mimo_ss.size = size(G);; catch e_; out.errs{end+1} = sprintf('satir 176: %s', e_.message); end\ntry; if isa(G, 'tf') && isequal(size(G), [1 1]), [n_, d_] = tfdata(G, 'v'); out.a_mimo_ss.tn = n_; out.a_mimo_ss.td = d_; out.a_mimo_ss.io = G.IODelay; out.a_mimo_ss.ind = G.InputDelay; out.a_mimo_ss.outd = G.OutputDelay; end; catch e_; out.errs{end+1} = sprintf('satir 177: %s', e_.message); end\ntry; if isa(G, 'zpk') && isequal(size(G), [1 1]), [z_, p_, k_] = zpkdata(G, 'v'); out.a_mimo_ss.zz = spt_c(z_); out.a_mimo_ss.zp = spt_c(p_); out.a_mimo_ss.zk = k_; end; catch e_; out.errs{end+1} = sprintf('satir 178: %s', e_.message); end\ntry; G = G2 * T2; w = w_c; if G.Ts > 0, w = [0.13 0.7 1.9 3.1] / G.Ts; end; out.a_scal.re = real(freqresp(G, w)); out.a_scal.im = imag(freqresp(G, w)); out.a_scal.cls = class(G); out.a_scal.n = order(G); out.a_scal.size = size(G);; catch e_; out.errs{end+1} = sprintf('satir 179: %s', e_.message); end\ntry; if isa(G, 'tf') && isequal(size(G), [1 1]), [n_, d_] = tfdata(G, 'v'); out.a_scal.tn = n_; out.a_scal.td = d_; out.a_scal.io = G.IODelay; out.a_scal.ind = G.InputDelay; out.a_scal.outd = G.OutputDelay; end; catch e_; out.errs{end+1} = sprintf('satir 180: %s', e_.message); end\ntry; if isa(G, 'zpk') && isequal(size(G), [1 1]), [z_, p_, k_] = zpkdata(G, 'v'); out.a_scal.zz = spt_c(z_); out.a_scal.zp = spt_c(p_); out.a_scal.zk = k_; end; catch e_; out.errs{end+1} = sprintf('satir 181: %s', e_.message); end\ntry; G = T2 + G2; w = w_c; if G.Ts > 0, w = [0.13 0.7 1.9 3.1] / G.Ts; end; out.a_scal2.re = real(freqresp(G, w)); out.a_scal2.im = imag(freqresp(G, w)); out.a_scal2.cls = class(G); out.a_scal2.n = order(G); out.a_scal2.size = size(G);; catch e_; out.errs{end+1} = sprintf('satir 182: %s', e_.message); end\ntry; if isa(G, 'tf') && isequal(size(G), [1 1]), [n_, d_] = tfdata(G, 'v'); out.a_scal2.tn = n_; out.a_scal2.td = d_; out.a_scal2.io = G.IODelay; out.a_scal2.ind = G.InputDelay; out.a_scal2.outd = G.OutputDelay; end; catch e_; out.errs{end+1} = sprintf('satir 183: %s', e_.message); end\ntry; if isa(G, 'zpk') && isequal(size(G), [1 1]), [z_, p_, k_] = zpkdata(G, 'v'); out.a_scal2.zz = spt_c(z_); out.a_scal2.zp = spt_c(p_); out.a_scal2.zk = k_; end; catch e_; out.errs{end+1} = sprintf('satir 184: %s', e_.message); end\ntry; G = T2(2, 1); w = w_c; if G.Ts > 0, w = [0.13 0.7 1.9 3.1] / G.Ts; end; out.a_sub.re = real(freqresp(G, w)); out.a_sub.im = imag(freqresp(G, w)); out.a_sub.cls = class(G); out.a_sub.n = order(G); out.a_sub.size = size(G);; catch e_; out.errs{end+1} = sprintf('satir 185: %s', e_.message); end\ntry; if isa(G, 'tf') && isequal(size(G), [1 1]), [n_, d_] = tfdata(G, 'v'); out.a_sub.tn = n_; out.a_sub.td = d_; out.a_sub.io = G.IODelay; out.a_sub.ind = G.InputDelay; out.a_sub.outd = G.OutputDelay; end; catch e_; out.errs{end+1} = sprintf('satir 186: %s', e_.message); end\ntry; if isa(G, 'zpk') && isequal(size(G), [1 1]), [z_, p_, k_] = zpkdata(G, 'v'); out.a_sub.zz = spt_c(z_); out.a_sub.zp = spt_c(p_); out.a_sub.zk = k_; end; catch e_; out.errs{end+1} = sprintf('satir 187: %s', e_.message); end\ntry; G = -Z1; w = w_c; if G.Ts > 0, w = [0.13 0.7 1.9 3.1] / G.Ts; end; out.a_neg.re = real(freqresp(G, w)); out.a_neg.im = imag(freqresp(G, w)); out.a_neg.cls = class(G); out.a_neg.n = order(G); out.a_neg.size = size(G);; catch e_; out.errs{end+1} = sprintf('satir 188: %s', e_.message); end\ntry; if isa(G, 'tf') && isequal(size(G), [1 1]), [n_, d_] = tfdata(G, 'v'); out.a_neg.tn = n_; out.a_neg.td = d_; out.a_neg.io = G.IODelay; out.a_neg.ind = G.InputDelay; out.a_neg.outd = G.OutputDelay; end; catch e_; out.errs{end+1} = sprintf('satir 189: %s', e_.message); end\ntry; if isa(G, 'zpk') && isequal(size(G), [1 1]), [z_, p_, k_] = zpkdata(G, 'v'); out.a_neg.zz = spt_c(z_); out.a_neg.zp = spt_c(p_); out.a_neg.zk = k_; end; catch e_; out.errs{end+1} = sprintf('satir 190: %s', e_.message); end\ntry; G = [1 2; 0 1] * T2; w = w_c; if G.Ts > 0, w = [0.13 0.7 1.9 3.1] / G.Ts; end; out.a_mat.re = real(freqresp(G, w)); out.a_mat.im = imag(freqresp(G, w)); out.a_mat.cls = class(G); out.a_mat.n = order(G); out.a_mat.size = size(G);; catch e_; out.errs{end+1} = sprintf('satir 191: %s', e_.message); end\ntry; if isa(G, 'tf') && isequal(size(G), [1 1]), [n_, d_] = tfdata(G, 'v'); out.a_mat.tn = n_; out.a_mat.td = d_; out.a_mat.io = G.IODelay; out.a_mat.ind = G.InputDelay; out.a_mat.outd = G.OutputDelay; end; catch e_; out.errs{end+1} = sprintf('satir 192: %s', e_.message); end\ntry; if isa(G, 'zpk') && isequal(size(G), [1 1]), [z_, p_, k_] = zpkdata(G, 'v'); out.a_mat.zz = spt_c(z_); out.a_mat.zp = spt_c(p_); out.a_mat.zk = k_; end; catch e_; out.errs{end+1} = sprintf('satir 193: %s', e_.message); end\ntry; G = feedback(G1, G2); w = w_c; if G.Ts > 0, w = [0.13 0.7 1.9 3.1] / G.Ts; end; out.a_fb.re = real(freqresp(G, w)); out.a_fb.im = imag(freqresp(G, w)); out.a_fb.cls = class(G); out.a_fb.n = order(G); out.a_fb.size = size(G);; catch e_; out.errs{end+1} = sprintf('satir 194: %s', e_.message); end\ntry; if isa(G, 'tf') && isequal(size(G), [1 1]), [n_, d_] = tfdata(G, 'v'); out.a_fb.tn = n_; out.a_fb.td = d_; out.a_fb.io = G.IODelay; out.a_fb.ind = G.InputDelay; out.a_fb.outd = G.OutputDelay; end; catch e_; out.errs{end+1} = sprintf('satir 195: %s', e_.message); end\ntry; if isa(G, 'zpk') && isequal(size(G), [1 1]), [z_, p_, k_] = zpkdata(G, 'v'); out.a_fb.zz = spt_c(z_); out.a_fb.zp = spt_c(p_); out.a_fb.zk = k_; end; catch e_; out.errs{end+1} = sprintf('satir 196: %s', e_.message); end\ntry; G = feedback(G1, G3, +1); w = w_c; if G.Ts > 0, w = [0.13 0.7 1.9 3.1] / G.Ts; end; out.a_fbpos.re = real(freqresp(G, w)); out.a_fbpos.im = imag(freqresp(G, w)); out.a_fbpos.cls = class(G); out.a_fbpos.n = order(G); out.a_fbpos.size = size(G);; catch e_; out.errs{end+1} = sprintf('satir 197: %s', e_.message); end\ntry; if isa(G, 'tf') && isequal(size(G), [1 1]), [n_, d_] = tfdata(G, 'v'); out.a_fbpos.tn = n_; out.a_fbpos.td = d_; out.a_fbpos.io = G.IODelay; out.a_fbpos.ind = G.InputDelay; out.a_fbpos.outd = G.OutputDelay; end; catch e_; out.errs{end+1} = sprintf('satir 198: %s', e_.message); end\ntry; if isa(G, 'zpk') && isequal(size(G), [1 1]), [z_, p_, k_] = zpkdata(G, 'v'); out.a_fbpos.zz = spt_c(z_); out.a_fbpos.zp = spt_c(p_); out.a_fbpos.zk = k_; end; catch e_; out.errs{end+1} = sprintf('satir 199: %s', e_.message); end\ntry; G = feedback(Z1, 2); w = w_c; if G.Ts > 0, w = [0.13 0.7 1.9 3.1] / G.Ts; end; out.a_fbz.re = real(freqresp(G, w)); out.a_fbz.im = imag(freqresp(G, w)); out.a_fbz.cls = class(G); out.a_fbz.n = order(G); out.a_fbz.size = size(G);; catch e_; out.errs{end+1} = sprintf('satir 200: %s', e_.message); end\ntry; if isa(G, 'tf') && isequal(size(G), [1 1]), [n_, d_] = tfdata(G, 'v'); out.a_fbz.tn = n_; out.a_fbz.td = d_; out.a_fbz.io = G.IODelay; out.a_fbz.ind = G.InputDelay; out.a_fbz.outd = G.OutputDelay; end; catch e_; out.errs{end+1} = sprintf('satir 201: %s', e_.message); end\ntry; if isa(G, 'zpk') && isequal(size(G), [1 1]), [z_, p_, k_] = zpkdata(G, 'v'); out.a_fbz.zz = spt_c(z_); out.a_fbz.zp = spt_c(p_); out.a_fbz.zk = k_; end; catch e_; out.errs{end+1} = sprintf('satir 202: %s', e_.message); end\ntry; G = feedback(M2, S1, 2, 1); w = w_c; if G.Ts > 0, w = [0.13 0.7 1.9 3.1] / G.Ts; end; out.a_fbss.re = real(freqresp(G, w)); out.a_fbss.im = imag(freqresp(G, w)); out.a_fbss.cls = class(G); out.a_fbss.n = order(G); out.a_fbss.size = size(G);; catch e_; out.errs{end+1} = sprintf('satir 203: %s', e_.message); end\ntry; if isa(G, 'tf') && isequal(size(G), [1 1]), [n_, d_] = tfdata(G, 'v'); out.a_fbss.tn = n_; out.a_fbss.td = d_; out.a_fbss.io = G.IODelay; out.a_fbss.ind = G.InputDelay; out.a_fbss.outd = G.OutputDelay; end; catch e_; out.errs{end+1} = sprintf('satir 204: %s', e_.message); end\ntry; if isa(G, 'zpk') && isequal(size(G), [1 1]), [z_, p_, k_] = zpkdata(G, 'v'); out.a_fbss.zz = spt_c(z_); out.a_fbss.zp = spt_c(p_); out.a_fbss.zk = k_; end; catch e_; out.errs{end+1} = sprintf('satir 205: %s', e_.message); end\ntry; G = feedback(T2, eye(2)); w = w_c; if G.Ts > 0, w = [0.13 0.7 1.9 3.1] / G.Ts; end; out.a_fbmimo.re = real(freqresp(G, w)); out.a_fbmimo.im = imag(freqresp(G, w)); out.a_fbmimo.cls = class(G); out.a_fbmimo.n = order(G); out.a_fbmimo.size = size(G);; catch e_; out.errs{end+1} = sprintf('satir 206: %s', e_.message); end\ntry; if isa(G, 'tf') && isequal(size(G), [1 1]), [n_, d_] = tfdata(G, 'v'); out.a_fbmimo.tn = n_; out.a_fbmimo.td = d_; out.a_fbmimo.io = G.IODelay; out.a_fbmimo.ind = G.InputDelay; out.a_fbmimo.outd = G.OutputDelay; end; catch e_; out.errs{end+1} = sprintf('satir 207: %s', e_.message); end\ntry; if isa(G, 'zpk') && isequal(size(G), [1 1]), [z_, p_, k_] = zpkdata(G, 'v'); out.a_fbmimo.zz = spt_c(z_); out.a_fbmimo.zp = spt_c(p_); out.a_fbmimo.zk = k_; end; catch e_; out.errs{end+1} = sprintf('satir 208: %s', e_.message); end\ntry; G = series(M2, T2, [2 1], [1 2]); w = w_c; if G.Ts > 0, w = [0.13 0.7 1.9 3.1] / G.Ts; end; out.a_series.re = real(freqresp(G, w)); out.a_series.im = imag(freqresp(G, w)); out.a_series.cls = class(G); out.a_series.n = order(G); out.a_series.size = size(G);; catch e_; out.errs{end+1} = sprintf('satir 209: %s', e_.message); end\ntry; if isa(G, 'tf') && isequal(size(G), [1 1]), [n_, d_] = tfdata(G, 'v'); out.a_series.tn = n_; out.a_series.td = d_; out.a_series.io = G.IODelay; out.a_series.ind = G.InputDelay; out.a_series.outd = G.OutputDelay; end; catch e_; out.errs{end+1} = sprintf('satir 210: %s', e_.message); end\ntry; if isa(G, 'zpk') && isequal(size(G), [1 1]), [z_, p_, k_] = zpkdata(G, 'v'); out.a_series.zz = spt_c(z_); out.a_series.zp = spt_c(p_); out.a_series.zk = k_; end; catch e_; out.errs{end+1} = sprintf('satir 211: %s', e_.message); end\ntry; G = parallel(M2, T2, 1, 2, 2, 1); w = w_c; if G.Ts > 0, w = [0.13 0.7 1.9 3.1] / G.Ts; end; out.a_par.re = real(freqresp(G, w)); out.a_par.im = imag(freqresp(G, w)); out.a_par.cls = class(G); out.a_par.n = order(G); out.a_par.size = size(G);; catch e_; out.errs{end+1} = sprintf('satir 212: %s', e_.message); end\ntry; if isa(G, 'tf') && isequal(size(G), [1 1]), [n_, d_] = tfdata(G, 'v'); out.a_par.tn = n_; out.a_par.td = d_; out.a_par.io = G.IODelay; out.a_par.ind = G.InputDelay; out.a_par.outd = G.OutputDelay; end; catch e_; out.errs{end+1} = sprintf('satir 213: %s', e_.message); end\ntry; if isa(G, 'zpk') && isequal(size(G), [1 1]), [z_, p_, k_] = zpkdata(G, 'v'); out.a_par.zz = spt_c(z_); out.a_par.zp = spt_c(p_); out.a_par.zk = k_; end; catch e_; out.errs{end+1} = sprintf('satir 214: %s', e_.message); end\ntry; G = append(G1, Z1, S1); w = w_c; if G.Ts > 0, w = [0.13 0.7 1.9 3.1] / G.Ts; end; out.a_app.re = real(freqresp(G, w)); out.a_app.im = imag(freqresp(G, w)); out.a_app.cls = class(G); out.a_app.n = order(G); out.a_app.size = size(G);; catch e_; out.errs{end+1} = sprintf('satir 215: %s', e_.message); end\ntry; if isa(G, 'tf') && isequal(size(G), [1 1]), [n_, d_] = tfdata(G, 'v'); out.a_app.tn = n_; out.a_app.td = d_; out.a_app.io = G.IODelay; out.a_app.ind = G.InputDelay; out.a_app.outd = G.OutputDelay; end; catch e_; out.errs{end+1} = sprintf('satir 216: %s', e_.message); end\ntry; if isa(G, 'zpk') && isequal(size(G), [1 1]), [z_, p_, k_] = zpkdata(G, 'v'); out.a_app.zz = spt_c(z_); out.a_app.zp = spt_c(p_); out.a_app.zk = k_; end; catch e_; out.errs{end+1} = sprintf('satir 217: %s', e_.message); end\ntry; G = D1 * D2 + D3; w = w_c; if G.Ts > 0, w = [0.13 0.7 1.9 3.1] / G.Ts; end; out.a_d1.re = real(freqresp(G, w)); out.a_d1.im = imag(freqresp(G, w)); out.a_d1.cls = class(G); out.a_d1.n = order(G); out.a_d1.size = size(G);; catch e_; out.errs{end+1} = sprintf('satir 218: %s', e_.message); end\ntry; if isa(G, 'tf') && isequal(size(G), [1 1]), [n_, d_] = tfdata(G, 'v'); out.a_d1.tn = n_; out.a_d1.td = d_; out.a_d1.io = G.IODelay; out.a_d1.ind = G.InputDelay; out.a_d1.outd = G.OutputDelay; end; catch e_; out.errs{end+1} = sprintf('satir 219: %s', e_.message); end\ntry; if isa(G, 'zpk') && isequal(size(G), [1 1]), [z_, p_, k_] = zpkdata(G, 'v'); out.a_d1.zz = spt_c(z_); out.a_d1.zp = spt_c(p_); out.a_d1.zk = k_; end; catch e_; out.errs{end+1} = sprintf('satir 220: %s', e_.message); end\ntry; G = D2 * D3; w = w_c; if G.Ts > 0, w = [0.13 0.7 1.9 3.1] / G.Ts; end; out.a_d2.re = real(freqresp(G, w)); out.a_d2.im = imag(freqresp(G, w)); out.a_d2.cls = class(G); out.a_d2.n = order(G); out.a_d2.size = size(G);; catch e_; out.errs{end+1} = sprintf('satir 221: %s', e_.message); end\ntry; if isa(G, 'tf') && isequal(size(G), [1 1]), [n_, d_] = tfdata(G, 'v'); out.a_d2.tn = n_; out.a_d2.td = d_; out.a_d2.io = G.IODelay; out.a_d2.ind = G.InputDelay; out.a_d2.outd = G.OutputDelay; end; catch e_; out.errs{end+1} = sprintf('satir 222: %s', e_.message); end\ntry; if isa(G, 'zpk') && isequal(size(G), [1 1]), [z_, p_, k_] = zpkdata(G, 'v'); out.a_d2.zz = spt_c(z_); out.a_d2.zp = spt_c(p_); out.a_d2.zk = k_; end; catch e_; out.errs{end+1} = sprintf('satir 223: %s', e_.message); end\ntry; G = D2 + D3; w = w_c; if G.Ts > 0, w = [0.13 0.7 1.9 3.1] / G.Ts; end; out.a_d3.re = real(freqresp(G, w)); out.a_d3.im = imag(freqresp(G, w)); out.a_d3.cls = class(G); out.a_d3.n = order(G); out.a_d3.size = size(G);; catch e_; out.errs{end+1} = sprintf('satir 224: %s', e_.message); end\ntry; if isa(G, 'tf') && isequal(size(G), [1 1]), [n_, d_] = tfdata(G, 'v'); out.a_d3.tn = n_; out.a_d3.td = d_; out.a_d3.io = G.IODelay; out.a_d3.ind = G.InputDelay; out.a_d3.outd = G.OutputDelay; end; catch e_; out.errs{end+1} = sprintf('satir 225: %s', e_.message); end\ntry; if isa(G, 'zpk') && isequal(size(G), [1 1]), [z_, p_, k_] = zpkdata(G, 'v'); out.a_d3.zz = spt_c(z_); out.a_d3.zp = spt_c(p_); out.a_d3.zk = k_; end; catch e_; out.errs{end+1} = sprintf('satir 226: %s', e_.message); end\ntry; G = feedback(D1 * D2, 1); w = w_c; if G.Ts > 0, w = [0.13 0.7 1.9 3.1] / G.Ts; end; out.a_dfb.re = real(freqresp(G, w)); out.a_dfb.im = imag(freqresp(G, w)); out.a_dfb.cls = class(G); out.a_dfb.n = order(G); out.a_dfb.size = size(G);; catch e_; out.errs{end+1} = sprintf('satir 227: %s', e_.message); end\ntry; if isa(G, 'tf') && isequal(size(G), [1 1]), [n_, d_] = tfdata(G, 'v'); out.a_dfb.tn = n_; out.a_dfb.td = d_; out.a_dfb.io = G.IODelay; out.a_dfb.ind = G.InputDelay; out.a_dfb.outd = G.OutputDelay; end; catch e_; out.errs{end+1} = sprintf('satir 228: %s', e_.message); end\ntry; if isa(G, 'zpk') && isequal(size(G), [1 1]), [z_, p_, k_] = zpkdata(G, 'v'); out.a_dfb.zz = spt_c(z_); out.a_dfb.zp = spt_c(p_); out.a_dfb.zk = k_; end; catch e_; out.errs{end+1} = sprintf('satir 229: %s', e_.message); end\ntry; G = L1 * L2; w = w_c; if G.Ts > 0, w = [0.13 0.7 1.9 3.1] / G.Ts; end; out.a_l1.re = real(freqresp(G, w)); out.a_l1.im = imag(freqresp(G, w)); out.a_l1.cls = class(G); out.a_l1.n = order(G); out.a_l1.size = size(G);; catch e_; out.errs{end+1} = sprintf('satir 230: %s', e_.message); end\ntry; if isa(G, 'tf') && isequal(size(G), [1 1]), [n_, d_] = tfdata(G, 'v'); out.a_l1.tn = n_; out.a_l1.td = d_; out.a_l1.io = G.IODelay; out.a_l1.ind = G.InputDelay; out.a_l1.outd = G.OutputDelay; end; catch e_; out.errs{end+1} = sprintf('satir 231: %s', e_.message); end\ntry; if isa(G, 'zpk') && isequal(size(G), [1 1]), [z_, p_, k_] = zpkdata(G, 'v'); out.a_l1.zz = spt_c(z_); out.a_l1.zp = spt_c(p_); out.a_l1.zk = k_; end; catch e_; out.errs{end+1} = sprintf('satir 232: %s', e_.message); end\ntry; G = L3 * L4; w = w_c; if G.Ts > 0, w = [0.13 0.7 1.9 3.1] / G.Ts; end; out.a_l2.re = real(freqresp(G, w)); out.a_l2.im = imag(freqresp(G, w)); out.a_l2.cls = class(G); out.a_l2.n = order(G); out.a_l2.size = size(G);; catch e_; out.errs{end+1} = sprintf('satir 233: %s', e_.message); end\ntry; if isa(G, 'tf') && isequal(size(G), [1 1]), [n_, d_] = tfdata(G, 'v'); out.a_l2.tn = n_; out.a_l2.td = d_; out.a_l2.io = G.IODelay; out.a_l2.ind = G.InputDelay; out.a_l2.outd = G.OutputDelay; end; catch e_; out.errs{end+1} = sprintf('satir 234: %s', e_.message); end\ntry; if isa(G, 'zpk') && isequal(size(G), [1 1]), [z_, p_, k_] = zpkdata(G, 'v'); out.a_l2.zz = spt_c(z_); out.a_l2.zp = spt_c(p_); out.a_l2.zk = k_; end; catch e_; out.errs{end+1} = sprintf('satir 235: %s', e_.message); end\ntry; G = SL * M2; w = w_c; if G.Ts > 0, w = [0.13 0.7 1.9 3.1] / G.Ts; end; out.a_l3.re = real(freqresp(G, w)); out.a_l3.im = imag(freqresp(G, w)); out.a_l3.cls = class(G); out.a_l3.n = order(G); out.a_l3.size = size(G);; catch e_; out.errs{end+1} = sprintf('satir 236: %s', e_.message); end\ntry; if isa(G, 'tf') && isequal(size(G), [1 1]), [n_, d_] = tfdata(G, 'v'); out.a_l3.tn = n_; out.a_l3.td = d_; out.a_l3.io = G.IODelay; out.a_l3.ind = G.InputDelay; out.a_l3.outd = G.OutputDelay; end; catch e_; out.errs{end+1} = sprintf('satir 237: %s', e_.message); end\ntry; if isa(G, 'zpk') && isequal(size(G), [1 1]), [z_, p_, k_] = zpkdata(G, 'v'); out.a_l3.zz = spt_c(z_); out.a_l3.zp = spt_c(p_); out.a_l3.zk = k_; end; catch e_; out.errs{end+1} = sprintf('satir 238: %s', e_.message); end\ntry; G = M2 * SL; w = w_c; if G.Ts > 0, w = [0.13 0.7 1.9 3.1] / G.Ts; end; out.a_l4.re = real(freqresp(G, w)); out.a_l4.im = imag(freqresp(G, w)); out.a_l4.cls = class(G); out.a_l4.n = order(G); out.a_l4.size = size(G);; catch e_; out.errs{end+1} = sprintf('satir 239: %s', e_.message); end\ntry; if isa(G, 'tf') && isequal(size(G), [1 1]), [n_, d_] = tfdata(G, 'v'); out.a_l4.tn = n_; out.a_l4.td = d_; out.a_l4.io = G.IODelay; out.a_l4.ind = G.InputDelay; out.a_l4.outd = G.OutputDelay; end; catch e_; out.errs{end+1} = sprintf('satir 240: %s', e_.message); end\ntry; if isa(G, 'zpk') && isequal(size(G), [1 1]), [z_, p_, k_] = zpkdata(G, 'v'); out.a_l4.zz = spt_c(z_); out.a_l4.zp = spt_c(p_); out.a_l4.zk = k_; end; catch e_; out.errs{end+1} = sprintf('satir 241: %s', e_.message); end\ntry; G = lft(M2, S1); w = w_c; if G.Ts > 0, w = [0.13 0.7 1.9 3.1] / G.Ts; end; out.a_lft.re = real(freqresp(G, w)); out.a_lft.im = imag(freqresp(G, w)); out.a_lft.cls = class(G); out.a_lft.n = order(G); out.a_lft.size = size(G);; catch e_; out.errs{end+1} = sprintf('satir 242: %s', e_.message); end\ntry; if isa(G, 'tf') && isequal(size(G), [1 1]), [n_, d_] = tfdata(G, 'v'); out.a_lft.tn = n_; out.a_lft.td = d_; out.a_lft.io = G.IODelay; out.a_lft.ind = G.InputDelay; out.a_lft.outd = G.OutputDelay; end; catch e_; out.errs{end+1} = sprintf('satir 243: %s', e_.message); end\ntry; if isa(G, 'zpk') && isequal(size(G), [1 1]), [z_, p_, k_] = zpkdata(G, 'v'); out.a_lft.zz = spt_c(z_); out.a_lft.zp = spt_c(p_); out.a_lft.zk = k_; end; catch e_; out.errs{end+1} = sprintf('satir 244: %s', e_.message); end\ntry; G = lft(S1, M2, 1, 1); w = w_c; if G.Ts > 0, w = [0.13 0.7 1.9 3.1] / G.Ts; end; out.a_lft2.re = real(freqresp(G, w)); out.a_lft2.im = imag(freqresp(G, w)); out.a_lft2.cls = class(G); out.a_lft2.n = order(G); out.a_lft2.size = size(G);; catch e_; out.errs{end+1} = sprintf('satir 245: %s', e_.message); end\ntry; if isa(G, 'tf') && isequal(size(G), [1 1]), [n_, d_] = tfdata(G, 'v'); out.a_lft2.tn = n_; out.a_lft2.td = d_; out.a_lft2.io = G.IODelay; out.a_lft2.ind = G.InputDelay; out.a_lft2.outd = G.OutputDelay; end; catch e_; out.errs{end+1} = sprintf('satir 246: %s', e_.message); end\ntry; if isa(G, 'zpk') && isequal(size(G), [1 1]), [z_, p_, k_] = zpkdata(G, 'v'); out.a_lft2.zz = spt_c(z_); out.a_lft2.zp = spt_c(p_); out.a_lft2.zk = k_; end; catch e_; out.errs{end+1} = sprintf('satir 247: %s', e_.message); end\ntry; G = minreal(tf([1.0 1.0000001],[1.0 3.0 2.0],0.0)); w = w_c; out.m_tf7.re = real(freqresp(G, w)); out.m_tf7.im = imag(freqresp(G, w)); out.m_tf7.n = order(G);; catch e_; out.errs{end+1} = sprintf('satir 248: %s', e_.message); end\ntry; if isa(G, 'tf'), [n_, d_] = tfdata(G, 'v'); out.m_tf7.tn = n_; out.m_tf7.td = d_; end; catch e_; out.errs{end+1} = sprintf('satir 249: %s', e_.message); end\ntry; G = minreal(tf([1.0 1.00000001],[1.0 3.0 2.0],0.0)); w = w_c; out.m_tf8.re = real(freqresp(G, w)); out.m_tf8.im = imag(freqresp(G, w)); out.m_tf8.n = order(G);; catch e_; out.errs{end+1} = sprintf('satir 250: %s', e_.message); end\ntry; if isa(G, 'tf'), [n_, d_] = tfdata(G, 'v'); out.m_tf8.tn = n_; out.m_tf8.td = d_; end; catch e_; out.errs{end+1} = sprintf('satir 251: %s', e_.message); end\ntry; G = minreal(tf([1.0 100.000001],[1.0 103.0 300.0],0.0)); w = w_c; out.m_tf100.re = real(freqresp(G, w)); out.m_tf100.im = imag(freqresp(G, w)); out.m_tf100.n = order(G);; catch e_; out.errs{end+1} = sprintf('satir 252: %s', e_.message); end\ntry; if isa(G, 'tf'), [n_, d_] = tfdata(G, 'v'); out.m_tf100.tn = n_; out.m_tf100.td = d_; end; catch e_; out.errs{end+1} = sprintf('satir 253: %s', e_.message); end\ntry; G = minreal(zpk([-1.0 -2.0],[-1.0 -3.0],5.0,0.0)); w = w_c; out.m_z.re = real(freqresp(G, w)); out.m_z.im = imag(freqresp(G, w)); out.m_z.n = order(G);; catch e_; out.errs{end+1} = sprintf('satir 254: %s', e_.message); end\ntry; if isa(G, 'tf'), [n_, d_] = tfdata(G, 'v'); out.m_z.tn = n_; out.m_z.td = d_; end; catch e_; out.errs{end+1} = sprintf('satir 255: %s', e_.message); end\ntry; G = minreal(ss([-1.0 0.0 0.0;0.0 -2.0 0.0;0.0 0.0 -3.0],[1.0;0.0;1.0],[1.0 1.0 0.0],[0.0],0.0)); w = w_c; out.m_ss.re = real(freqresp(G, w)); out.m_ss.im = imag(freqresp(G, w)); out.m_ss.n = order(G);; catch e_; out.errs{end+1} = sprintf('satir 256: %s', e_.message); end\ntry; if isa(G, 'tf'), [n_, d_] = tfdata(G, 'v'); out.m_ss.tn = n_; out.m_ss.td = d_; end; catch e_; out.errs{end+1} = sprintf('satir 257: %s', e_.message); end\ntry; G = minreal(ss([-1.0 1.0 0.0 0.0;0.0 -1.0 0.0 0.0;0.0 0.0 -2.0 1.0;0.0 0.0 0.0 -5.0],[0.0 1.0;1.0 0.0;0.0 0.0;1.0 1.0],[1.0 0.0 1.0 0.0;0.0 0.0 0.0 1.0],[0.0 0.0;0.0 0.0],0.0)); w = w_c; out.m_ss2.re = real(freqresp(G, w)); out.m_ss2.im = imag(freqresp(G, w)); out.m_ss2.n = order(G);; catch e_; out.errs{end+1} = sprintf('satir 258: %s', e_.message); end\ntry; if isa(G, 'tf'), [n_, d_] = tfdata(G, 'v'); out.m_ss2.tn = n_; out.m_ss2.td = d_; end; catch e_; out.errs{end+1} = sprintf('satir 259: %s', e_.message); end\ntry; G0 = tf([1.0],[1.0 6.0 16.0 21.0 10.0],0.0); w = [0.13 0.7 1.9 4.3 11.0]; out.r4.hsv = hsvd(G0); [gb_, g_] = balreal(ss(G0)); out.r4.g = g_; out.r4.nb = order(gb_);; catch e_; out.errs{end+1} = sprintf('satir 260: %s', e_.message); end\ntry; G = gb_; out.r4_bal.re = real(freqresp(G, w)); out.r4_bal.im = imag(freqresp(G, w));; catch e_; out.errs{end+1} = sprintf('satir 261: %s', e_.message); end\ntry; G = balred(G0, 2); out.r4_dc.re = real(freqresp(G, w)); out.r4_dc.im = imag(freqresp(G, w)); out.r4_dc.p = spt_c(pole(G));; catch e_; out.errs{end+1} = sprintf('satir 262: %s', e_.message); end\ntry; G = balred(G0, 2, balredOptions('StateElimMethod','Truncate')); out.r4_tr.re = real(freqresp(G, w)); out.r4_tr.im = imag(freqresp(G, w));; catch e_; out.errs{end+1} = sprintf('satir 263: %s', e_.message); end\ntry; G = modred(gb_, [3 4]); out.r4_mr.re = real(freqresp(G, w)); out.r4_mr.im = imag(freqresp(G, w));; catch e_; out.errs{end+1} = sprintf('satir 264: %s', e_.message); end\ntry; G = modred(gb_, [3 4], 'Truncate'); out.r4_mt.re = real(freqresp(G, w)); out.r4_mt.im = imag(freqresp(G, w));; catch e_; out.errs{end+1} = sprintf('satir 265: %s', e_.message); end\ntry; G0 = zpk([-0.7 -4.0],[complex(-0.5,0.0) complex(-1.0,2.0) complex(-1.0,-2.0) complex(-3.0,0.0) complex(-6.0,0.0) complex(-10.0,0.0)],20.0,0.0); w = [0.13 0.7 1.9 4.3 11.0]; out.r6.hsv = hsvd(G0); [gb_, g_] = balreal(ss(G0)); out.r6.g = g_; out.r6.nb = order(gb_);; catch e_; out.errs{end+1} = sprintf('satir 266: %s', e_.message); end\ntry; G = gb_; out.r6_bal.re = real(freqresp(G, w)); out.r6_bal.im = imag(freqresp(G, w));; catch e_; out.errs{end+1} = sprintf('satir 267: %s', e_.message); end\ntry; G = balred(G0, 2); out.r6_dc.re = real(freqresp(G, w)); out.r6_dc.im = imag(freqresp(G, w)); out.r6_dc.p = spt_c(pole(G));; catch e_; out.errs{end+1} = sprintf('satir 268: %s', e_.message); end\ntry; G = balred(G0, 2, balredOptions('StateElimMethod','Truncate')); out.r6_tr.re = real(freqresp(G, w)); out.r6_tr.im = imag(freqresp(G, w));; catch e_; out.errs{end+1} = sprintf('satir 269: %s', e_.message); end\ntry; G = modred(gb_, [3 4]); out.r6_mr.re = real(freqresp(G, w)); out.r6_mr.im = imag(freqresp(G, w));; catch e_; out.errs{end+1} = sprintf('satir 270: %s', e_.message); end\ntry; G = modred(gb_, [3 4], 'Truncate'); out.r6_mt.re = real(freqresp(G, w)); out.r6_mt.im = imag(freqresp(G, w));; catch e_; out.errs{end+1} = sprintf('satir 271: %s', e_.message); end\ntry; G0 = zpk([],[1.0 -1.0 -2.0 -10.0],1.0,0.0); w = [0.13 0.7 1.9 4.3 11.0]; out.ru.hsv = hsvd(G0); [gb_, g_] = balreal(ss(G0)); out.ru.g = g_; out.ru.nb = order(gb_);; catch e_; out.errs{end+1} = sprintf('satir 272: %s', e_.message); end\ntry; G = gb_; out.ru_bal.re = real(freqresp(G, w)); out.ru_bal.im = imag(freqresp(G, w));; catch e_; out.errs{end+1} = sprintf('satir 273: %s', e_.message); end\ntry; G = balred(G0, 2); out.ru_dc.re = real(freqresp(G, w)); out.ru_dc.im = imag(freqresp(G, w)); out.ru_dc.p = spt_c(pole(G));; catch e_; out.errs{end+1} = sprintf('satir 274: %s', e_.message); end\ntry; G = balred(G0, 2, balredOptions('StateElimMethod','Truncate')); out.ru_tr.re = real(freqresp(G, w)); out.ru_tr.im = imag(freqresp(G, w));; catch e_; out.errs{end+1} = sprintf('satir 275: %s', e_.message); end\ntry; G = modred(gb_, [3 4]); out.ru_mr.re = real(freqresp(G, w)); out.ru_mr.im = imag(freqresp(G, w));; catch e_; out.errs{end+1} = sprintf('satir 276: %s', e_.message); end\ntry; G = modred(gb_, [3 4], 'Truncate'); out.ru_mt.re = real(freqresp(G, w)); out.ru_mt.im = imag(freqresp(G, w));; catch e_; out.errs{end+1} = sprintf('satir 277: %s', e_.message); end\ntry; G0 = tf([0.1 0.05 0.02],[1.0 -1.6 0.89 -0.21 0.018],0.1); w = [1.3 6.999999999999999 18.999999999999996 31.0]; out.rd.hsv = hsvd(G0); [gb_, g_] = balreal(ss(G0)); out.rd.g = g_; out.rd.nb = order(gb_);; catch e_; out.errs{end+1} = sprintf('satir 278: %s', e_.message); end\ntry; G = gb_; out.rd_bal.re = real(freqresp(G, w)); out.rd_bal.im = imag(freqresp(G, w));; catch e_; out.errs{end+1} = sprintf('satir 279: %s', e_.message); end\ntry; G = balred(G0, 2); out.rd_dc.re = real(freqresp(G, w)); out.rd_dc.im = imag(freqresp(G, w)); out.rd_dc.p = spt_c(pole(G));; catch e_; out.errs{end+1} = sprintf('satir 280: %s', e_.message); end\ntry; G = balred(G0, 2, balredOptions('StateElimMethod','Truncate')); out.rd_tr.re = real(freqresp(G, w)); out.rd_tr.im = imag(freqresp(G, w));; catch e_; out.errs{end+1} = sprintf('satir 281: %s', e_.message); end\ntry; G = modred(gb_, [3 4]); out.rd_mr.re = real(freqresp(G, w)); out.rd_mr.im = imag(freqresp(G, w));; catch e_; out.errs{end+1} = sprintf('satir 282: %s', e_.message); end\ntry; G = modred(gb_, [3 4], 'Truncate'); out.rd_mt.re = real(freqresp(G, w)); out.rd_mt.im = imag(freqresp(G, w));; catch e_; out.errs{end+1} = sprintf('satir 283: %s', e_.message); end\ntry; G0 = ss([-1.0 0.5 0.0 0.0;0.0 -2.0 0.3 0.0;0.0 0.0 -4.0 1.0;0.1 0.0 0.0 -8.0],[1.0 0.0;0.0 1.0;1.0 0.0;0.0 1.0],[1.0 0.0 0.5 0.0;0.0 1.0 0.0 0.2],[0.0 0.0;0.1 0.0],0.0); w = [0.13 0.7 1.9 4.3 11.0]; out.rm.hsv = hsvd(G0); [gb_, g_] = balreal(ss(G0)); out.rm.g = g_; out.rm.nb = order(gb_);; catch e_; out.errs{end+1} = sprintf('satir 284: %s', e_.message); end\ntry; G = gb_; out.rm_bal.re = real(freqresp(G, w)); out.rm_bal.im = imag(freqresp(G, w));; catch e_; out.errs{end+1} = sprintf('satir 285: %s', e_.message); end\ntry; G = balred(G0, 2); out.rm_dc.re = real(freqresp(G, w)); out.rm_dc.im = imag(freqresp(G, w)); out.rm_dc.p = spt_c(pole(G));; catch e_; out.errs{end+1} = sprintf('satir 286: %s', e_.message); end\ntry; G = balred(G0, 2, balredOptions('StateElimMethod','Truncate')); out.rm_tr.re = real(freqresp(G, w)); out.rm_tr.im = imag(freqresp(G, w));; catch e_; out.errs{end+1} = sprintf('satir 287: %s', e_.message); end\ntry; G = modred(gb_, [3 4]); out.rm_mr.re = real(freqresp(G, w)); out.rm_mr.im = imag(freqresp(G, w));; catch e_; out.errs{end+1} = sprintf('satir 288: %s', e_.message); end\ntry; G = modred(gb_, [3 4], 'Truncate'); out.rm_mt.re = real(freqresp(G, w)); out.rm_mt.im = imag(freqresp(G, w));; catch e_; out.errs{end+1} = sprintf('satir 289: %s', e_.message); end\ntry; G = modred(ss([-1.0 0.5 0.0 0.0;0.0 -2.0 0.3 0.0;0.0 0.0 -4.0 1.0;0.1 0.0 0.0 -8.0],[1.0 0.0;0.0 1.0;1.0 0.0;0.0 1.0],[1.0 0.0 0.5 0.0;0.0 1.0 0.0 0.2],[0.0 0.0;0.1 0.0],0.0), [1 3]); w = w_c; out.rm_raw.re = real(freqresp(G, w)); out.rm_raw.im = imag(freqresp(G, w));; catch e_; out.errs{end+1} = sprintf('satir 290: %s', e_.message); end\ntry; G0 = tf([1.0 2.0],[1.0 3.0 5.0 7.0],0.0); [c_, T_] = canon(ss(G0), 'modal'); out.k1.modal = c_.A;; catch e_; out.errs{end+1} = sprintf('satir 291: %s', e_.message); end\ntry; [c_, T_] = canon(ss(G0), 'companion'); out.k1.ca = c_.A; out.k1.cb = c_.B; out.k1.cc = c_.C; out.k1.cd = c_.D;; catch e_; out.errs{end+1} = sprintf('satir 292: %s', e_.message); end\ntry; G0 = zpk([],[complex(-1.0,0.0) complex(-2.0,3.0) complex(-2.0,-3.0) complex(-5.0,0.0)],4.0,0.0); [c_, T_] = canon(ss(G0), 'modal'); out.k2.modal = c_.A;; catch e_; out.errs{end+1} = sprintf('satir 293: %s', e_.message); end\ntry; [c_, T_] = canon(ss(G0), 'companion'); out.k2.ca = c_.A; out.k2.cb = c_.B; out.k2.cc = c_.C; out.k2.cd = c_.D;; catch e_; out.errs{end+1} = sprintf('satir 294: %s', e_.message); end\ntry; G0 = zpk([],[complex(-1.0,0.0) complex(-0.5,5.0) complex(-0.5,-5.0) complex(2.0,0.0) complex(-3.0,0.0)],4.0,0.0); [c_, T_] = canon(ss(G0), 'modal'); out.k3.modal = c_.A;; catch e_; out.errs{end+1} = sprintf('satir 295: %s', e_.message); end\ntry; [c_, T_] = canon(ss(G0), 'companion'); out.k3.ca = c_.A; out.k3.cb = c_.B; out.k3.cc = c_.C; out.k3.cd = c_.D;; catch e_; out.errs{end+1} = sprintf('satir 296: %s', e_.message); end\ntry; G0 = zpk([-1.0],[complex(-0.1,1.0) complex(-0.1,-1.0) complex(-0.2,0.5) complex(-0.2,-0.5)],4.0,0.0); [c_, T_] = canon(ss(G0), 'modal'); out.k4.modal = c_.A;; catch e_; out.errs{end+1} = sprintf('satir 297: %s', e_.message); end\ntry; [c_, T_] = canon(ss(G0), 'companion'); out.k4.ca = c_.A; out.k4.cb = c_.B; out.k4.cc = c_.C; out.k4.cd = c_.D;; catch e_; out.errs{end+1} = sprintf('satir 298: %s', e_.message); end\ntry; G0 = tf([1.0 0.5],[1.0 -1.2 0.5],0.1); [c_, T_] = canon(ss(G0), 'modal'); out.k5.modal = c_.A;; catch e_; out.errs{end+1} = sprintf('satir 299: %s', e_.message); end\ntry; [c_, T_] = canon(ss(G0), 'companion'); out.k5.ca = c_.A; out.k5.cb = c_.B; out.k5.cc = c_.C; out.k5.cd = c_.D;; catch e_; out.errs{end+1} = sprintf('satir 300: %s', e_.message); end\ntry; C = tf(2,1); C.InputName = 'e'; C.OutputName = 'u'; P = tf(1,[1 1]); P.InputName = 'u'; P.OutputName = 'y';; catch e_; out.errs{end+1} = sprintf('satir 301: %s', e_.message); end\ntry; S = sumblk('e = r - y'); w = w_c;; catch e_; out.errs{end+1} = sprintf('satir 302: %s', e_.message); end\ntry; G = connect(P,C,S,'r','y'); out.n_cl.re = real(freqresp(G, w)); out.n_cl.im = imag(freqresp(G, w)); out.n_cl.cls = class(G);; catch e_; out.errs{end+1} = sprintf('satir 303: %s', e_.message); end\ntry; G = connect(P,C,S,{'r','u'},{'y','u','e'}); out.n_ap.re = real(freqresp(G, w)); out.n_ap.im = imag(freqresp(G, w));; catch e_; out.errs{end+1} = sprintf('satir 304: %s', e_.message); end\ntry; G = connect(P,C,S,'u','y'); out.n_u.re = real(freqresp(G, w)); out.n_u.im = imag(freqresp(G, w));; catch e_; out.errs{end+1} = sprintf('satir 305: %s', e_.message); end\ntry; P2 = ss([-1 0.5;0 -2],[1 0;0 1],[1 0;0.5 1],0); P2.InputName = 'u'; P2.OutputName = 'y';; catch e_; out.errs{end+1} = sprintf('satir 306: %s', e_.message); end\ntry; K2 = ss(-0.5,[1 0.2],[1;0.3],[2 0;0 1.5]); K2.InputName = 'e'; K2.OutputName = 'u';; catch e_; out.errs{end+1} = sprintf('satir 307: %s', e_.message); end\ntry; S2 = sumblk('e = r - y', 2); G = connect(P2,K2,S2,'r','y'); out.n_mimo.re = real(freqresp(G, w)); out.n_mimo.im = imag(freqresp(G, w));; catch e_; out.errs{end+1} = sprintf('satir 308: %s', e_.message); end\ntry; L = loopsens(P2, ss(-0.5,[1 0.2],[1;0.3],[2 0;0 1.5]));; catch e_; out.errs{end+1} = sprintf('satir 309: %s', e_.message); end\ntry; G = L.Si; out.ls_Si.re = real(freqresp(G, w)); out.ls_Si.im = imag(freqresp(G, w)); G = L.So; out.ls_So.re = real(freqresp(G, w)); out.ls_So.im = imag(freqresp(G, w));; catch e_; out.errs{end+1} = sprintf('satir 310: %s', e_.message); end\ntry; G = L.Ti; out.ls_Ti.re = real(freqresp(G, w)); out.ls_Ti.im = imag(freqresp(G, w)); G = L.To; out.ls_To.re = real(freqresp(G, w)); out.ls_To.im = imag(freqresp(G, w));; catch e_; out.errs{end+1} = sprintf('satir 311: %s', e_.message); end\ntry; G = L.PSi; out.ls_PSi.re = real(freqresp(G, w)); out.ls_PSi.im = imag(freqresp(G, w)); G = L.CSo; out.ls_CSo.re = real(freqresp(G, w)); out.ls_CSo.im = imag(freqresp(G, w));; catch e_; out.errs{end+1} = sprintf('satir 312: %s', e_.message); end\ntry; G = L.Li; out.ls_Li.re = real(freqresp(G, w)); out.ls_Li.im = imag(freqresp(G, w)); G = L.Lo; out.ls_Lo.re = real(freqresp(G, w)); out.ls_Lo.im = imag(freqresp(G, w));; catch e_; out.errs{end+1} = sprintf('satir 313: %s', e_.message); end\ntry; out.ls.poles = spt_c(L.Poles); out.ls.stable = L.Stable;; catch e_; out.errs{end+1} = sprintf('satir 314: %s', e_.message); end\ntry; S3 = sumblk('v = a + b - c'); out.sb.in = S3.InputName; out.sb.D = S3.Numerator;; catch e_; out.errs{end+1} = sprintf('satir 315: %s', e_.message); end",
+ "out": {
+  "errs": [],
+  "c1": {
+   "re": [
+    0.28704824385266836,
+    0.32726762350049815,
+    -0.12207201689945027,
+    -0.06061617585168352,
+    -0.008403840192556664
+   ],
+   "im": [
+    -0.008051273295510359,
+    -0.060250250884461586,
+    -0.5802590591727017,
+    -0.016171600729758488,
+    -0.0007772469502744294
+   ],
+   "tf00": {
+    "n": [
+     0,
+     0,
+     1,
+     2
+    ],
+    "d": [
+     1,
+     3,
+     5,
+     7
+    ]
+   },
+   "zpk00": {
+    "z": [
+     -2,
+     0
+    ],
+    "p": [
+     [
+      -2.179509024602916,
+      0
+     ],
+     [
+      -0.4102454876985412,
+      1.7445432509226555
+     ],
+     [
+      -0.4102454876985412,
+      -1.7445432509226555
+     ]
+    ],
+    "k": 1
+   },
+   "n": 3,
+   "mk": [
+    0,
+    0,
+    1,
+    -1,
+    -2,
+    4,
+    5
+   ],
+   "eig": [
+    [
+     -2.179509024602916,
+     0
+    ],
+    [
+     -0.4102454876985412,
+     1.7445432509226555
+    ],
+    [
+     -0.4102454876985412,
+     -1.7445432509226555
+    ]
+   ],
+   "pole": [
+    [
+     -2.179509024602916,
+     0
+    ],
+    [
+     -0.4102454876985412,
+     1.7445432509226555
+    ],
+    [
+     -0.4102454876985412,
+     -1.7445432509226555
+    ]
+   ],
+   "tzero": [
+    -1.9999999999999993,
+    0
+   ]
+  },
+  "c2": {
+   "re": [
+    -2.471889867470412,
+    1.4469566774547817,
+    -2.6431705421130616,
+    -0.130523276065035,
+    -0.0169832684212634
+   ],
+   "im": [
+    1.0952952219800125,
+    1.1655507156025082,
+    -1.1676432643476282,
+    -0.0157430193377283,
+    -0.000775870264958967
+   ],
+   "tf00": {
+    "n": [
+     0,
+     0,
+     2,
+     0,
+     -1
+    ],
+    "d": [
+     1,
+     0.5,
+     3,
+     1.2,
+     0.4
+    ]
+   },
+   "zpk00": {
+    "z": [
+     [
+      0.7071067811865476,
+      0
+     ],
+     [
+      -0.7071067811865475,
+      0
+     ]
+    ],
+    "p": [
+     [
+      -0.03960161329666623,
+      1.680331657109591
+     ],
+     [
+      -0.03960161329666623,
+      -1.680331657109591
+     ],
+     [
+      -0.21039838670333377,
+      0.31196360527855604
+     ],
+     [
+      -0.21039838670333377,
+      -0.31196360527855604
+     ]
+    ],
+    "k": 2
+   },
+   "n": 4,
+   "mk": [
+    0,
+    0,
+    2,
+    -1,
+    -6.5,
+    3.85,
+    17.974999999999998
+   ],
+   "eig": [
+    [
+     -0.03960161329666623,
+     1.680331657109591
+    ],
+    [
+     -0.03960161329666623,
+     -1.680331657109591
+    ],
+    [
+     -0.21039838670333377,
+     0.31196360527855604
+    ],
+    [
+     -0.21039838670333377,
+     -0.31196360527855604
+    ]
+   ],
+   "pole": [
+    [
+     -0.03960161329666623,
+     1.680331657109591
+    ],
+    [
+     -0.03960161329666623,
+     -1.680331657109591
+    ],
+    [
+     -0.21039838670333377,
+     0.31196360527855604
+    ],
+    [
+     -0.21039838670333377,
+     -0.31196360527855604
+    ]
+   ],
+   "tzero": [
+    [
+     0.7071067811865477,
+     0
+    ],
+    [
+     -0.7071067811865476,
+     0
+    ]
+   ]
+  },
+  "c3": {
+   "re": [
+    0.48333212172938195,
+    0.19860753588773727,
+    0.7777931507408509,
+    0.4512008916249884,
+    0.08705496756572208
+   ],
+   "im": [
+    -0.06254124053440098,
+    -0.03236728721519737,
+    0.1563178829036594,
+    -0.40784228539884587,
+    -0.25234277910549674
+   ],
+   "tf00": {
+    "n": [
+     0,
+     3,
+     1,
+     2
+    ],
+    "d": [
+     1,
+     4,
+     6,
+     4
+    ]
+   },
+   "zpk00": {
+    "z": [
+     [
+      -0.16666666666666666,
+      0.799305253885453
+     ],
+     [
+      -0.16666666666666666,
+      -0.799305253885453
+     ]
+    ],
+    "p": [
+     [
+      -2.000000000000002,
+      0
+     ],
+     [
+      -0.9999999999999983,
+      0.999999999999999
+     ],
+     [
+      -0.9999999999999983,
+      -0.999999999999999
+     ]
+    ],
+    "k": 3
+   },
+   "n": 3,
+   "mk": [
+    0,
+    3,
+    -11,
+    28,
+    -58,
+    108,
+    -196
+   ],
+   "eig": [
+    [
+     -2.000000000000002,
+     0
+    ],
+    [
+     -0.9999999999999983,
+     0.999999999999999
+    ],
+    [
+     -0.9999999999999983,
+     -0.999999999999999
+    ]
+   ],
+   "pole": [
+    [
+     -2.000000000000002,
+     0
+    ],
+    [
+     -0.9999999999999983,
+     0.999999999999999
+    ],
+    [
+     -0.9999999999999983,
+     -0.999999999999999
+    ]
+   ],
+   "tzero": [
+    [
+     -0.16666666666666666,
+     0.7993052538854537
+    ],
+    [
+     -0.16666666666666666,
+     -0.7993052538854537
+    ]
+   ]
+  },
+  "c4": {
+   "re": [
+    0.027589994232261147,
+    -0.008689588593944152,
+    0.007419089574020232,
+    -0.0033465498146662944,
+    4.054642555156508e-05
+   ],
+   "im": [
+    -0.009578775704678162,
+    -0.029897044804467685,
+    0.026505588904711438,
+    0.0026828186586219777,
+    3.331027704044923e-06
+   ],
+   "tf00": {
+    "n": [
+     0,
+     0,
+     0,
+     0,
+     0,
+     7,
+     -17.5,
+     -7,
+     52.5
+    ],
+    "d": [
+     1,
+     16,
+     114.5,
+     508.75,
+     1595.0625,
+     3521.6875,
+     5093.125,
+     4389.875,
+     1803.75
+    ]
+   },
+   "zpk00": {
+    "z": [
+     [
+      -1.5,
+      0
+     ],
+     [
+      2,
+      1
+     ],
+     [
+      2,
+      -1
+     ]
+    ],
+    "p": [
+     [
+      -0.5,
+      3
+     ],
+     [
+      -0.5,
+      -3
+     ],
+     [
+      -1,
+      1
+     ],
+     [
+      -1,
+      -1
+     ],
+     [
+      -2,
+      0
+     ],
+     [
+      -3,
+      0
+     ],
+     [
+      -4,
+      0.5
+     ],
+     [
+      -4,
+      -0.5
+     ]
+    ],
+    "k": 7
+   },
+   "n": 8,
+   "mk": [
+    0,
+    0,
+    0,
+    0,
+    0,
+    6.999999999999998,
+    -129.5
+   ],
+   "eig": [
+    [
+     -1,
+     1.0000000000000002
+    ],
+    [
+     -1,
+     -1.0000000000000002
+    ],
+    [
+     -2,
+     0
+    ],
+    [
+     -3,
+     0
+    ],
+    [
+     -0.5,
+     2.9999999999999996
+    ],
+    [
+     -0.5,
+     -2.9999999999999996
+    ],
+    [
+     -4,
+     0.5
+    ],
+    [
+     -4,
+     -0.5
+    ]
+   ],
+   "pole": [
+    [
+     -0.5,
+     3
+    ],
+    [
+     -0.5,
+     -3
+    ],
+    [
+     -1,
+     1
+    ],
+    [
+     -1,
+     -1
+    ],
+    [
+     -2,
+     0
+    ],
+    [
+     -3,
+     0
+    ],
+    [
+     -4,
+     0.5
+    ],
+    [
+     -4,
+     -0.5
+    ]
+   ],
+   "tzero": [
+    [
+     2.0000000000000018,
+     0.9999999999999993
+    ],
+    [
+     2.0000000000000018,
+     -0.9999999999999993
+    ],
+    [
+     -1.5000000000000004,
+     0
+    ]
+   ]
+  },
+  "c5": {
+   "re": [
+    0.47810045763775877,
+    0.09788861838242433,
+    -0.1088564121188671,
+    -0.10605993482605033
+   ],
+   "im": [
+    -0.12646340407423112,
+    -0.39220300329779473,
+    -0.07687069165796044,
+    -0.0022536728726428013
+   ],
+   "tf00": {
+    "n": [
+     0,
+     0.2,
+     -0.1,
+     0.05
+    ],
+    "d": [
+     1,
+     -1.3,
+     0.8,
+     -0.2
+    ]
+   },
+   "zpk00": {
+    "z": [
+     [
+      0.25,
+      0.43301270189221924
+     ],
+     [
+      0.25,
+      -0.43301270189221924
+     ]
+    ],
+    "p": [
+     [
+      0.4000000000000003,
+      0.4898979485566358
+     ],
+     [
+      0.4000000000000003,
+      -0.4898979485566358
+     ],
+     [
+      0.5,
+      0
+     ]
+    ],
+    "k": 0.2
+   },
+   "n": 3,
+   "mk": [
+    0,
+    0.2,
+    0.16,
+    0.09800000000000005,
+    0.03940000000000002,
+    0.0048200000000000204,
+    -0.005653999999999982
+   ],
+   "eig": [
+    [
+     0.4000000000000003,
+     0.4898979485566358
+    ],
+    [
+     0.4000000000000003,
+     -0.4898979485566358
+    ],
+    [
+     0.5,
+     0
+    ]
+   ],
+   "pole": [
+    [
+     0.4000000000000003,
+     0.4898979485566358
+    ],
+    [
+     0.4000000000000003,
+     -0.4898979485566358
+    ],
+    [
+     0.5,
+     0
+    ]
+   ],
+   "tzero": [
+    [
+     0.24999999999999992,
+     0.43301270189221924
+    ],
+    [
+     0.24999999999999992,
+     -0.43301270189221924
+    ]
+   ]
+  },
+  "c6": {
+   "re": [
+    [
+     [
+      0.9833808634083981,
+      0.6711409395973155,
+      0.21691973969631234,
+      0.051308363263211906,
+      0.00819672131147541
+     ],
+     [
+      0.9833808634083979,
+      0.6711409395973156,
+      0.21691973969631234,
+      0.051308363263211906,
+      0.008196721311475407
+     ]
+    ],
+    [
+     [
+      0.002714980945687392,
+      0.08789198254716346,
+      0.8819882605163664,
+      0.2889738653692798,
+      0.03472022955523673
+     ],
+     [
+      0,
+      0,
+      0,
+      0,
+      0
+     ]
+    ]
+   ],
+   "im": [
+    [
+     [
+      -0.12783951224309176,
+      -0.4697986577181208,
+      -0.41214750542299344,
+      -0.2206259620318112,
+      -0.09016393442622951
+     ],
+     [
+      -0.12783951224309176,
+      -0.4697986577181208,
+      -0.41214750542299344,
+      -0.2206259620318112,
+      -0.09016393442622951
+     ]
+    ],
+    [
+     [
+      0.05203469827098017,
+      0.28313774377693374,
+      0.3226220216099339,
+      -0.4532857492827424,
+      -0.1830703012912482
+     ],
+     [
+      -7.692307692307692,
+      -1.4285714285714286,
+      -0.5263157894736842,
+      -0.23255813953488372,
+      -0.09090909090909091
+     ]
+    ]
+   ],
+   "tf00": {
+    "n": [
+     0,
+     1
+    ],
+    "d": [
+     1,
+     1
+    ]
+   },
+   "zpk00": {
+    "z": [],
+    "p": [
+     -1,
+     0
+    ],
+    "k": 1
+   },
+   "tf01": {
+    "n": [
+     0,
+     1,
+     2
+    ],
+    "d": [
+     1,
+     3,
+     2
+    ]
+   },
+   "zpk01": {
+    "z": [
+     -2,
+     0
+    ],
+    "p": [
+     [
+      -2,
+      0
+     ],
+     [
+      -1,
+      0
+     ]
+    ],
+    "k": 1
+   },
+   "tf10": {
+    "n": [
+     0,
+     2,
+     0
+    ],
+    "d": [
+     1,
+     2,
+     5
+    ]
+   },
+   "zpk10": {
+    "z": [
+     0,
+     0
+    ],
+    "p": [
+     [
+      -1,
+      2
+     ],
+     [
+      -1,
+      -2
+     ]
+    ],
+    "k": 2
+   },
+   "tf11": {
+    "n": [
+     0,
+     1
+    ],
+    "d": [
+     1,
+     0
+    ]
+   },
+   "zpk11": {
+    "z": [],
+    "p": [
+     0,
+     0
+    ],
+    "k": 1
+   },
+   "n": 6,
+   "mk": [
+    [
+     [
+      0,
+      1,
+      -1,
+      1,
+      -1,
+      1,
+      -1
+     ],
+     [
+      0,
+      1,
+      -1,
+      1,
+      -1,
+      1,
+      -1
+     ]
+    ],
+    [
+     [
+      0,
+      2,
+      -4,
+      -2,
+      24,
+      -38,
+      -44
+     ],
+     [
+      0,
+      1,
+      0,
+      0,
+      0,
+      0,
+      0
+     ]
+    ]
+   ],
+   "eig": [
+    [
+     -1,
+     0
+    ],
+    [
+     -2,
+     0
+    ],
+    [
+     -1,
+     2
+    ],
+    [
+     -1,
+     -2
+    ],
+    [
+     -1,
+     0
+    ],
+    [
+     0,
+     0
+    ]
+   ],
+   "pole": [
+    [
+     -1,
+     0
+    ],
+    [
+     -1,
+     2
+    ],
+    [
+     -1,
+     -2
+    ],
+    [
+     -2,
+     0
+    ],
+    [
+     -1,
+     0
+    ],
+    [
+     0,
+     0
+    ]
+   ],
+   "tzero": [
+    [
+     3.449489742783172,
+     0
+    ],
+    [
+     -2.0000000000000004,
+     0
+    ],
+    [
+     -1.449489742783177,
+     0
+    ],
+    [
+     -1.0000000000000018,
+     0
+    ]
+   ]
+  },
+  "c7": {
+   "re": [
+    [
+     [
+      0.9510244073145717,
+      0.2729443702061823,
+      -0.26164591191715786,
+      -0.3332692457567808
+     ],
+     [
+      2.191115730490379,
+      0.42616041327919585,
+      -0.5367334937659486,
+      -0.6189804426028631
+     ],
+     [
+      0.21968103747450188,
+      0.1551499889482896,
+      -0.07877661562739598,
+      -0.18170120570435994
+     ]
+    ],
+    [
+     [
+      3.0045831711387665,
+      1.1082711453706313,
+      0.6312670091614798,
+      0.5882722765245402
+     ],
+     [
+      0.07124342707105993,
+      0.06574069892947122,
+      0.008510442310691252,
+      -0.16610719116727246
+     ],
+     [
+      2.902048814629144,
+      1.5458887404123645,
+      0.4767081761656843,
+      0.33346150848643835
+     ]
+    ]
+   ],
+   "im": [
+    [
+     [
+      -0.2508030732833005,
+      -0.6639259127168271,
+      -0.3007393259379297,
+      -0.009243700279246949
+     ],
+     [
+      -0.6497454323879793,
+      -1.4803947014508982,
+      -0.5359060044529401,
+      -0.015752686022272203
+     ],
+     [
+      -0.031941879911617566,
+      -0.15033698066523465,
+      -0.17611187260838224,
+      -0.006873819380843559
+     ]
+    ],
+    [
+     [
+      -0.8912770368909931,
+      -1.0756914562308333,
+      -0.34099053959208253,
+      -0.01007566201046856
+     ],
+     [
+      -0.0066368449922059435,
+      -0.03635799036474102,
+      -0.1049848368152962,
+      -0.011528028426504496
+     ],
+     [
+      -0.501606146566601,
+      -1.3278518254336542,
+      -0.6014786518758594,
+      -0.018487400558493898
+     ]
+    ]
+   ],
+   "tf00": {
+    "n": [
+     0,
+     0.5
+    ],
+    "d": [
+     1,
+     -0.5
+    ]
+   },
+   "zpk00": {
+    "z": [],
+    "p": [
+     0.5,
+     0
+    ],
+    "k": 0.5
+   },
+   "tf01": {
+    "n": [
+     0,
+     1,
+     -0.3
+    ],
+    "d": [
+     1,
+     -0.9,
+     0.2
+    ]
+   },
+   "zpk01": {
+    "z": [
+     0.3,
+     0
+    ],
+    "p": [
+     [
+      0.5,
+      0
+     ],
+     [
+      0.4,
+      0
+     ]
+    ],
+    "k": 1
+   },
+   "tf02": {
+    "n": [
+     0,
+     0.2
+    ],
+    "d": [
+     1,
+     -0.1
+    ]
+   },
+   "zpk02": {
+    "z": [],
+    "p": [
+     0.1,
+     0
+    ],
+    "k": 0.2
+   },
+   "tf10": {
+    "n": [
+     1,
+     0
+    ],
+    "d": [
+     1,
+     -0.7
+    ]
+   },
+   "zpk10": {
+    "z": [
+     0,
+     0
+    ],
+    "p": [
+     0.7,
+     0
+    ],
+    "k": 1
+   },
+   "tf11": {
+    "n": [
+     0,
+     0.1
+    ],
+    "d": [
+     1,
+     0.4
+    ]
+   },
+   "zpk11": {
+    "z": [],
+    "p": [
+     -0.4,
+     0
+    ],
+    "k": 0.1
+   },
+   "tf12": {
+    "n": [
+     1,
+     0.5
+    ],
+    "d": [
+     1,
+     -0.5
+    ]
+   },
+   "zpk12": {
+    "z": [
+     -0.5,
+     0
+    ],
+    "p": [
+     0.5,
+     0
+    ],
+    "k": 1
+   },
+   "n": 7,
+   "mk": [
+    [
+     [
+      0,
+      0.5,
+      0.25,
+      0.125,
+      0.0625,
+      0.03125,
+      0.015625
+     ],
+     [
+      0,
+      1,
+      0.6000000000000001,
+      0.3400000000000001,
+      0.18600000000000008,
+      0.09940000000000002,
+      0.05225999999999999
+     ],
+     [
+      0,
+      0.2,
+      0.020000000000000004,
+      0.0020000000000000005,
+      0.00020000000000000006,
+      2.0000000000000012e-05,
+      2.000000000000001e-06
+     ]
+    ],
+    [
+     [
+      1,
+      0.7,
+      0.48999999999999994,
+      0.3429999999999999,
+      0.24009999999999992,
+      0.16806999999999994,
+      0.11764899999999995
+     ],
+     [
+      0,
+      0.1,
+      -0.04000000000000001,
+      0.016000000000000004,
+      -0.006400000000000002,
+      0.0025600000000000015,
+      -0.0010240000000000006
+     ],
+     [
+      1,
+      1,
+      0.5,
+      0.25,
+      0.125,
+      0.0625,
+      0.03125
+     ]
+    ]
+   ],
+   "eig": [
+    [
+     0.5,
+     0
+    ],
+    [
+     0.4,
+     0
+    ],
+    [
+     0.5,
+     0
+    ],
+    [
+     0.7,
+     0
+    ],
+    [
+     -0.4,
+     0
+    ],
+    [
+     0.1,
+     0
+    ],
+    [
+     0.5,
+     0
+    ]
+   ],
+   "pole": [
+    [
+     0.5,
+     0
+    ],
+    [
+     0.7,
+     0
+    ],
+    [
+     0.5,
+     0
+    ],
+    [
+     0.4,
+     0
+    ],
+    [
+     -0.4,
+     0
+    ],
+    [
+     0.1,
+     0
+    ],
+    [
+     0.5,
+     0
+    ]
+   ],
+   "tzero": []
+  },
+  "c8": {
+   "re": [
+    [
+     [
+      0.9659294783056067,
+      0.3702985061250486,
+      -0.15208937297351,
+      -0.06374685293897614,
+      -0.00889281210592686
+     ],
+     [
+      2.6094586759336433,
+      1.5896367340452686,
+      0.5294313589515651,
+      0.4788525757994513,
+      0.4989407313997478
+     ]
+    ],
+    [
+     [
+      -0.9887938771050218,
+      -0.7183742821537618,
+      0.03866109641202109,
+      0.2707480354633182,
+      0.07969230769230769
+     ],
+     [
+      -0.986460910965558,
+      -0.6608761772443625,
+      0.2267561881201016,
+      0.4202829890363139,
+      0.11692307692307692
+     ]
+    ]
+   ],
+   "im": [
+    [
+     [
+      -0.21177177752571463,
+      -0.6615314083535887,
+      -0.2576939263040265,
+      -0.02141133130736036,
+      -0.0003329129886506935
+     ],
+     [
+      -0.37837646659785096,
+      -1.2472083177683133,
+      -0.7015807336501327,
+      -0.23936444548096936,
+      -0.08988650693568727
+     ]
+    ],
+    [
+     [
+      0.12914977521991347,
+      0.5833593443807923,
+      0.6413052653078664,
+      0.12178404823549571,
+      -0.05753846153846154
+     ],
+     [
+      0.15062419015687734,
+      0.6738777895381612,
+      0.6886260304849523,
+      0.034914672880764636,
+      -0.13538461538461538
+     ]
+    ]
+   ],
+   "tf00": {
+    "n": [
+     0,
+     0,
+     1,
+     6.000000000000003
+    ],
+    "d": [
+     1,
+     6.000000000000002,
+     11.000000000000005,
+     6.000000000000008
+    ]
+   },
+   "zpk00": {
+    "z": [
+     -6.000000000000003,
+     0
+    ],
+    "p": [
+     [
+      -1.000000000000002,
+      0
+     ],
+     [
+      -1.9999999999999978,
+      0
+     ],
+     [
+      -3.0000000000000013,
+      0
+     ]
+    ],
+    "k": 1
+   },
+   "tf01": {
+    "n": [
+     0.5,
+     4.000000000000002,
+     11.500000000000004,
+     15.999999999999996
+    ],
+    "d": [
+     1,
+     6.000000000000002,
+     11.000000000000005,
+     6.000000000000008
+    ]
+   },
+   "zpk01": {
+    "z": [
+     [
+      -4.445428354302452,
+      0
+     ],
+     [
+      -1.7772858228487758,
+      2.009890923089442
+     ],
+     [
+      -1.7772858228487758,
+      -2.009890923089442
+     ]
+    ],
+    "p": [
+     [
+      -1.000000000000002,
+      0
+     ],
+     [
+      -1.9999999999999978,
+      0
+     ],
+     [
+      -3.0000000000000013,
+      0
+     ]
+    ],
+    "k": 0.5
+   },
+   "tf10": {
+    "n": [
+     0,
+     1,
+     -4.9999999999999964,
+     -5.999999999999997
+    ],
+    "d": [
+     1,
+     6.000000000000002,
+     11.000000000000005,
+     6.000000000000008
+    ]
+   },
+   "zpk10": {
+    "z": [
+     [
+      -1.0000000000000002,
+      0
+     ],
+     [
+      5.9999999999999964,
+      0
+     ]
+    ],
+    "p": [
+     [
+      -1.000000000000002,
+      0
+     ],
+     [
+      -1.9999999999999978,
+      0
+     ],
+     [
+      -3.0000000000000013,
+      0
+     ]
+    ],
+    "k": 1
+   },
+   "tf11": {
+    "n": [
+     0,
+     2,
+     -3.999999999999991,
+     -5.999999999999987
+    ],
+    "d": [
+     1,
+     6.000000000000002,
+     11.000000000000005,
+     6.000000000000008
+    ]
+   },
+   "zpk11": {
+    "z": [
+     [
+      -0.9999999999999994,
+      0
+     ],
+     [
+      2.999999999999995,
+      0
+     ]
+    ],
+    "p": [
+     [
+      -1.000000000000002,
+      0
+     ],
+     [
+      -1.9999999999999978,
+      0
+     ],
+     [
+      -3.0000000000000013,
+      0
+     ]
+    ],
+    "k": 2
+   },
+   "n": 3,
+   "mk": [
+    [
+     [
+      0,
+      0,
+      1,
+      0,
+      -11,
+      60,
+      -239
+     ],
+     [
+      0.5,
+      1,
+      0,
+      2,
+      -18,
+      86,
+      -330
+     ]
+    ],
+    [
+     [
+      0,
+      1,
+      -11,
+      49,
+      -179,
+      601,
+      -1931
+     ],
+     [
+      0,
+      2,
+      -16,
+      68,
+      -244,
+      812,
+      -2596
+     ]
+    ]
+   ],
+   "eig": [
+    [
+     -1.000000000000002,
+     0
+    ],
+    [
+     -1.9999999999999978,
+     0
+    ],
+    [
+     -3.0000000000000013,
+     0
+    ]
+   ],
+   "pole": [
+    [
+     -1.000000000000002,
+     0
+    ],
+    [
+     -1.9999999999999978,
+     0
+    ],
+    [
+     -3.0000000000000013,
+     0
+    ]
+   ],
+   "tzero": [
+    [
+     6.216990566028309,
+     0
+    ],
+    [
+     -3.2169905660283034,
+     0
+    ]
+   ]
+  },
+  "c9": {
+   "re": [
+    [
+     [
+      0.9833808634083981,
+      0.6711409395973155,
+      0.21691973969631237,
+      0.0513083632632119,
+      0.00819672131147541
+     ],
+     [
+      5.933523453633593,
+      4.684563758389261,
+      2.8676789587852496,
+      2.2052334530528475,
+      2.0327868852459017
+     ]
+    ]
+   ],
+   "im": [
+    [
+     [
+      -0.12783951224309176,
+      -0.4697986577181208,
+      -0.41214750542299355,
+      -0.22062596203181117,
+      -0.0901639344262295
+     ],
+     [
+      -0.511358048972367,
+      -1.8791946308724827,
+      -1.6485900216919742,
+      -0.8825038481272447,
+      -0.360655737704918
+     ]
+    ]
+   ],
+   "tf00": {
+    "n": [
+     0,
+     1
+    ],
+    "d": [
+     1,
+     1
+    ]
+   },
+   "zpk00": {
+    "z": [],
+    "p": [
+     -1,
+     0
+    ],
+    "k": 1
+   },
+   "tf01": {
+    "n": [
+     2,
+     6
+    ],
+    "d": [
+     1,
+     1
+    ]
+   },
+   "zpk01": {
+    "z": [
+     -3,
+     0
+    ],
+    "p": [
+     -1,
+     0
+    ],
+    "k": 2
+   },
+   "n": 1,
+   "mk": [
+    [
+     [
+      0,
+      1,
+      -1,
+      1,
+      -1,
+      1,
+      -1
+     ],
+     [
+      2,
+      4,
+      -4,
+      4,
+      -4,
+      4,
+      -4
+     ]
+    ]
+   ],
+   "eig": [
+    -1,
+    0
+   ],
+   "pole": [
+    -1,
+    0
+   ],
+   "tzero": []
+  },
+  "c10": {
+   "re": [
+    0.49789643631015434,
+    0.4454343210116441,
+    0.26281208476687534,
+    0.08892840886582964,
+    0.015999999219672125
+   ],
+   "im": [
+    -0.03236327475213564,
+    -0.1559020358440083,
+    -0.24967150113590691,
+    -0.19119609009283187,
+    -0.08800000021639344
+   ],
+   "tf00": {
+    "n": [
+     0,
+     1,
+     1.0000001
+    ],
+    "d": [
+     1,
+     3,
+     2
+    ]
+   },
+   "zpk00": {
+    "z": [
+     -1.0000001,
+     0
+    ],
+    "p": [
+     [
+      -2,
+      0
+     ],
+     [
+      -1,
+      0
+     ]
+    ],
+    "k": 1
+   },
+   "n": 2,
+   "mk": [
+    0,
+    1,
+    -1.9999999,
+    3.9999997,
+    -7.9999993,
+    15.999998499999998,
+    -31.9999969
+   ],
+   "eig": [
+    [
+     -2,
+     0
+    ],
+    [
+     -1,
+     0
+    ]
+   ],
+   "pole": [
+    [
+     -2,
+     0
+    ],
+    [
+     -1,
+     0
+    ]
+   ],
+   "tzero": [
+    -1.0000001,
+    0
+   ]
+  },
+  "c11": {
+   "re": [
+    0.1666033577421954,
+    0.17508055601840877,
+    0.4093720333339934,
+    1.1754793084546207,
+    1.8172307692307692
+   ],
+   "im": [
+    0.0470839226266606,
+    0.26991253247469493,
+    0.7577262273334994,
+    0.9906169040651996,
+    0.5821538461538462
+   ],
+   "tf00": {
+    "n": [
+     2,
+     3,
+     1
+    ],
+    "d": [
+     1,
+     5,
+     6
+    ]
+   },
+   "zpk00": {
+    "z": [
+     [
+      -1,
+      0
+     ],
+     [
+      -0.5,
+      0
+     ]
+    ],
+    "p": [
+     [
+      -3.0000000000000004,
+      0
+     ],
+     [
+      -1.9999999999999998,
+      0
+     ]
+    ],
+    "k": 2
+   },
+   "n": 2,
+   "mk": [
+    2,
+    -7,
+    24,
+    -78,
+    246,
+    -762,
+    2334
+   ],
+   "eig": [
+    [
+     -3.0000000000000004,
+     0
+    ],
+    [
+     -1.9999999999999998,
+     0
+    ]
+   ],
+   "pole": [
+    [
+     -3.0000000000000004,
+     0
+    ],
+    [
+     -1.9999999999999998,
+     0
+    ]
+   ],
+   "tzero": [
+    [
+     -0.4999999999999987,
+     0
+    ],
+    [
+     -1.0000000000000004,
+     0
+    ]
+   ]
+  },
+  "c12": {
+   "re": [
+    -0.20149094536122897,
+    -0.2461872368285344,
+    -0.5258946622607974,
+    -0.09177928741920474,
+    -0.009038737446197992
+   ],
+   "im": [
+    0.015575114729000115,
+    0.07878888435477867,
+    -0.07079116301512943,
+    -0.260244486893613,
+    -0.09311334289813486
+   ],
+   "tf00": {
+    "n": [
+     0,
+     1,
+     -1
+    ],
+    "d": [
+     1,
+     -2,
+     5
+    ]
+   },
+   "zpk00": {
+    "z": [
+     1,
+     0
+    ],
+    "p": [
+     [
+      1,
+      2
+     ],
+     [
+      1,
+      -2
+     ]
+    ],
+    "k": 1
+   },
+   "n": 2,
+   "mk": [
+    0,
+    1,
+    1,
+    -3,
+    -11,
+    -7,
+    41
+   ],
+   "eig": [
+    [
+     1,
+     2
+    ],
+    [
+     1,
+     -2
+    ]
+   ],
+   "pole": [
+    [
+     1,
+     2
+    ],
+    [
+     1,
+     -2
+    ]
+   ],
+   "tzero": [
+    1.0000000000000004,
+    0
+   ]
+  },
+  "c13": {
+   "re": [
+    [
+     [
+      2.2656653104787154,
+      0.8811329978916639,
+      -0.6009280692590346,
+      -1.2374870137383522
+     ],
+     [
+      0.8928195128598714,
+      -0.01799511905808461,
+      -0.2184034185507495,
+      0.44776198662867683
+     ]
+    ]
+   ],
+   "im": [
+    [
+     [
+      -0.5674921686226394,
+      -1.4695721091455773,
+      -1.240494297269108,
+      -0.041197748433534694
+     ],
+     [
+      -0.7187381809623749,
+      -0.2904321955573574,
+      0.2463101252046532,
+      0.026036076958710845
+     ]
+    ]
+   ],
+   "tf00": {
+    "n": [
+     0,
+     1.4999999999999978,
+     -1.299999999999998,
+     0.2849999999999995,
+     -0.15699999999999975
+    ],
+    "d": [
+     1,
+     -1.0999999999999999,
+     0.31,
+     -0.141,
+     0.068
+    ]
+   },
+   "zpk00": {
+    "z": [
+     [
+      0.7934580522389194,
+      0
+     ],
+     [
+      0.036604307213873644,
+      0.3613476997054802
+     ],
+     [
+      0.036604307213873644,
+      -0.3613476997054802
+     ]
+    ],
+    "p": [
+     [
+      0.5,
+      0
+     ],
+     [
+      0.8,
+      0
+     ],
+     [
+      -0.09999999999999999,
+      0.39999999999999997
+     ],
+     [
+      -0.09999999999999999,
+      -0.39999999999999997
+     ]
+    ],
+    "k": 1.4999999999999978
+   },
+   "tf01": {
+    "n": [
+     0.1000000000000003,
+     -0.11000000000000063,
+     0.43100000000000077,
+     -0.38410000000000055,
+     0.14980000000000016
+    ],
+    "d": [
+     1,
+     -1.0999999999999999,
+     0.31,
+     -0.141,
+     0.068
+    ]
+   },
+   "zpk01": {
+    "z": [
+     [
+      0.051796625814585,
+      1.9522639086514815
+     ],
+     [
+      0.051796625814585,
+      -1.9522639086514815
+     ],
+     [
+      0.4982033741854165,
+      0.3802040550445792
+     ],
+     [
+      0.4982033741854165,
+      -0.3802040550445792
+     ]
+    ],
+    "p": [
+     [
+      0.5,
+      0
+     ],
+     [
+      0.8,
+      0
+     ],
+     [
+      -0.09999999999999999,
+      0.39999999999999997
+     ],
+     [
+      -0.09999999999999999,
+      -0.39999999999999997
+     ]
+    ],
+    "k": 0.1000000000000003
+   },
+   "n": 4,
+   "mk": [
+    [
+     [
+      0,
+      1.5,
+      0.35,
+      0.205,
+      0.1715,
+      0.07245,
+      0.031635
+     ],
+     [
+      0.1,
+      0,
+      0.4,
+      0.07,
+      0.096,
+      0.14030000000000004,
+      0.10724000000000004
+     ]
+    ]
+   ],
+   "eig": [
+    [
+     0.5,
+     0
+    ],
+    [
+     0.8,
+     0
+    ],
+    [
+     -0.09999999999999999,
+     0.39999999999999997
+    ],
+    [
+     -0.09999999999999999,
+     -0.39999999999999997
+    ]
+   ],
+   "pole": [
+    [
+     0.5,
+     0
+    ],
+    [
+     0.8,
+     0
+    ],
+    [
+     -0.09999999999999999,
+     0.39999999999999997
+    ],
+    [
+     -0.09999999999999999,
+     -0.39999999999999997
+    ]
+   ],
+   "tzero": []
+  },
+  "c14": {
+   "re": [
+    -2.415289985950684,
+    -1.5572288942467016,
+    -0.15881287813032124,
+    -0.22893557053579416,
+    -0.03250267392556279
+   ],
+   "im": [
+    0.3322561135047001,
+    1.1948947263731977,
+    0.3798088373131661,
+    0.6804830626080508,
+    0.27153722157383525
+   ],
+   "tf00": {
+    "n": [
+     0,
+     -3,
+     -0.30000000000000004,
+     -12.0075
+    ],
+    "d": [
+     1,
+     1.4,
+     5.280000000000001,
+     4.880000000000001
+    ]
+   },
+   "zpk00": {
+    "z": [
+     [
+      -0.05,
+      2
+     ],
+     [
+      -0.05,
+      -2
+     ]
+    ],
+    "p": [
+     [
+      -1,
+      0
+     ],
+     [
+      -0.2,
+      2.2
+     ],
+     [
+      -0.2,
+      -2.2
+     ]
+    ],
+    "k": -3
+   },
+   "n": 3,
+   "mk": [
+    0,
+    -3,
+    3.9,
+    -1.6274999999999995,
+    -3.673500000000002,
+    -5.295900000000002,
+    34.75254000000001
+   ],
+   "eig": [
+    [
+     -0.2,
+     2.2
+    ],
+    [
+     -0.2,
+     -2.2
+    ],
+    [
+     -1,
+     0
+    ]
+   ],
+   "pole": [
+    [
+     -1,
+     0
+    ],
+    [
+     -0.2,
+     2.2
+    ],
+    [
+     -0.2,
+     -2.2
+    ]
+   ],
+   "tzero": [
+    [
+     -0.049999999999999996,
+     2.0000000000000004
+    ],
+    [
+     -0.049999999999999996,
+     -2.0000000000000004
+    ]
+   ]
+  },
+  "c15": {
+   "re": [
+    [
+     [
+      0.9833808634083981,
+      0.6711409395973155,
+      0.21691973969631234,
+      0.051308363263211906,
+      0.00819672131147541
+     ],
+     [
+      1.9667617268167963,
+      1.342281879194631,
+      0.4338394793926247,
+      0.10261672652642381,
+      0.01639344262295082
+     ]
+    ],
+    [
+     [
+      2.9501425902251945,
+      2.0134228187919465,
+      0.6507592190889371,
+      0.1539250897896357,
+      0.02459016393442623
+     ],
+     [
+      3.9335234536335926,
+      2.684563758389262,
+      0.8676789587852494,
+      0.20523345305284763,
+      0.03278688524590164
+     ]
+    ]
+   ],
+   "im": [
+    [
+     [
+      -0.12783951224309176,
+      -0.4697986577181208,
+      -0.41214750542299344,
+      -0.2206259620318112,
+      -0.09016393442622951
+     ],
+     [
+      -0.2556790244861835,
+      -0.9395973154362416,
+      -0.8242950108459869,
+      -0.4412519240636224,
+      -0.18032786885245902
+     ]
+    ],
+    [
+     [
+      -0.3835185367292753,
+      -1.4093959731543622,
+      -1.2364425162689805,
+      -0.6618778860954336,
+      -0.2704918032786885
+     ],
+     [
+      -0.511358048972367,
+      -1.8791946308724832,
+      -1.6485900216919738,
+      -0.8825038481272448,
+      -0.36065573770491804
+     ]
+    ]
+   ],
+   "tf00": {
+    "n": [
+     0,
+     1
+    ],
+    "d": [
+     1,
+     1
+    ]
+   },
+   "zpk00": {
+    "z": [],
+    "p": [
+     -1,
+     0
+    ],
+    "k": 1
+   },
+   "tf01": {
+    "n": [
+     0,
+     2
+    ],
+    "d": [
+     1,
+     1
+    ]
+   },
+   "zpk01": {
+    "z": [],
+    "p": [
+     -1,
+     0
+    ],
+    "k": 2
+   },
+   "tf10": {
+    "n": [
+     0,
+     3
+    ],
+    "d": [
+     1,
+     1
+    ]
+   },
+   "zpk10": {
+    "z": [],
+    "p": [
+     -1,
+     0
+    ],
+    "k": 3
+   },
+   "tf11": {
+    "n": [
+     0,
+     4
+    ],
+    "d": [
+     1,
+     1
+    ]
+   },
+   "zpk11": {
+    "z": [],
+    "p": [
+     -1,
+     0
+    ],
+    "k": 4
+   },
+   "n": 2,
+   "mk": [
+    [
+     [
+      0,
+      1,
+      -1,
+      1,
+      -1,
+      1,
+      -1
+     ],
+     [
+      0,
+      2,
+      -2,
+      2,
+      -2,
+      2,
+      -2
+     ]
+    ],
+    [
+     [
+      0,
+      3,
+      -3,
+      3,
+      -3,
+      3,
+      -3
+     ],
+     [
+      0,
+      4,
+      -4,
+      4,
+      -4,
+      4,
+      -4
+     ]
+    ]
+   ],
+   "eig": [
+    [
+     -1,
+     0
+    ],
+    [
+     -1,
+     0
+    ]
+   ],
+   "pole": [
+    [
+     -1,
+     0
+    ],
+    [
+     -1,
+     0
+    ]
+   ],
+   "tzero": []
+  },
+  "c16": {
+   "re": [
+    [
+     [
+      0.983380863408398,
+      0.6711409395973155,
+      0.21691973969631237,
+      0.0513083632632119,
+      0.008196721311475409
+     ]
+    ],
+    [
+     [
+      0.9833808634083981,
+      0.6711409395973155,
+      0.21691973969631234,
+      0.051308363263211906,
+      0.00819672131147541
+     ]
+    ]
+   ],
+   "im": [
+    [
+     [
+      -0.12783951224309173,
+      -0.46979865771812085,
+      -0.41214750542299355,
+      -0.22062596203181117,
+      -0.0901639344262295
+     ]
+    ],
+    [
+     [
+      -0.12783951224309176,
+      -0.4697986577181208,
+      -0.41214750542299344,
+      -0.2206259620318112,
+      -0.09016393442622951
+     ]
+    ]
+   ],
+   "tf00": {
+    "n": [
+     0,
+     1,
+     1
+    ],
+    "d": [
+     1,
+     2,
+     1
+    ]
+   },
+   "zpk00": {
+    "z": [
+     -1,
+     0
+    ],
+    "p": [
+     [
+      -1,
+      0
+     ],
+     [
+      -1,
+      0
+     ]
+    ],
+    "k": 1
+   },
+   "tf10": {
+    "n": [
+     0,
+     1
+    ],
+    "d": [
+     1,
+     1
+    ]
+   },
+   "zpk10": {
+    "z": [],
+    "p": [
+     -1,
+     0
+    ],
+    "k": 1
+   },
+   "n": 3,
+   "mk": [
+    [
+     [
+      0,
+      1,
+      -1,
+      1,
+      -1,
+      1,
+      -1
+     ]
+    ],
+    [
+     [
+      0,
+      1,
+      -1,
+      1,
+      -1,
+      1,
+      -1
+     ]
+    ]
+   ],
+   "eig": [
+    [
+     -1,
+     0
+    ],
+    [
+     -1,
+     0
+    ],
+    [
+     -1,
+     0
+    ]
+   ],
+   "pole": [
+    [
+     -1,
+     0
+    ],
+    [
+     -1,
+     0
+    ],
+    [
+     -1,
+     0
+    ]
+   ],
+   "tzero": [
+    -1,
+    0
+   ]
+  },
+  "a_add": {
+   "re": [
+    1.2704291072610663,
+    0.9984085630978135,
+    0.094847722796862,
+    -0.00930781258847167,
+    -0.00020711888108125874
+   ],
+   "im": [
+    -0.13589078553860207,
+    -0.5300489086025824,
+    -0.9924065645956955,
+    -0.23679756276156966,
+    -0.09094118137650395
+   ],
+   "cls": "tf",
+   "n": 4,
+   "size": [
+    1,
+    1
+   ],
+   "tn": [
+    0,
+    1,
+    4,
+    8,
+    9
+   ],
+   "td": [
+    1,
+    4,
+    8,
+    12,
+    7
+   ],
+   "io": 0,
+   "ind": 0,
+   "outd": 0
+  },
+  "a_mul": {
+   "re": [
+    0.28124847902866756,
+    0.1913372133432047,
+    -0.2656321538671549,
+    -0.006677991738822215,
+    -0.0001389635790620934
+   ],
+   "im": [
+    -0.04461357556923714,
+    -0.19418630022470487,
+    -0.07555796682510763,
+    0.012543763747177049,
+    0.0007513524194085974
+   ],
+   "cls": "tf",
+   "n": 4,
+   "size": [
+    1,
+    1
+   ],
+   "tn": [
+    0,
+    0,
+    0,
+    1,
+    2
+   ],
+   "td": [
+    1,
+    4,
+    8,
+    12,
+    7
+   ],
+   "io": 0,
+   "ind": 0,
+   "outd": 0
+  },
+  "a_div": {
+   "re": [
+    0.28809490938108473,
+    0.3694427991196212,
+    0.9804201955286833,
+    0.008921707286277981,
+    0.00014587626046206419
+   ],
+   "im": [
+    0.029264998405336532,
+    0.16883708556588706,
+    -0.8121958912816574,
+    -0.27682115689199766,
+    -0.09321948906839773
+   ],
+   "cls": "tf",
+   "n": 3,
+   "size": [
+    1,
+    1
+   ],
+   "tn": [
+    0,
+    1,
+    3,
+    2
+   ],
+   "td": [
+    1,
+    3,
+    5,
+    7
+   ],
+   "io": 0,
+   "ind": 0,
+   "outd": 0
+  },
+  "a_sub0": {
+   "re": [
+    0,
+    0,
+    0,
+    0,
+    0
+   ],
+   "im": [
+    0,
+    0,
+    0,
+    0,
+    0
+   ],
+   "cls": "tf",
+   "n": 0,
+   "size": [
+    1,
+    1
+   ],
+   "tn": 0,
+   "td": 1,
+   "io": 0,
+   "ind": 0,
+   "outd": 0
+  },
+  "a_lin": {
+   "re": [
+    2.8611447315580048,
+    2.9818028705014945,
+    1.633783949301649,
+    1.8181514724449495,
+    1.9747884794223298
+   ],
+   "im": [
+    -0.024153819886531043,
+    -0.18075075265338492,
+    -1.7407771775181056,
+    -0.048514802189275355,
+    -0.002331740850823375
+   ],
+   "cls": "tf",
+   "n": 3,
+   "size": [
+    1,
+    1
+   ],
+   "tn": [
+    2,
+    6,
+    13,
+    20
+   ],
+   "td": [
+    1,
+    3,
+    5,
+    7
+   ],
+   "io": 0,
+   "ind": 0,
+   "outd": 0
+  },
+  "a_pow3": {
+   "re": [
+    0.9027525812235142,
+    -0.1420819970319977,
+    -0.10033460416687058,
+    -0.007357357476995221,
+    -0.00019935589322454307
+   ],
+   "im": [
+    -0.3687876954136969,
+    -0.5311448272025959,
+    0.011829888731373656,
+    0.00899672314063192,
+    0.0007148175397940798
+   ],
+   "cls": "tf",
+   "n": 3,
+   "size": [
+    1,
+    1
+   ],
+   "tn": [
+    0,
+    0,
+    0,
+    1
+   ],
+   "td": [
+    1,
+    3,
+    3,
+    1
+   ],
+   "io": 0,
+   "ind": 0,
+   "outd": 0
+  },
+  "a_powm2": {
+   "re": [
+    0.9831,
+    0.51,
+    -2.6100000000000003,
+    -17.490000000000002,
+    -120
+   ],
+   "im": [
+    0.26,
+    1.4,
+    3.8000000000000003,
+    8.600000000000001,
+    22
+   ],
+   "cls": "tf",
+   "n": 3,
+   "size": [
+    1,
+    1
+   ],
+   "tn": [
+    1,
+    2,
+    1
+   ],
+   "td": [
+    0,
+    0,
+    1
+   ],
+   "io": 0,
+   "ind": 0,
+   "outd": 0
+  },
+  "a_inv": {
+   "re": [
+    5.558341308027716,
+    1.6915019045891533,
+    0.5519118159441628,
+    0.4974366352665324,
+    0.4990704749028223
+   ],
+   "im": [
+    -1.5708477645733898,
+    -2.607699981861056,
+    -1.0215599114338056,
+    -0.4192069873558013,
+    -0.1598783167145513
+   ],
+   "cls": "tf",
+   "n": 2,
+   "size": [
+    1,
+    1
+   ],
+   "tn": [
+    1,
+    5,
+    6
+   ],
+   "td": [
+    2,
+    3,
+    1
+   ],
+   "io": 0,
+   "ind": 0,
+   "outd": 0
+  },
+  "a_zadd": {
+   "re": [
+    0.8812444147089785,
+    0.5409375975463783,
+    0.13565419088331726,
+    -0.029485621935071014,
+    -0.0456524184313896
+   ],
+   "im": [
+    -0.13341750787827011,
+    -0.4637523572796399,
+    -0.3555741079262959,
+    -0.23111928161645046,
+    -0.023489179748083084
+   ],
+   "cls": "zpk",
+   "n": 5,
+   "size": [
+    1,
+    1
+   ],
+   "zz": [
+    [
+     -1.0000000000000002,
+     0
+    ],
+    [
+     -2.1666666666666665,
+     1.6749792701868147
+    ],
+    [
+     -2.1666666666666665,
+     -1.6749792701868147
+    ]
+   ],
+   "zp": [
+    [
+     -1,
+     0
+    ],
+    [
+     -3,
+     4
+    ],
+    [
+     -3,
+     -4
+    ],
+    [
+     -1,
+     0
+    ],
+    [
+     -2,
+     0
+    ]
+   ],
+   "zk": 5.999999999999999
+  },
+  "a_zmul": {
+   "re": [
+    0.38433235829789353,
+    0.14116239166371766,
+    -0.040203866703023575,
+    -0.044080555234927044,
+    -0.002233006871174216
+   ],
+   "im": [
+    -0.0879044674184155,
+    -0.2486693781804647,
+    -0.11671074065586261,
+    -0.01214301922429737,
+    0.0032378302610627996
+   ],
+   "cls": "zpk",
+   "n": 4,
+   "size": [
+    1,
+    1
+   ],
+   "zz": [
+    -2,
+    0
+   ],
+   "zp": [
+    [
+     -1,
+     0
+    ],
+    [
+     -3,
+     4
+    ],
+    [
+     -3,
+     -4
+    ],
+    [
+     -1,
+     0
+    ]
+   ],
+   "zk": 5
+  },
+  "a_zdiv": {
+   "re": [
+    0.7996286268819011,
+    0.7906957225822759,
+    0.8083691678577464,
+    2.4676566385615324,
+    5.207780725022106
+   ],
+   "im": [
+    0.07910506186310429,
+    0.4357028953551383,
+    1.3457032017962451,
+    3.430792430892851,
+    1.2886825817860306
+   ],
+   "cls": "zpk",
+   "n": 3,
+   "size": [
+    1,
+    1
+   ],
+   "zz": [
+    [
+     -2,
+     0
+    ],
+    [
+     -1,
+     0
+    ],
+    [
+     -2,
+     0
+    ]
+   ],
+   "zp": [
+    [
+     -1,
+     0
+    ],
+    [
+     -3,
+     4
+    ],
+    [
+     -3,
+     -4
+    ]
+   ],
+   "zk": 5
+  },
+  "a_ss_tf": {
+   "re": [
+    1.2355686062973954,
+    1.233762212560203,
+    0.5123885234794422,
+    0.10672610937611855,
+    0.15705947272286105
+   ],
+   "im": [
+    -0.05027645741558055,
+    -0.2834606674679492,
+    -1.0775008641178472,
+    -0.3521128101057603,
+    -0.06743956937957198
+   ],
+   "cls": "ss",
+   "n": 5,
+   "size": [
+    1,
+    1
+   ]
+  },
+  "a_ss_mul": {
+   "re": [
+    0.25709795893263593,
+    0.2282390487332579,
+    -0.38507726593438707,
+    0.003325224503371017,
+    -0.000209882040488718
+   ],
+   "im": [
+    -0.030222697011226485,
+    -0.178945774199542,
+    -0.013086238963208784,
+    0.00818754942430697,
+    0.0001675659801817345
+   ],
+   "cls": "ss",
+   "n": 7,
+   "size": [
+    1,
+    1
+   ]
+  },
+  "a_mimo_mul": {
+   "re": [
+    [
+     [
+      0.9600169323804807,
+      0.4217250217353344,
+      0.20147713253099037,
+      -0.13122309543458638,
+      -0.02428409542643888
+     ],
+     [
+      1.1952431973895203,
+      0.3725759434401758,
+      -0.11849733368041929,
+      -0.06759902759881714,
+      -0.015062468491124551
+     ]
+    ],
+    [
+     [
+      0.010422315652634493,
+      0.22534489690153103,
+      0.5354529762372078,
+      -0.1081787632292924,
+      -0.029907092551558167
+     ],
+     [
+      0.07162425200834592,
+      0.24904445370064943,
+      0.3565078266513172,
+      -0.08727303921204442,
+      -0.021816077673320573
+     ]
+    ]
+   ],
+   "im": [
+    [
+     [
+      -0.20060701518157403,
+      -0.48186842915592104,
+      -0.4723320356219412,
+      -0.10965240094583215,
+      -0.006109186026650091
+     ],
+     [
+      -0.2913375549276854,
+      -0.7730517878048369,
+      -0.28389191360255794,
+      -0.054623961855012795,
+      -0.00476875182677916
+     ]
+    ],
+    [
+     [
+      0.06379575738157897,
+      0.21368386190750396,
+      -0.3131737852349025,
+      -0.17561006937142026,
+      -0.012763962684569799
+     ],
+     [
+      0.046768913126284305,
+      0.12813951110377653,
+      -0.3330526801271781,
+      -0.11593073999380507,
+      -0.009319670977641043
+     ]
+    ]
+   ],
+   "cls": "tf",
+   "n": 24,
+   "size": [
+    2,
+    2
+   ]
+  },
+  "a_mimo_add": {
+   "re": [
+    [
+     [
+      2.512767239926017,
+      1.731527689675986,
+      0.6456857681096199,
+      0.19868126702185523,
+      0.037071221920903966
+     ],
+     [
+      1.7790962052454364,
+      1.2292592354619578,
+      0.5066628689626281,
+      0.23592539956196576,
+      0.12714271613560307
+     ]
+    ],
+    [
+     [
+      0.22100739334993125,
+      0.2306047723268259,
+      0.8956872558330919,
+      0.26620235890197086,
+      0.02753503770812742
+     ],
+     [
+      0.9288100294952972,
+      0.817128866666484,
+      0.48852677969240776,
+      0.18470256563831447,
+      0.0381280365151785
+     ]
+    ]
+   ],
+   "im": [
+    [
+     [
+      -0.32000150934690585,
+      -1.1540822729513773,
+      -1.0288265816436608,
+      -0.6054050952638469,
+      -0.2654581727618659
+     ],
+     [
+      -0.2214874356019876,
+      -0.7860791741016862,
+      -0.6642548249657932,
+      -0.3897691810638215,
+      -0.17545818387036544
+     ]
+    ],
+    [
+     [
+      0.020430731860372975,
+      0.16288413745082497,
+      0.2146111166916636,
+      -0.48722425999934127,
+      -0.18627229791000505
+     ],
+     [
+      -0.0637097241669528,
+      -0.29228514039243125,
+      -0.44506419612263914,
+      -0.35032314697189654,
+      -0.17167079053503292
+     ]
+    ]
+   ],
+   "cls": "ss",
+   "n": 9,
+   "size": [
+    2,
+    2
+   ]
+  },
+  "a_mimo_ss": {
+   "re": [
+    [
+     [
+      -1.5723360601647474,
+      -1.591974988979251,
+      -0.6818015727917565,
+      -0.3953973236579164,
+      -0.08480255489412286
+     ],
+     [
+      0.08593156781394745,
+      -0.6040857985731725,
+      -0.7059666012672072,
+      -0.4462415276612932,
+      -0.25683609924907913
+     ]
+    ],
+    [
+     [
+      -0.2212240265670301,
+      -0.12490339246976206,
+      0.2943551112303264,
+      -0.04553641342173293,
+      -0.002395879143867302
+     ],
+     [
+      -0.9783851757324604,
+      -0.9810641441210053,
+      -0.5863360537994764,
+      -0.16627184082810953,
+      -0.02528573975472528
+     ]
+    ]
+   ],
+   "im": [
+    [
+     [
+      0.040990110570713056,
+      0.5413740435645276,
+      0.7939952566152059,
+      0.5847393488172032,
+      0.3218112850423072
+     ],
+     [
+      -0.2270342358448511,
+      -0.4252706541851964,
+      0.11423266766069226,
+      0.24339635703171952,
+      0.15450747089658168
+     ]
+    ],
+    [
+     [
+      0.03940726775726188,
+      0.23347425452120718,
+      -0.028338184372007885,
+      -0.025200014814569946,
+      0.002217906085944927
+     ],
+     [
+      0.03280615026152575,
+      0.2669241618497593,
+      0.568684359280737,
+      0.41984303897764264,
+      0.17999415994382487
+     ]
+    ]
+   ],
+   "cls": "ss",
+   "n": 12,
+   "size": [
+    2,
+    2
+   ]
+  },
+  "a_scal": {
+   "re": [
+    [
+     [
+      0.9506949816272948,
+      0.22971938200981942,
+      -0.12281139275648054,
+      -0.046043266981712475,
+      -0.008062348830959418
+     ],
+     [
+      0.9506949816272947,
+      0.22971938200981942,
+      -0.12281139275648051,
+      -0.046043266981712475,
+      -0.00806234883095942
+     ]
+    ],
+    [
+     [
+      0.009321950753185971,
+      0.1920056397255148,
+      0.3242885252874708,
+      -0.0851798284528739,
+      -0.016221746595479456
+     ],
+     [
+      0.24454821576222555,
+      0.1428565614303564,
+      0.004314059076061281,
+      -0.02155576061710468,
+      -0.007000119660165131
+     ]
+    ]
+   ],
+   "im": [
+    [
+     [
+      -0.25142985985464006,
+      -0.6306022251249944,
+      -0.17880585918568045,
+      -0.02263991401044753,
+      -0.0014780972856758934
+     ],
+     [
+      -0.2514298598546401,
+      -0.6306022251249944,
+      -0.17880585918568045,
+      -0.02263991401044753,
+      -0.0014780972856758936
+     ]
+    ],
+    [
+     [
+      0.05082284467306599,
+      0.14873379596907335,
+      -0.29352617643626067,
+      -0.08701248693538458,
+      -0.004631088740974199
+     ],
+     [
+      -0.039907695073045264,
+      -0.14244956267984257,
+      -0.10508605441687749,
+      -0.03198404784456526,
+      -0.003290654541103267
+     ]
+    ]
+   ],
+   "cls": "tf",
+   "n": 10,
+   "size": [
+    2,
+    2
+   ]
+  },
+  "a_scal2": {
+   "re": [
+    [
+     [
+      1.966761726816796,
+      1.342281879194631,
+      0.43383947939262474,
+      0.1026167265264238,
+      0.016393442622950817
+     ],
+     [
+      1.9667617268167963,
+      1.3422818791946307,
+      0.43383947939262474,
+      0.10261672652642381,
+      0.016393442622950834
+     ]
+    ],
+    [
+     [
+      0.9860958443540854,
+      0.7590329221444789,
+      1.0989080002126785,
+      0.34028222863249175,
+      0.04291695086671215
+     ],
+     [
+      1.2331170795301196,
+      0.9137121949035616,
+      0.4208973021644409,
+      0.16728400837773785,
+      0.03739380160344622
+     ]
+    ]
+   ],
+   "im": [
+    [
+     [
+      -0.25567902448618346,
+      -0.9395973154362417,
+      -0.8242950108459871,
+      -0.44125192406362235,
+      -0.180327868852459
+     ],
+     [
+      -0.25567902448618357,
+      -0.9395973154362416,
+      -0.824295010845987,
+      -0.44125192406362235,
+      -0.180327868852459
+     ]
+    ],
+    [
+     [
+      -0.07580481397211158,
+      -0.18666091394118706,
+      -0.08952548381305947,
+      -0.6739117113145536,
+      -0.27323423571747774
+     ],
+     [
+      -0.1359559392670477,
+      -0.5122486273967138,
+      -0.5090368475953546,
+      -0.3452997805299266,
+      -0.17045590522914922
+     ]
+    ]
+   ],
+   "cls": "tf",
+   "n": 10,
+   "size": [
+    2,
+    2
+   ]
+  },
+  "a_sub": {
+   "re": [
+    0.002714980945687392,
+    0.08789198254716346,
+    0.8819882605163664,
+    0.2889738653692798,
+    0.03472022955523673
+   ],
+   "im": [
+    0.05203469827098017,
+    0.28313774377693374,
+    0.3226220216099339,
+    -0.4532857492827424,
+    -0.1830703012912482
+   ],
+   "cls": "tf",
+   "n": 2,
+   "size": [
+    1,
+    1
+   ],
+   "tn": [
+    0,
+    2,
+    0
+   ],
+   "td": [
+    1,
+    2,
+    5
+   ],
+   "io": 0,
+   "ind": 0,
+   "outd": 0
+  },
+  "a_neg": {
+   "re": [
+    -0.39575993906228757,
+    -0.315230956390043,
+    -0.18154654054311536,
+    -0.008134427429551656,
+    0.037849139742865016
+   ],
+   "im": [
+    0.03794126083968931,
+    0.1498557040158623,
+    0.1930980873916074,
+    0.20168940673448366,
+    0.021325245321853578
+   ],
+   "cls": "zpk",
+   "n": 3,
+   "size": [
+    1,
+    1
+   ],
+   "zz": [
+    -2,
+    0
+   ],
+   "zp": [
+    [
+     -1,
+     0
+    ],
+    [
+     -3,
+     4
+    ],
+    [
+     -3,
+     -4
+    ]
+   ],
+   "zk": -5
+  },
+  "a_mat": {
+   "re": [
+    [
+     [
+      0.9888108252997728,
+      0.8469249046916423,
+      1.9808962607290446,
+      0.6292560940017716,
+      0.07763718042194889
+     ],
+     [
+      1.4828532956518408,
+      1.156283450209808,
+      0.6248748646325694,
+      0.2832596534922637,
+      0.06659088189541704
+     ]
+    ],
+    [
+     [
+      0.002714980945687392,
+      0.08789198254716346,
+      0.8819882605163664,
+      0.2889738653692798,
+      0.03472022955523673
+     ],
+     [
+      0.24973621612172145,
+      0.24257125530624624,
+      0.2039775624681285,
+      0.11597564511452595,
+      0.029197080291970802
+     ]
+    ]
+   ],
+   "im": [
+    [
+     [
+      -0.023770115701131397,
+      0.09647682983574667,
+      0.23309653779687411,
+      -1.127197460597296,
+      -0.4563045370087259
+     ],
+     [
+      -0.14407236629100362,
+      -0.5546985970753072,
+      -0.6059261897677155,
+      -0.46997359902804187,
+      -0.2507478760320689
+     ]
+    ],
+    [
+     [
+      0.05203469827098017,
+      0.28313774377693374,
+      0.3226220216099339,
+      -0.4532857492827424,
+      -0.1830703012912482
+     ],
+     [
+      -0.008116427023955947,
+      -0.04244996967859309,
+      -0.09688934217236105,
+      -0.1246738184981154,
+      -0.08029197080291971
+     ]
+    ]
+   ],
+   "cls": "tf",
+   "n": 9,
+   "size": [
+    2,
+    2
+   ]
+  },
+  "a_fb": {
+   "re": [
+    0.22398515554946025,
+    0.2756265551439594,
+    -0.08404061913748176,
+    -0.061219518378621045,
+    -0.008405587584762533
+   ],
+   "im": [
+    0.0015153230616552253,
+    -0.005646889748786427,
+    -0.7987945013858042,
+    -0.015507234739986707,
+    -0.0007710385379809003
+   ],
+   "cls": "tf",
+   "n": 4,
+   "size": [
+    1,
+    1
+   ],
+   "tn": [
+    0,
+    0,
+    1,
+    3,
+    2
+   ],
+   "td": [
+    1,
+    4,
+    8,
+    13,
+    9
+   ],
+   "io": 0,
+   "ind": 0,
+   "outd": 0
+  },
+  "a_fbpos": {
+   "re": [
+    0.3016441942756806,
+    0.3562024028417489,
+    -0.5525877594365786,
+    -0.058264506183418684,
+    -0.008285558769491292
+   ],
+   "im": [
+    -0.004600831029066679,
+    -0.03512701253800046,
+    -0.6519524357553563,
+    -0.010960037911152286,
+    -0.000714421269614185
+   ],
+   "cls": "tf",
+   "n": 5,
+   "size": [
+    1,
+    1
+   ],
+   "tn": [
+    0,
+    0,
+    1,
+    7,
+    16,
+    12
+   ],
+   "td": [
+    1,
+    8,
+    24,
+    43,
+    58,
+    40
+   ],
+   "io": 0,
+   "ind": 0,
+   "outd": 0
+  },
+  "a_fbz": {
+   "re": [
+    0.22140718292855951,
+    0.20336177348357812,
+    0.16044407729039195,
+    0.07496673814195479,
+    -0.039799549098337765
+   ],
+   "im": [
+    -0.01180021820537834,
+    -0.05452802046364751,
+    -0.09620414063794935,
+    -0.16870477928491967,
+    -0.024908225428257835
+   ],
+   "cls": "zpk",
+   "n": 3,
+   "size": [
+    1,
+    1
+   ],
+   "zz": [
+    -2,
+    0
+   ],
+   "zp": [
+    [
+     -1.3480823743557298,
+     0
+    ],
+    [
+     -2.8259588128221353,
+     5.039316050397256
+    ],
+    [
+     -2.8259588128221353,
+     -5.039316050397256
+    ]
+   ],
+   "zk": 5
+  },
+  "a_fbss": {
+   "re": [
+    [
+     [
+      0.8769237967860287,
+      0.8089593184786785,
+      0.528797362194292,
+      0.18632368225791657,
+      0.03221870858401546
+     ],
+     [
+      0.45599784432319435,
+      0.4176877212427733,
+      0.31607323820667726,
+      0.20388014221019085,
+      0.1190765591633523
+     ]
+    ],
+    [
+     [
+      -0.34054609281033293,
+      -0.1466223309653443,
+      0.1658737138839843,
+      0.012195118295437292,
+      -0.004330786098715966
+     ],
+     [
+      0.3881876041453391,
+      0.41601367180415993,
+      0.33562253226998967,
+      0.09125296843536683,
+      0.01076158608366538
+     ]
+    ]
+   ],
+   "im": [
+    [
+     [
+      -0.0484370916961804,
+      -0.2449403729838649,
+      -0.43072615784552004,
+      -0.3777435050988037,
+      -0.1721744339902349
+     ],
+     [
+      -0.02160263328922648,
+      -0.10066790310372391,
+      -0.14739478795375968,
+      -0.15473977106355927,
+      -0.081528515095622
+     ]
+    ],
+    [
+     [
+      0.07086772901635764,
+      0.280615455646243,
+      0.08681243007394474,
+      -0.04689133746125225,
+      -0.0034900478957682352
+     ],
+     [
+      -0.004608737607482581,
+      -0.054854991093615926,
+      -0.23254020989984983,
+      -0.2231938347908404,
+      -0.08988366225650357
+     ]
+    ]
+   ],
+   "cls": "ss",
+   "n": 5,
+   "size": [
+    2,
+    2
+   ]
+  },
+  "a_fbmimo": {
+   "re": [
+    [
+     [
+      0.49762941207481576,
+      0.42966958339922867,
+      -0.03174248811039805,
+      0.11850719257469892,
+      0.02958329607146211
+     ],
+     [
+      0.39978171725058204,
+      0.3951472489494171,
+      0.28212752430804555,
+      0.07952850910917887,
+      0.021198263880642026
+     ]
+    ],
+    [
+     [
+      -0.0008290966496275568,
+      -0.015429463850258694,
+      0.6598422905762132,
+      0.3046633241896416,
+      0.05987412348050792
+     ],
+     [
+      0.198476598170608,
+      0.1525192893362633,
+      -0.11945004995089455,
+      0.1508615606277981,
+      0.047652448656705385
+     ]
+    ]
+   ],
+   "im": [
+    [
+     [
+      -0.042848249999969466,
+      -0.2229861386454296,
+      -0.21244351876030665,
+      -0.10658657922347951,
+      -0.0800872076705971
+     ],
+     [
+      -0.01507667175559439,
+      -0.08169458966414514,
+      -0.2922078954393703,
+      -0.16048405143112673,
+      -0.08272282032563733
+     ]
+    ],
+    [
+     [
+      0.02100467643021284,
+      0.14520356891139877,
+      0.48519776493037275,
+      -0.2964077696242467,
+      -0.16524184144488954
+     ],
+     [
+      -0.021818279731386912,
+      -0.11321389493630168,
+      0.048373494693456705,
+      -0.02100448630721596,
+      -0.06773526203578809
+     ]
+    ]
+   ],
+   "cls": "tf",
+   "n": 12,
+   "size": [
+    2,
+    2
+   ]
+  },
+  "a_series": {
+   "re": [
+    [
+     [
+      1.6900277447782357,
+      0.429478848836763,
+      -0.2026997701592079,
+      -0.0859868892605333,
+      -0.015916141604393492
+     ],
+     [
+      1.4312005079608303,
+      0.494224782722616,
+      -0.12282945404474034,
+      -0.0741028218292643,
+      -0.014881367294191844
+     ]
+    ],
+    [
+     [
+      0.38262066042995746,
+      0.27476317116326915,
+      0.07463806886927857,
+      -0.052844429736477114,
+      -0.014067330749740342
+     ],
+     [
+      0.20269530495124585,
+      0.24319413140891238,
+      0.39797252928840987,
+      -0.08209999215960306,
+      -0.019794230834516195
+     ]
+    ]
+   ],
+   "im": [
+    [
+     [
+      -0.44346957033559187,
+      -1.1051724157450995,
+      -0.33956041783644264,
+      -0.04897402012834132,
+      -0.003418677306064793
+     ],
+     [
+      -0.3352972865368007,
+      -0.9120730350032346,
+      -0.3669062108080712,
+      -0.07615041363995503,
+      -0.01297802894013884
+     ]
+    ],
+    [
+     [
+      -0.049129987307851126,
+      -0.18116287148317123,
+      -0.258176305813967,
+      -0.06248389411326014,
+      -0.006232249332639174
+     ],
+     [
+      0.005338822708996636,
+      0.0403077706617624,
+      -0.2947815477970129,
+      -0.13899309715172756,
+      -0.01684843783719407
+     ]
+    ]
+   ],
+   "cls": "ss",
+   "n": 9,
+   "size": [
+    2,
+    2
+   ]
+  },
+  "a_par": {
+   "re": [
+    [
+     [
+      0.7957153418370383,
+      0.5581182958646425,
+      0.2897431292663156,
+      0.18461703629875387,
+      0.11894599482412768
+     ],
+     [
+      1.5293863765176188,
+      1.0603867500786703,
+      0.42876602841330747,
+      0.14737290375864334,
+      0.028874500609428554
+     ],
+     [
+      0,
+      0,
+      0,
+      0,
+      0
+     ]
+    ],
+    [
+     [
+      0.6790738133735758,
+      0.5745576113602378,
+      0.2845492172242792,
+      0.06872692052378851,
+      0.008930956223207703
+     ],
+     [
+      1.2016732758126418,
+      0.8138537293769778,
+      0.23061873501303826,
+      0.028536856795902912,
+      0.0010115294643660948
+     ],
+     [
+      0.9833808634083981,
+      0.6711409395973155,
+      0.2169197396963124,
+      0.051308363263211906,
+      0.00819672131147541
+     ]
+    ],
+    [
+     [
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     [
+      0.24973621612172145,
+      0.24257125530624624,
+      0.2039775624681285,
+      0.11597564511452596,
+      0.029197080291970802
+     ],
+     [
+      0.002714980945687393,
+      0.08789198254716347,
+      0.8819882605163663,
+      0.2889738653692798,
+      0.03472022955523673
+     ]
+    ]
+   ],
+   "im": [
+    [
+     [
+      -0.09364792335889588,
+      -0.31628051638356525,
+      -0.2521073195427997,
+      -0.16914321903201032,
+      -0.08529424944413591
+     ],
+     [
+      -0.1921619971038141,
+      -0.6842836152332566,
+      -0.6166790762206674,
+      -0.3847791332320357,
+      -0.1752942383356364
+     ],
+     [
+      0,
+      0,
+      0,
+      0,
+      0
+     ]
+    ],
+    [
+     [
+      -0.05559329714299684,
+      -0.24983517071383818,
+      -0.3481748539502781,
+      -0.22564932847378114,
+      -0.0913788197321132
+     ],
+     [
+      -0.15944347865369893,
+      -0.5900522640442296,
+      -0.5201584103412639,
+      -0.2545644727484101,
+      -0.09336593104498635
+     ],
+     [
+      -0.12783951224309176,
+      -0.4697986577181208,
+      -0.4121475054229935,
+      -0.2206259620318112,
+      -0.09016393442622951
+     ]
+    ],
+    [
+     [
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     [
+      -0.008116427023955947,
+      -0.04244996967859309,
+      -0.09688934217236105,
+      -0.12467381849811542,
+      -0.08029197080291971
+     ],
+     [
+      0.05203469827098017,
+      0.28313774377693374,
+      0.322622021609934,
+      -0.45328574928274235,
+      -0.1830703012912482
+     ]
+    ]
+   ],
+   "cls": "ss",
+   "n": 9,
+   "size": [
+    3,
+    3
+   ]
+  },
+  "a_app": {
+   "re": [
+    [
+     [
+      0.2870482438526684,
+      0.3272676235004982,
+      -0.1220720168994501,
+      -0.060616175851683524,
+      -0.008403840192556664
+     ],
+     [
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     [
+      0,
+      0,
+      0,
+      0,
+      0
+     ]
+    ],
+    [
+     [
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     [
+      0.39575993906228746,
+      0.3152309563900431,
+      0.18154654054311536,
+      0.008134427429551672,
+      -0.03784913974286501
+     ],
+     [
+      0,
+      0,
+      0,
+      0,
+      0
+     ]
+    ],
+    [
+     [
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     [
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     [
+      0.9485203624447271,
+      0.9064945890597049,
+      0.6344605403788923,
+      0.1673422852278021,
+      0.16546331291541772
+     ]
+    ]
+   ],
+   "im": [
+    [
+     [
+      -0.008051273295510353,
+      -0.060250250884461606,
+      -0.5802590591727019,
+      -0.016171600729758498,
+      -0.0007772469502744296
+     ],
+     [
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     [
+      0,
+      0,
+      0,
+      0,
+      0
+     ]
+    ],
+    [
+     [
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     [
+      -0.03794126083968936,
+      -0.1498557040158623,
+      -0.19309808739160744,
+      -0.2016894067344836,
+      -0.021325245321853578
+     ],
+     [
+      0,
+      0,
+      0,
+      0,
+      0
+     ]
+    ],
+    [
+     [
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     [
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     [
+      -0.04222518412007019,
+      -0.22321041658348756,
+      -0.49724180494514514,
+      -0.3359412093760018,
+      -0.06666232242929754
+     ]
+    ]
+   ],
+   "cls": "ss",
+   "n": 8,
+   "size": [
+    3,
+    3
+   ]
+  },
+  "a_d1": {
+   "re": [
+    2.070524025749131,
+    -0.9474931716999303,
+    -0.40465369263136597,
+    0.40694816469761347
+   ],
+   "im": [
+    -1.8275080287123102,
+    0.5514547721470403,
+    0.006596609522731112,
+    0.03858428128469109
+   ],
+   "cls": "tf",
+   "n": 5,
+   "size": [
+    1,
+    1
+   ],
+   "tn": [
+    0,
+    0.3,
+    -0.33,
+    0.614,
+    -0.012,
+    -0.020000000000000004
+   ],
+   "td": [
+    1,
+    -1.3,
+    0.6000000000000001,
+    -0.11600000000000002,
+    0.008,
+    0
+   ],
+   "io": 1,
+   "ind": 0,
+   "outd": 0
+  },
+  "a_d2": {
+   "re": [
+    0.5071812397565731,
+    -0.2757810804885229,
+    -0.17768100012183674,
+    -0.1638069867901246
+   ],
+   "im": [
+    -0.5329603492114741,
+    0.42030574115353725,
+    0.13172401498387076,
+    -0.03102269351057728
+   ],
+   "cls": "tf",
+   "n": 2,
+   "size": [
+    1,
+    1
+   ],
+   "tn": [
+    0,
+    0,
+    0.3
+   ],
+   "td": [
+    1,
+    -0.7,
+    0.1
+   ],
+   "io": 2,
+   "ind": 1,
+   "outd": 0
+  },
+  "a_d3": {
+   "re": [
+    2.0673152975638556,
+    -1.208800970977573,
+    0.5955841481296247,
+    -0.41339409919159215
+   ],
+   "im": [
+    -1.081511782212937,
+    -1.1137185081240395,
+    0.3611049990699666,
+    -0.05475836240994418
+   ],
+   "cls": "tf",
+   "n": 3,
+   "size": [
+    1,
+    1
+   ],
+   "tn": [
+    0,
+    0.3,
+    0.85,
+    -0.2
+   ],
+   "td": [
+    1,
+    -0.7,
+    0.1,
+    0
+   ],
+   "io": 1,
+   "ind": 0,
+   "outd": 0
+  },
+  "a_dfb": {
+   "re": [
+    0.7370309884396694,
+    0.9440877376471731,
+    -0.2014637885197734,
+    0.13642306339950258
+   ],
+   "im": [
+    -0.16672976873087245,
+    1.1063922519332776,
+    -0.30577052206504435,
+    0.014574077616787322
+   ],
+   "cls": "tf",
+   "n": 5,
+   "size": [
+    1,
+    1
+   ],
+   "tn": [
+    0,
+    0,
+    0,
+    0,
+    0.5,
+    0.1
+   ],
+   "td": [
+    1,
+    -1.1,
+    0.38,
+    -0.04,
+    0.5,
+    0.1
+   ],
+   "io": 0,
+   "ind": 0,
+   "outd": 0
+  },
+  "a_l1": {
+   "re": [
+    0.4813926817177052,
+    0.15531320780805294,
+    -0.12631408176234823,
+    -0.038702556721386394,
+    0.008046931182025057
+   ],
+   "im": [
+    -0.11433274172847871,
+    -0.35405141473047064,
+    -0.11202373746050664,
+    0.02799102986659722,
+    0.0009059078559964522
+   ],
+   "cls": "tf",
+   "n": 2,
+   "size": [
+    1,
+    1
+   ],
+   "tn": [
+    0,
+    0,
+    1
+   ],
+   "td": [
+    1,
+    3,
+    2
+   ],
+   "io": 0.30000000000000004,
+   "ind": 0,
+   "outd": 0
+  },
+  "a_l2": {
+   "re": [
+    0.4813926817177052,
+    0.15531320780805294,
+    -0.12631408176234823,
+    -0.038702556721386394,
+    0.008046931182025057
+   ],
+   "im": [
+    -0.11433274172847871,
+    -0.35405141473047064,
+    -0.11202373746050664,
+    0.02799102986659722,
+    0.0009059078559964522
+   ],
+   "cls": "tf",
+   "n": 2,
+   "size": [
+    1,
+    1
+   ],
+   "tn": [
+    0,
+    0,
+    1
+   ],
+   "td": [
+    1,
+    3,
+    2
+   ],
+   "io": 0.30000000000000004,
+   "ind": 0,
+   "outd": 0
+  },
+  "a_l3": {
+   "re": [
+    [
+     [
+      1.5699807106862647,
+      0.2100702385538824,
+      -0.34006065683831205,
+      -0.07271600715749327,
+      0.01631106750447189
+     ],
+     [
+      1.0964939083952874,
+      0.29245457274621306,
+      -0.226458165851337,
+      -0.09735967596138018,
+      0.016587629754586393
+     ]
+    ],
+    [
+     [
+      0.10669334713644928,
+      0.028032468659147318,
+      -0.03683666394838724,
+      -0.001075980251404587,
+      0.00030011101951933297
+     ],
+     [
+      0.33411736507119666,
+      0.17033983590339163,
+      -0.09794234983178914,
+      -0.04216860629067641,
+      0.008154160536007897
+     ]
+    ]
+   ],
+   "im": [
+    [
+     [
+      -0.4688548411783784,
+      -1.1012172680429895,
+      -0.18860164027432855,
+      0.06837138573210688,
+      0.000897447242295589
+     ],
+     [
+      -0.286442419275663,
+      -0.7528360364941695,
+      -0.2547191069059137,
+      0.03944077708692924,
+      0.011195297868530792
+     ]
+    ],
+    [
+     [
+      -0.02698065793405018,
+      -0.08349218325981538,
+      -0.014168620792638455,
+      0.008550653585862641,
+      -0.0006363737029241835
+     ],
+     [
+      -0.06273172341359907,
+      -0.24167831389793118,
+      -0.1302950807218527,
+      0.02637881629658488,
+      0.0009738949381583757
+     ]
+    ]
+   ],
+   "cls": "ss",
+   "n": 5,
+   "size": [
+    2,
+    2
+   ]
+  },
+  "a_l4": {
+   "re": [
+    [
+     [
+      1.4632873635498154,
+      0.18203776989473514,
+      -0.30322399288992485,
+      -0.07164002690608864,
+      0.016010956484952557
+     ],
+     [
+      1.1390543872284131,
+      0.4070284425260814,
+      -0.24365728531106637,
+      -0.12948709419679,
+      0.023018855191222442
+     ]
+    ],
+    [
+     [
+      0.20816434881313603,
+      0.007621690388863119,
+      -0.05066682521832224,
+      0.0007553091363740085,
+      0.00024519298908780285
+     ],
+     [
+      0.440810712207646,
+      0.19837230456253896,
+      -0.13477901378017637,
+      -0.043244586542081014,
+      0.008454271555527235
+     ]
+    ]
+   ],
+   "im": [
+    [
+     [
+      -0.4418741832443283,
+      -1.017725084783174,
+      -0.1744330194816901,
+      0.05982073214624422,
+      0.0015338209452197722
+     ],
+     [
+      -0.26216282077623904,
+      -0.8004479812156899,
+      -0.3281069202513617,
+      0.04215174135128915,
+      0.01371824975549344
+     ]
+    ],
+    [
+     [
+      -0.06715254608606963,
+      -0.15269682173043178,
+      -0.002059935172400419,
+      0.009226762804277335,
+      -0.0006686490711015347
+     ],
+     [
+      -0.08971238134764925,
+      -0.32517049715774654,
+      -0.14446370151449112,
+      0.034929469882447536,
+      0.0003375212352341938
+     ]
+    ]
+   ],
+   "cls": "ss",
+   "n": 5,
+   "size": [
+    2,
+    2
+   ]
+  },
+  "a_lft": {
+   "re": [
+    1.9237244639083007,
+    0.9812246928816123,
+    0.3968846789397313,
+    0.14521218045867515,
+    0.028705958029189297
+   ],
+   "im": [
+    -0.422610766690082,
+    -0.8393790086090676,
+    -0.6155979652507428,
+    -0.38189623878348167,
+    -0.17517855818603995
+   ],
+   "cls": "ss",
+   "n": 5,
+   "size": [
+    1,
+    1
+   ]
+  },
+  "a_lft2": {
+   "re": [
+    0.35477764385361554,
+    0.45428976248349373,
+    0.2570514811086008,
+    0.06678104854169124,
+    0.008764613625384374
+   ],
+   "im": [
+    -0.12247768981307935,
+    -0.2914939823146554,
+    -0.34223946204374833,
+    -0.22278998922827228,
+    -0.09126092403507337
+   ],
+   "cls": "ss",
+   "n": 5,
+   "size": [
+    1,
+    1
+   ]
+  },
+  "m_tf7": {
+   "re": [
+    0.49789643631015434,
+    0.4454343210116441,
+    0.26281208476687534,
+    0.08892840886582964,
+    0.015999999219672125
+   ],
+   "im": [
+    -0.03236327475213564,
+    -0.1559020358440083,
+    -0.24967150113590691,
+    -0.19119609009283187,
+    -0.08800000021639344
+   ],
+   "n": 2,
+   "tn": [
+    0,
+    1,
+    1.0000001
+   ],
+   "td": [
+    1,
+    3,
+    2
+   ]
+  },
+  "m_tf8": {
+   "re": [
+    0.4978963877617068,
+    0.4454342984409799,
+    0.2628120893561104,
+    0.08892841262783459,
+    0.016000000000000004
+   ],
+   "im": [
+    -0.032363265204510945,
+    -0.15590200445434296,
+    -0.24967148488830487,
+    -0.19119608714984437,
+    -0.08800000000000001
+   ],
+   "n": 1,
+   "tn": [
+    0,
+    1
+   ],
+   "td": [
+    1,
+    2
+   ]
+  },
+  "m_tf100": {
+   "re": [
+    0.3327085805542925,
+    0.31612223393045313,
+    0.23790642347343377,
+    0.10913059294288832,
+    0.023076923076923075
+   ],
+   "im": [
+    -0.014417371824019342,
+    -0.0737618545837724,
+    -0.1506740681998414,
+    -0.15642051655147327,
+    -0.08461538461538462
+   ],
+   "n": 1,
+   "tn": [
+    0,
+    1
+   ],
+   "td": [
+    1,
+    3
+   ]
+  },
+  "m_z": {
+   "re": [
+    3.3364570972285374,
+    3.419388830347734,
+    3.810467882632831,
+    4.454347035285558,
+    4.884615384615384
+   ],
+   "im": [
+    0.07208685912009671,
+    0.36880927291886195,
+    0.753370340999207,
+    0.7821025827573663,
+    0.42307692307692313
+   ],
+   "n": 1
+  },
+  "m_ss": {
+   "re": [
+    0.9833808634083981,
+    0.6711409395973155,
+    0.2169197396963124,
+    0.051308363263211906,
+    0.00819672131147541
+   ],
+   "im": [
+    -0.12783951224309176,
+    -0.4697986577181208,
+    -0.4121475054229935,
+    -0.2206259620318112,
+    -0.09016393442622951
+   ],
+   "n": 1
+  },
+  "m_ss2": {
+   "re": [
+    [
+     [
+      1.0500388137700443,
+      0.31281236314308186,
+      -0.09346205247361536,
+      -0.05472344889951331,
+      -0.014144540611781338
+     ],
+     [
+      1.0827246955511476,
+      0.7542339207305779,
+      0.24626907997917757,
+      0.04262818134541108,
+      0.002114529530653493
+     ]
+    ],
+    [
+     [
+      0.19986489133345858,
+      0.19615535504119264,
+      0.17476406850751486,
+      0.11496895838123708,
+      0.03424657534246575
+     ],
+     [
+      0.19986489133345858,
+      0.19615535504119264,
+      0.17476406850751486,
+      0.11496895838123708,
+      0.03424657534246575
+     ]
+    ]
+   ],
+   "im": [
+    [
+     [
+      -0.26048545253125377,
+      -0.6734156433745196,
+      -0.23989290547083025,
+      -0.053414174991107705,
+      -0.005697275367867674
+     ],
+     [
+      -0.13689510491970544,
+      -0.5126120759676461,
+      -0.4732345517081432,
+      -0.2514002230124714,
+      -0.0943831125084213
+     ]
+    ],
+    [
+     [
+      -0.005196487174669923,
+      -0.027461749705766966,
+      -0.06641034603285564,
+      -0.09887330420786389,
+      -0.07534246575342465
+     ],
+     [
+      -0.005196487174669923,
+      -0.027461749705766966,
+      -0.06641034603285564,
+      -0.09887330420786389,
+      -0.07534246575342465
+     ]
+    ]
+   ],
+   "n": 4
+  },
+  "r4": {
+   "hsv": [
+    0.07020235753257527,
+    0.02485602727321993,
+    0.005126916654440444,
+    0.00047324691379581633
+   ],
+   "g": [
+    0.07020235753257527,
+    0.02485602727321993,
+    0.005126916654440444,
+    0.00047324691379581633
+   ],
+   "nb": 4
+  },
+  "r4_bal": {
+   "re": [
+    0.0953426405625566,
+    0.014495051727513815,
+    -0.028757794645731815,
+    0.000366971047545236,
+    5.73235126712425e-05
+   ],
+   "im": [
+    -0.026621957588243816,
+    -0.07634950374535625,
+    0.0010384237021457427,
+    0.002532527901801353,
+    3.496215814121316e-05
+   ]
+  },
+  "r4_dc": {
+   "re": [
+    0.09553456577375924,
+    0.013385162582901056,
+    -0.029220843752208795,
+    -0.002884047882893523,
+    0.007253308452986874
+   ],
+   "im": [
+    -0.026446715352496538,
+    -0.07653493889081936,
+    -0.004740392663391621,
+    0.011645975015070977,
+    0.006161129235828947
+   ],
+   "p": [
+    [
+     -1.001590355610778,
+     0.46128993130980467
+    ],
+    [
+     -1.001590355610778,
+     -0.46128993130980467
+    ]
+   ]
+  },
+  "r4_tr": {
+   "re": [
+    0.08904161943531584,
+    0.014151193919138647,
+    -0.0205836752234334,
+    -0.004470685470102759,
+    -0.0006919607890214141
+   ],
+   "im": [
+    -0.019782013989047376,
+    -0.08571518051223427,
+    -0.004045664216491087,
+    0.0026614841630810157,
+    0.001371546898535925
+   ]
+  },
+  "r4_mr": {
+   "re": [
+    0.09553456577375927,
+    0.013385162582901027,
+    -0.029220843752208826,
+    -0.002884047882893462,
+    0.007253308452986929
+   ],
+   "im": [
+    -0.02644671535249654,
+    -0.07653493889081944,
+    -0.004740392663391515,
+    0.011645975015071017,
+    0.006161129235828955
+   ]
+  },
+  "r4_mt": {
+   "re": [
+    0.08904161943531579,
+    0.014151193919138619,
+    -0.02058367522343341,
+    -0.004470685470102761,
+    -0.0006919607890214143
+   ],
+   "im": [
+    -0.019782013989047366,
+    -0.08571518051223424,
+    -0.004045664216491069,
+    0.0026614841630810257,
+    0.001371546898535928
+   ]
+  },
+  "r6": {
+   "hsv": [
+    0.0897604092951112,
+    0.04054500467214156,
+    0.010543760443283864,
+    0.0025357533855108988,
+    9.490818624850232e-05,
+    2.2211956706328892e-05
+   ],
+   "g": [
+    0.0897604092951112,
+    0.04054500467214156,
+    0.010543760443283864,
+    0.0025357533855108988,
+    9.490818624850232e-05,
+    2.2211956706328892e-05
+   ],
+   "nb": 6
+  },
+  "r6_bal": {
+   "re": [
+    0.1209243200135822,
+    0.08058746102078534,
+    -0.034984395800050014,
+    -0.014003136855281886,
+    0.0002283427530284038
+   ],
+   "im": [
+    -0.02055276501566587,
+    -0.06900876925855481,
+    -0.09278789029369833,
+    0.0105593245122004,
+    0.0009061539657789133
+   ]
+  },
+  "r6_dc": {
+   "re": [
+    0.12288568844792186,
+    0.08450723063967563,
+    -0.026023201227269914,
+    -0.037024581368680046,
+    0.010368663893333682
+   ],
+   "im": [
+    -0.017603653676495724,
+    -0.07966137619824949,
+    -0.07692789311616698,
+    0.011968544907883438,
+    0.024317336681705888
+   ],
+   "p": [
+    [
+     -2.3137836582936426,
+     0.6245364982214567
+    ],
+    [
+     -2.3137836582936426,
+     -0.6245364982214567
+    ]
+   ]
+  },
+  "r6_tr": {
+   "re": [
+    0.09839242375244987,
+    0.09352202348194702,
+    -0.047885907569010094,
+    -0.01853198918047148,
+    -0.002763487680576706
+   ],
+   "im": [
+    -0.008889150046098561,
+    -0.0554781307901452,
+    -0.08032331159670071,
+    0.0026823850458556767,
+    0.003158565572130371
+   ]
+  },
+  "r6_mr": {
+   "re": [
+    0.12288512147316366,
+    0.08450406174939133,
+    -0.026025194230572927,
+    -0.03698880937424222,
+    0.010283004460330938
+   ],
+   "im": [
+    -0.017604700840822617,
+    -0.0796558019216821,
+    -0.07694530053444942,
+    0.011985620685022406,
+    0.024307365593328325
+   ]
+  },
+  "r6_mt": {
+   "re": [
+    0.09825263573822762,
+    0.09354385649927918,
+    -0.047960803912881544,
+    -0.018553008025786476,
+    -0.0029252222058180405
+   ],
+   "im": [
+    -0.008848832765841369,
+    -0.05533174401160265,
+    -0.08018093189886022,
+    0.002501348728342522,
+    0.003169026954269602
+   ]
+  },
+  "ru": {
+   "hsv": [
+    Infinity,
+    0.01906286654836718,
+    0.001657733338422912,
+    1.910921429816108e-05
+   ],
+   "g": [
+    Infinity,
+    0.01906286654836718,
+    0.001657733338422912,
+    1.910921429816108e-05
+   ],
+   "nb": 4
+  },
+  "ru_bal": {
+   "re": [
+    -0.04891253870907776,
+    -0.029020294391653767,
+    -0.004509119008297889,
+    -2.907327480078305e-05,
+    2.9968103256435583e-05
+   ],
+   "im": [
+    0.0038184045711707085,
+    0.012494642382875029,
+    0.006272599962732881,
+    0.000993497337563226,
+    3.916623395890323e-05
+   ]
+  },
+  "ru_dc": {
+   "re": [
+    -0.04882779137130394,
+    -0.029092919644468557,
+    -0.006076164794439558,
+    0.0011414152289863394,
+    0.002939012338695572
+   ],
+   "im": [
+    0.003914867887793116,
+    0.011684569800513352,
+    0.007701445803586695,
+    0.00372442613933219,
+    0.0014825177025795193
+   ],
+   "p": [
+    [
+     1,
+     0
+    ],
+    [
+     -0.8265265195782427,
+     0
+    ]
+   ]
+  },
+  "ru_tr": {
+   "re": [
+    -0.05123437792208399,
+    -0.02586343141304776,
+    -0.00659344065107366,
+    -0.0014714622826294843,
+    -0.00023191378549125108
+   ],
+   "im": [
+    0.006130116478797699,
+    0.011644776958421522,
+    0.004485604217944537,
+    0.0017542336328199228,
+    0.0006575743569049681
+   ]
+  },
+  "ru_mr": {
+   "re": [
+    -0.048827791371303934,
+    -0.02909291964446854,
+    -0.006076164794439548,
+    0.0011414152289863457,
+    0.002939012338695578
+   ],
+   "im": [
+    0.003914867887793121,
+    0.01168456980051336,
+    0.007701445803586692,
+    0.0037244261393321893,
+    0.0014825177025795187
+   ]
+  },
+  "ru_mt": {
+   "re": [
+    -0.05123437792208397,
+    -0.025863431413047738,
+    -0.0065934406510736515,
+    -0.0014714622826294825,
+    -0.00023191378549125086
+   ],
+   "im": [
+    0.006130116478797698,
+    0.011644776958421518,
+    0.00448560421794453,
+    0.0017542336328199197,
+    0.0006575743569049669
+   ]
+  },
+  "rd": {
+   "hsv": [
+    1.213146516787476,
+    0.41608974179994396,
+    0.06597390847722236,
+    0.005097407949062707
+   ],
+   "g": [
+    1.213146516787476,
+    0.41608974179994396,
+    0.06597390847722236,
+    0.005097407949062707
+   ],
+   "nb": 4
+  },
+  "rd_bal": {
+   "re": [
+    1.090789543553446,
+    -0.45415619499040794,
+    0.027370271806169022,
+    0.018823822459126477
+   ],
+   "im": [
+    -1.144041054949495,
+    0.05946242571604654,
+    0.025926020702642827,
+    0.0005943106884407287
+   ]
+  },
+  "rd_dc": {
+   "re": [
+    1.094933171326557,
+    -0.46208556912665194,
+    0.07224565259623168,
+    0.14052023293739563
+   ],
+   "im": [
+    -1.1501721747501081,
+    0.0011174980020000516,
+    0.14264875212303238,
+    0.004591117532119169
+   ],
+   "p": [
+    [
+     0.6871005048697703,
+     0.07856087348529622
+    ],
+    [
+     0.6871005048697703,
+     -0.07856087348529622
+    ]
+   ]
+  },
+  "rd_tr": {
+   "re": [
+    1.145187437935763,
+    -0.3924036475481981,
+    0.020542590377773753,
+    0.061133077172705344
+   ],
+   "im": [
+    -1.112068468159138,
+    0.008672813742074502,
+    0.08346958103018842,
+    0.0026219341878422737
+   ]
+  },
+  "rd_mr": {
+   "re": [
+    1.0949331713265558,
+    -0.4620855691266515,
+    0.07224565259623161,
+    0.14052023293739557
+   ],
+   "im": [
+    -1.1501721747501052,
+    0.0011174980019999503,
+    0.1426487521230322,
+    0.004591117532119167
+   ]
+  },
+  "rd_mt": {
+   "re": [
+    1.145187437935763,
+    -0.392403647548198,
+    0.020542590377773742,
+    0.0611330771727053
+   ],
+   "im": [
+    -1.1120684681591357,
+    0.008672813742074459,
+    0.08346958103018837,
+    0.0026219341878422724
+   ]
+  },
+  "rm": {
+   "hsv": [
+    0.5793473050620468,
+    0.25059449540431294,
+    0.02106607637821923,
+    0.004358034931959483
+   ],
+   "g": [
+    0.5793473050620468,
+    0.25059449540431294,
+    0.02106607637821923,
+    0.004358034931959483
+   ],
+   "nb": 4
+  },
+  "rm_bal": {
+   "re": [
+    [
+     [
+      1.1280893437072452,
+      0.7994155852480079,
+      0.31498427834302895,
+      0.10790462521413505,
+      0.02271020582438131
+     ],
+     [
+      0.261019040904714,
+      0.12838592800877688,
+      -0.012903534816347775,
+      -0.01656005043084511,
+      -0.005654585410680634
+     ]
+    ],
+    [
+     [
+      0.1401803843376183,
+      0.13213036596784264,
+      0.1089807622831683,
+      0.09578904143998576,
+      0.09792083777121151
+     ],
+     [
+      0.5282559105031934,
+      0.4740834843842206,
+      0.2867508084575853,
+      0.1073597691328291,
+      0.024489715778507937
+     ]
+    ]
+   ],
+   "im": [
+    [
+     [
+      -0.1364331408369446,
+      -0.5050080358873216,
+      -0.46551054209095977,
+      -0.2828663179969739,
+      -0.13021173465604347
+     ],
+     [
+      -0.049174884729494175,
+      -0.16286904147795978,
+      -0.09030147930474375,
+      -0.023688158894070985,
+      -0.003677594249567595
+     ]
+    ],
+    [
+     [
+      -0.004122299826931377,
+      -0.018701358003623297,
+      -0.024102356728750565,
+      -0.010441782941554408,
+      -0.0012423413618094584
+     ],
+     [
+      -0.03346565988650143,
+      -0.16101711142544894,
+      -0.25842795513865735,
+      -0.20238371612159528,
+      -0.09982048863144333
+     ]
+    ]
+   ]
+  },
+  "rm_dc": {
+   "re": [
+    [
+     [
+      1.128779854969852,
+      0.8037516333808647,
+      0.29740594787423535,
+      0.10281923406698144,
+      0.051442823832556016
+     ],
+     [
+      0.26135151662295947,
+      0.13069139616183223,
+      -0.01852317136945547,
+      -0.016668031314509862,
+      0.0002209121111375013
+     ]
+    ],
+    [
+     [
+      0.13998221674934322,
+      0.12926176400796402,
+      0.1106315676871755,
+      0.10137004570864189,
+      0.09834243648604099
+     ],
+     [
+      0.5282101111004301,
+      0.47366830919243297,
+      0.2870502611193937,
+      0.10458539352340697,
+      0.025729675311656944
+     ]
+    ]
+   ],
+   "im": [
+    [
+     [
+      -0.135225471385282,
+      -0.510776035640256,
+      -0.46637153965259676,
+      -0.2530432433129296,
+      -0.10373611970329129
+     ],
+     [
+      -0.048539757387626795,
+      -0.16517346703380179,
+      -0.09092289660853468,
+      -0.01660981207179383,
+      -0.0009558662092378435
+     ]
+    ],
+    [
+     [
+      -0.004666832574092274,
+      -0.018272890014850888,
+      -0.018810960909899952,
+      -0.011368363251799013,
+      -0.004868351224012451
+     ],
+     [
+      -0.033580560268771736,
+      -0.16083716854972593,
+      -0.25890027453698167,
+      -0.2016926095945458,
+      -0.09363536069544663
+     ]
+    ]
+   ],
+   "p": [
+    [
+     -1.0475358871739624,
+     0
+    ],
+    [
+     -2.073273117980489,
+     0
+    ]
+   ]
+  },
+  "rm_tr": {
+   "re": [
+    [
+     [
+      1.096657451687803,
+      0.8263739123496389,
+      0.31870814886007703,
+      0.08238125993487216,
+      0.013552047180271315
+     ],
+     [
+      0.24608641888184848,
+      0.1392331664996,
+      -0.013189500422502684,
+      -0.021947490796703075,
+      -0.005004110874892458
+     ]
+    ],
+    [
+     [
+      0.15468514061967475,
+      0.13169310144066831,
+      0.09844922533272504,
+      0.0957816588186105,
+      0.09901907566227428
+     ],
+     [
+      0.5257611512025502,
+      0.4722952619795585,
+      0.2923409179253201,
+      0.10610550892286419,
+      0.01975069372470625
+     ]
+    ]
+   ],
+   "im": [
+    [
+     [
+      -0.11913492422623795,
+      -0.48193742787914023,
+      -0.49878647254151864,
+      -0.28820127014535957,
+      -0.12059262738014166
+     ],
+     [
+      -0.041311985772347064,
+      -0.1525857440761829,
+      -0.10063694607776441,
+      -0.021806155881126898,
+      -0.0020482640684195324
+     ]
+    ],
+    [
+     [
+      -0.008942780703167837,
+      -0.03318338835025155,
+      -0.02254740937050078,
+      -0.00554418311080125,
+      -0.0008627079550513028
+     ],
+     [
+      -0.03309928115946568,
+      -0.15783996450757284,
+      -0.25772665109916504,
+      -0.2087860275662296,
+      -0.09901994407783603
+     ]
+    ]
+   ]
+  },
+  "rm_mr": {
+   "re": [
+    [
+     [
+      1.1287798549698513,
+      0.8037516333808647,
+      0.2974059478742357,
+      0.10281923406698168,
+      0.05144282383255622
+     ],
+     [
+      0.26135151662295925,
+      0.1306913961618323,
+      -0.01852317136945519,
+      -0.01666803131450978,
+      0.00022091211113749263
+     ]
+    ],
+    [
+     [
+      0.13998221674934314,
+      0.1292617640079641,
+      0.11063156768717557,
+      0.10137004570864189,
+      0.09834243648604095
+     ],
+     [
+      0.5282101111004303,
+      0.4736683091924331,
+      0.28705026111939375,
+      0.10458539352340697,
+      0.025729675311656944
+     ]
+    ]
+   ],
+   "im": [
+    [
+     [
+      -0.1352254713852818,
+      -0.5107760356402554,
+      -0.4663715396525967,
+      -0.25304324331292966,
+      -0.10373611970329134
+     ],
+     [
+      -0.04853975738762667,
+      -0.16517346703380148,
+      -0.09092289660853475,
+      -0.016609812071793937,
+      -0.0009558662092379145
+     ]
+    ],
+    [
+     [
+      -0.0046668325740922435,
+      -0.01827289001485083,
+      -0.0188109609099,
+      -0.011368363251799084,
+      -0.0048683512240124925
+     ],
+     [
+      -0.033580560268771736,
+      -0.160837168549726,
+      -0.2589002745369818,
+      -0.20169260959454582,
+      -0.09363536069544666
+     ]
+    ]
+   ]
+  },
+  "rm_mt": {
+   "re": [
+    [
+     [
+      1.0966574516878025,
+      0.826373912349639,
+      0.3187081488600771,
+      0.08238125993487218,
+      0.013552047180271318
+     ],
+     [
+      0.24608641888184835,
+      0.13923316649960016,
+      -0.013189500422502451,
+      -0.021947490796702968,
+      -0.005004110874892434
+     ]
+    ],
+    [
+     [
+      0.15468514061967464,
+      0.13169310144066837,
+      0.0984492253327251,
+      0.09578165881861052,
+      0.09901907566227428
+     ],
+     [
+      0.5257611512025504,
+      0.47229526197955846,
+      0.29234091792532,
+      0.10610550892286415,
+      0.01975069372470624
+     ]
+    ]
+   ],
+   "im": [
+    [
+     [
+      -0.11913492422623786,
+      -0.48193742787914007,
+      -0.49878647254151853,
+      -0.28820127014535957,
+      -0.12059262738014166
+     ],
+     [
+      -0.041311985772347015,
+      -0.15258574407618278,
+      -0.10063694607776444,
+      -0.02180615588112703,
+      -0.0020482640684195744
+     ]
+    ],
+    [
+     [
+      -0.00894278070316782,
+      -0.03318338835025155,
+      -0.02254740937050076,
+      -0.005544183110801266,
+      -0.0008627079550513068
+     ],
+     [
+      -0.03309928115946569,
+      -0.1578399645075729,
+      -0.2577266510991651,
+      -0.20878602756622958,
+      -0.09901994407783603
+     ]
+    ]
+   ]
+  },
+  "rm_raw": {
+   "re": [
+    [
+     [
+      1.1455001723192453,
+      1.1434835482547954,
+      1.1364357820766922,
+      1.1295407101264021,
+      1.1261212935630374
+     ],
+     [
+      0.2673503440787969,
+      0.2406078954503391,
+      0.14724559765265124,
+      0.0565189192539854,
+      0.013205610760359884
+     ]
+    ],
+    [
+     [
+      0.14036370741342608,
+      0.13633668076473723,
+      0.12227538708923977,
+      0.10859679012336841,
+      0.10202723124710854
+     ],
+     [
+      0.5282954600991995,
+      0.474878150590822,
+      0.2885143758351671,
+      0.10819237732678978,
+      0.024260500573605837
+     ]
+    ]
+   ],
+   "im": [
+    [
+     [
+      -0.0012610165003594587,
+      -0.006086889982011565,
+      -0.009872226013293189,
+      -0.007919584787853842,
+      -0.0040632616269980154
+     ],
+     [
+      -0.01666559949575145,
+      -0.08040340302473993,
+      -0.12999627453025522,
+      -0.10313241988115412,
+      -0.0516398968261649
+     ]
+    ],
+    [
+     [
+      -0.0025109168794383947,
+      -0.01211490627025622,
+      -0.01959692035083705,
+      -0.015574145241166277,
+      -0.007828335300577938
+     ],
+     [
+      -0.03321687666450508,
+      -0.160202953914438,
+      -0.2584941480164033,
+      -0.2036001102548531,
+      -0.10029494124641604
+     ]
+    ]
+   ]
+  },
+  "k1": {
+   "modal": [
+    [
+     -2.179509024602915,
+     0,
+     0
+    ],
+    [
+     0,
+     -0.4102454876985425,
+     1.744543250922657
+    ],
+    [
+     0,
+     -1.744543250922657,
+     -0.4102454876985426
+    ]
+   ],
+   "ca": [
+    [
+     0,
+     0,
+     -7
+    ],
+    [
+     1,
+     0,
+     -5
+    ],
+    [
+     0,
+     1,
+     -3
+    ]
+   ],
+   "cb": [
+    1,
+    0,
+    0
+   ],
+   "cc": [
+    0,
+    1,
+    -1
+   ],
+   "cd": 0
+  },
+  "k2": {
+   "modal": [
+    [
+     -1,
+     0,
+     0,
+     0
+    ],
+    [
+     0,
+     -2,
+     3,
+     0
+    ],
+    [
+     0,
+     -3,
+     -2,
+     0
+    ],
+    [
+     0,
+     0,
+     0,
+     -5
+    ]
+   ],
+   "ca": [
+    [
+     0,
+     0,
+     0,
+     -64.99999999999994
+    ],
+    [
+     1,
+     0,
+     0,
+     -97.99999999999994
+    ],
+    [
+     0,
+     1,
+     0,
+     -41.99999999999999
+    ],
+    [
+     0,
+     0,
+     1,
+     -10
+    ]
+   ],
+   "cb": [
+    1,
+    0,
+    0,
+    0
+   ],
+   "cc": [
+    0,
+    0,
+    0,
+    3.9999999999999996
+   ],
+   "cd": 0
+  },
+  "k3": {
+   "modal": [
+    [
+     -1,
+     0,
+     0,
+     0,
+     0
+    ],
+    [
+     0,
+     2,
+     0,
+     0,
+     0
+    ],
+    [
+     0,
+     0,
+     -2.9999999999999996,
+     0,
+     0
+    ],
+    [
+     0,
+     0,
+     0,
+     -0.49999999999999994,
+     5
+    ],
+    [
+     0,
+     0,
+     0,
+     -4.999999999999999,
+     -0.5
+    ]
+   ],
+   "ca": [
+    [
+     0,
+     0,
+     0,
+     0,
+     151.50000000000014
+    ],
+    [
+     1,
+     0,
+     0,
+     0,
+     132.2500000000001
+    ],
+    [
+     0,
+     1,
+     0,
+     0,
+     -39.49999999999999
+    ],
+    [
+     0,
+     0,
+     1,
+     0,
+     -22.249999999999996
+    ],
+    [
+     0,
+     0,
+     0,
+     1,
+     -3
+    ]
+   ],
+   "cb": [
+    1,
+    0,
+    0,
+    0,
+    0
+   ],
+   "cc": [
+    0,
+    0,
+    0,
+    0,
+    4.000000000000001
+   ],
+   "cd": 0
+  },
+  "k4": {
+   "modal": [
+    [
+     -0.2,
+     0.5,
+     0,
+     0
+    ],
+    [
+     -0.5,
+     -0.2,
+     0,
+     0
+    ],
+    [
+     0,
+     0,
+     -0.10000000000000002,
+     1
+    ],
+    [
+     0,
+     0,
+     -1,
+     -0.1
+    ]
+   ],
+   "ca": [
+    [
+     0,
+     0,
+     0,
+     -0.29290000000000016
+    ],
+    [
+     1,
+     0,
+     0,
+     -0.46199999999999997
+    ],
+    [
+     0,
+     1,
+     0,
+     -1.3800000000000001
+    ],
+    [
+     0,
+     0,
+     1,
+     -0.6
+    ]
+   ],
+   "cb": [
+    1,
+    0,
+    0,
+    0
+   ],
+   "cc": [
+    0,
+    0,
+    4,
+    1.5999999999999999
+   ],
+   "cd": 0
+  },
+  "k5": {
+   "modal": [
+    [
+     0.6000000000000001,
+     0.3741657386773943
+    ],
+    [
+     -0.3741657386773942,
+     0.6000000000000001
+    ]
+   ],
+   "ca": [
+    [
+     0,
+     -0.5
+    ],
+    [
+     1,
+     1.2
+    ]
+   ],
+   "cb": [
+    1,
+    0
+   ],
+   "cc": [
+    1,
+    1.7
+   ],
+   "cd": 0
+  },
+  "n_cl": {
+   "re": [
+    0.6654171611085851,
+    0.6322444678609062,
+    0.4758128469468676,
+    0.21826118588577667,
+    0.046153846153846156
+   ],
+   "im": [
+    -0.028834743648038685,
+    -0.14752370916754476,
+    -0.3013481363996828,
+    -0.31284103310294653,
+    -0.16923076923076924
+   ],
+   "cls": "ss"
+  },
+  "n_ap": {
+   "re": [
+    [
+     [
+      0.6654171611085851,
+      0.6322444678609062,
+      0.4758128469468676,
+      0.21826118588577667,
+      0.046153846153846156
+     ],
+     [
+      0.33270858055429253,
+      0.3161222339304531,
+      0.2379064234734338,
+      0.10913059294288834,
+      0.023076923076923078
+     ]
+    ],
+    [
+     [
+      0.6691656777828299,
+      0.7355110642781877,
+      1.0483743061062647,
+      1.5634776282284466,
+      1.9076923076923076
+     ],
+     [
+      -0.6654171611085851,
+      -0.6322444678609062,
+      -0.4758128469468676,
+      -0.21826118588577667,
+      -0.046153846153846156
+     ]
+    ],
+    [
+     [
+      0.33458283889141494,
+      0.36775553213909384,
+      0.5241871530531323,
+      0.7817388141142233,
+      0.9538461538461538
+     ],
+     [
+      -0.33270858055429253,
+      -0.3161222339304531,
+      -0.2379064234734338,
+      -0.10913059294288834,
+      -0.023076923076923078
+     ]
+    ]
+   ],
+   "im": [
+    [
+     [
+      -0.028834743648038685,
+      -0.14752370916754476,
+      -0.3013481363996828,
+      -0.31284103310294653,
+      -0.16923076923076924
+     ],
+     [
+      -0.014417371824019342,
+      -0.07376185458377238,
+      -0.1506740681998414,
+      -0.15642051655147327,
+      -0.08461538461538462
+     ]
+    ],
+    [
+     [
+      0.05766948729607737,
+      0.2950474183350895,
+      0.6026962727993656,
+      0.6256820662058931,
+      0.3384615384615385
+     ],
+     [
+      0.028834743648038685,
+      0.14752370916754476,
+      0.3013481363996828,
+      0.31284103310294653,
+      0.16923076923076924
+     ]
+    ],
+    [
+     [
+      0.028834743648038685,
+      0.14752370916754476,
+      0.3013481363996828,
+      0.31284103310294653,
+      0.16923076923076924
+     ],
+     [
+      0.014417371824019342,
+      0.07376185458377238,
+      0.1506740681998414,
+      0.15642051655147327,
+      0.08461538461538462
+     ]
+    ]
+   ]
+  },
+  "n_u": {
+   "re": [
+    0.33270858055429253,
+    0.3161222339304531,
+    0.2379064234734338,
+    0.10913059294288834,
+    0.023076923076923078
+   ],
+   "im": [
+    -0.014417371824019342,
+    -0.07376185458377238,
+    -0.1506740681998414,
+    -0.15642051655147327,
+    -0.08461538461538462
+   ]
+  },
+  "n_mimo": {
+   "re": [
+    [
+     [
+      0.7648709072022144,
+      0.7180226824688053,
+      0.5106260000370628,
+      0.20787727626517513,
+      0.03966851137369338
+     ],
+     [
+      0.08494477973934202,
+      0.08172456307784637,
+      0.036867884804431234,
+      -0.010485811791404837,
+      -0.006245410588343614
+     ]
+    ],
+    [
+     [
+      0.2502864978237819,
+      0.24555226006788106,
+      0.21392152595317235,
+      0.11918466411318925,
+      0.027822357829109662
+     ],
+     [
+      0.4564737427793938,
+      0.44278673001730223,
+      0.3519572899790013,
+      0.16904668023135033,
+      0.03621868282177461
+     ]
+    ]
+   ],
+   "im": [
+    [
+     [
+      -0.03717950436481887,
+      -0.18772439669362773,
+      -0.3656714967016851,
+      -0.34652544390544626,
+      -0.1732848847678645
+     ],
+     [
+      -0.004816524732488847,
+      -0.029967854195078962,
+      -0.06252909867462907,
+      -0.032851787530350854,
+      -0.003805807778566791
+     ]
+    ],
+    [
+     [
+      -0.0072384086270078415,
+      -0.03850672968079467,
+      -0.0965755028056219,
+      -0.13199561015007333,
+      -0.08197278998581836
+     ],
+     [
+      -0.016443826250710985,
+      -0.08859492266405439,
+      -0.20169168107938612,
+      -0.2268093692958033,
+      -0.12626893002181203
+     ]
+    ]
+   ]
+  },
+  "ls_Si": {
+   "re": [
+    [
+     [
+      0.22973757798330585,
+      0.2748358825327417,
+      0.48475338631386533,
+      0.792940666249426,
+      0.9609747342026529
+     ],
+     [
+      -0.1311269742924229,
+      -0.11303844690614161,
+      -0.041604442091472814,
+      0.015163742407792762,
+      0.007984024032776508
+     ]
+    ],
+    [
+     [
+      -0.1490134707879181,
+      -0.1549448361536081,
+      -0.15299685722932102,
+      -0.09354089228192548,
+      -0.02269987676458521
+     ],
+     [
+      0.5489177720350862,
+      0.5643547049811508,
+      0.6526633236700707,
+      0.8301353772540485,
+      0.963138071601879
+     ]
+    ]
+   ],
+   "im": [
+    [
+     [
+      0.03693403378047258,
+      0.18837871665421896,
+      0.37121406124511885,
+      0.35001636722802504,
+      0.17370516521915302
+     ],
+     [
+      0.011134722486196192,
+      0.054635716709368856,
+      0.08596101113576594,
+      0.04127656586429067,
+      0.0046753147165585875
+     ]
+    ],
+    [
+     [
+      0.0009739042880130478,
+      0.010109243391134648,
+      0.050397289913576226,
+      0.08979456684785722,
+      0.06047860754414011
+     ],
+     [
+      0.01668929683505725,
+      0.08794060270346313,
+      0.19614911653595218,
+      0.22331844597322442,
+      0.1258486495705235
+     ]
+    ]
+   ]
+  },
+  "ls_So": {
+   "re": [
+    [
+     [
+      0.2351290927977856,
+      0.2819773175311947,
+      0.4893739999629372,
+      0.7921227237348248,
+      0.9603314886263066
+     ],
+     [
+      -0.08494477973934202,
+      -0.08172456307784637,
+      -0.036867884804431234,
+      0.010485811791404837,
+      0.006245410588343614
+     ]
+    ],
+    [
+     [
+      -0.2502864978237819,
+      -0.24555226006788106,
+      -0.21392152595317235,
+      -0.11918466411318925,
+      -0.027822357829109662
+     ],
+     [
+      0.5435262572206062,
+      0.5572132699826977,
+      0.6480427100209987,
+      0.8309533197686496,
+      0.9637813171782253
+     ]
+    ]
+   ],
+   "im": [
+    [
+     [
+      0.03717950436481887,
+      0.18772439669362773,
+      0.3656714967016851,
+      0.34652544390544626,
+      0.1732848847678645
+     ],
+     [
+      0.004816524732488847,
+      0.029967854195078962,
+      0.06252909867462907,
+      0.032851787530350854,
+      0.003805807778566791
+     ]
+    ],
+    [
+     [
+      0.0072384086270078415,
+      0.03850672968079467,
+      0.0965755028056219,
+      0.13199561015007333,
+      0.08197278998581836
+     ],
+     [
+      0.016443826250710985,
+      0.08859492266405439,
+      0.20169168107938612,
+      0.2268093692958033,
+      0.12626893002181203
+     ]
+    ]
+   ]
+  },
+  "ls_Ti": {
+   "re": [
+    [
+     [
+      0.7702624220166941,
+      0.7251641174672583,
+      0.5152466136861347,
+      0.20705933375057398,
+      0.03902526579734706
+     ],
+     [
+      0.1311269742924229,
+      0.11303844690614161,
+      0.041604442091472814,
+      -0.015163742407792762,
+      -0.007984024032776508
+     ]
+    ],
+    [
+     [
+      0.1490134707879181,
+      0.1549448361536081,
+      0.15299685722932102,
+      0.09354089228192548,
+      0.02269987676458521
+     ],
+     [
+      0.4510822279649139,
+      0.4356452950188492,
+      0.3473366763299293,
+      0.1698646227459515,
+      0.03686192839812093
+     ]
+    ]
+   ],
+   "im": [
+    [
+     [
+      -0.03693403378047258,
+      -0.18837871665421896,
+      -0.37121406124511885,
+      -0.35001636722802504,
+      -0.17370516521915302
+     ],
+     [
+      -0.011134722486196192,
+      -0.054635716709368856,
+      -0.08596101113576594,
+      -0.04127656586429067,
+      -0.0046753147165585875
+     ]
+    ],
+    [
+     [
+      -0.0009739042880130478,
+      -0.010109243391134648,
+      -0.050397289913576226,
+      -0.08979456684785722,
+      -0.06047860754414011
+     ],
+     [
+      -0.01668929683505725,
+      -0.08794060270346313,
+      -0.19614911653595218,
+      -0.22331844597322442,
+      -0.1258486495705235
+     ]
+    ]
+   ]
+  },
+  "ls_To": {
+   "re": [
+    [
+     [
+      0.7648709072022144,
+      0.7180226824688053,
+      0.5106260000370628,
+      0.20787727626517513,
+      0.03966851137369338
+     ],
+     [
+      0.08494477973934202,
+      0.08172456307784637,
+      0.036867884804431234,
+      -0.010485811791404837,
+      -0.006245410588343614
+     ]
+    ],
+    [
+     [
+      0.2502864978237819,
+      0.24555226006788106,
+      0.21392152595317235,
+      0.11918466411318925,
+      0.027822357829109662
+     ],
+     [
+      0.4564737427793938,
+      0.44278673001730223,
+      0.3519572899790013,
+      0.16904668023135033,
+      0.03621868282177461
+     ]
+    ]
+   ],
+   "im": [
+    [
+     [
+      -0.03717950436481887,
+      -0.18772439669362773,
+      -0.3656714967016851,
+      -0.34652544390544626,
+      -0.1732848847678645
+     ],
+     [
+      -0.004816524732488847,
+      -0.029967854195078962,
+      -0.06252909867462907,
+      -0.032851787530350854,
+      -0.003805807778566791
+     ]
+    ],
+    [
+     [
+      -0.0072384086270078415,
+      -0.03850672968079467,
+      -0.0965755028056219,
+      -0.13199561015007333,
+      -0.08197278998581836
+     ],
+     [
+      -0.016443826250710985,
+      -0.08859492266405439,
+      -0.20169168107938612,
+      -0.2268093692958033,
+      -0.12626893002181203
+     ]
+    ]
+   ]
+  },
+  "ls_PSi": {
+   "re": [
+    [
+     [
+      0.19451579565655697,
+      0.25705427023227423,
+      0.26575239588607824,
+      0.12098801342299642,
+      0.023692785812697584
+     ],
+     [
+      0.006517944374347901,
+      0.02729448978466331,
+      0.02736242876763331,
+      -0.002444041116827522,
+      -0.0031346656920021696
+     ]
+    ],
+    [
+     [
+      0.02309614771789605,
+      0.061085442035196766,
+      0.10524954043675172,
+      0.06934393347370076,
+      0.016805312341999758
+     ],
+     [
+      0.2771032682011972,
+      0.27874030321186977,
+      0.23418186730871163,
+      0.11529821386546188,
+      0.024917557461835053
+     ]
+    ]
+   ],
+   "im": [
+    [
+     [
+      0.01430071329571088,
+      0.022770334628575285,
+      -0.10799350614454904,
+      -0.157297120048263,
+      -0.08543285528252552
+     ],
+     [
+      0.005559774305839526,
+      0.011123439330051154,
+      -0.02172813452807443,
+      -0.017643697845711192,
+      -0.002214648625336068
+     ]
+    ],
+    [
+     [
+      0.012457822549036839,
+      0.04004438158818414,
+      -0.0025527834845133226,
+      -0.05277861913893834,
+      -0.039751180765273016
+     ],
+     [
+      -0.006675343670463116,
+      -0.04325054939508119,
+      -0.12226512927471136,
+      -0.14768112994757596,
+      -0.08384989622050504
+     ]
+    ]
+   ]
+  },
+  "ls_CSo": {
+   "re": [
+    [
+     [
+      0.8357787206583034,
+      0.9061593007376054,
+      1.2260975808029442,
+      1.6903136720682932,
+      1.9418081927490713
+     ],
+     [
+      -0.12142974850029593,
+      -0.09826016322478792,
+      -0.011088501502166455,
+      0.043632081525577425,
+      0.015947780917917872
+     ]
+    ],
+    [
+     [
+      -0.2657735862168531,
+      -0.2656669903992568,
+      -0.24667741466663753,
+      -0.14695652879019086,
+      -0.03538997209472705
+     ],
+     [
+      0.8298273291244258,
+      0.8553765938533181,
+      0.9908582454635069,
+      1.2532281170358048,
+      1.4467090636897073
+     ]
+    ]
+   ],
+   "im": [
+    [
+     [
+      0.05657804179376821,
+      0.2872137467015263,
+      0.561387780596124,
+      0.5267132881334818,
+      0.2607339141437058
+     ],
+     [
+      0.013244078575858896,
+      0.06404483774267096,
+      0.09273344832482613,
+      0.027250959531922334,
+      -0.010322311184082205
+     ]
+    ],
+    [
+     [
+      0.005523322859750898,
+      0.031289580515473245,
+      0.09387669036625905,
+      0.14809213532188678,
+      0.09720842836112055
+     ],
+     [
+      0.02574904810933084,
+      0.1341251228018355,
+      0.2928400969117496,
+      0.32867826928507116,
+      0.1840232170103533
+     ]
+    ]
+   ]
+  },
+  "ls_Li": {
+   "re": [
+    [
+     [
+      3.924717607760434,
+      1.3522582985670235,
+      0.24159014532498627,
+      0.048436299599225276,
+      0.0074328206861585255
+     ],
+     [
+      1.1435207177614721,
+      0.1769718628211028,
+      -0.11091872088703608,
+      -0.05018584239328894,
+      -0.00951245563630218
+     ]
+    ],
+    [
+     [
+      1.3249224118393899,
+      0.5063486305097044,
+      0.10501500455194274,
+      0.022227144369249368,
+      0.0034593544025688693
+     ],
+     [
+      1.1263121326445036,
+      0.7381710045945259,
+      0.3575005915435699,
+      0.11551536252141852,
+      0.020561017407470003
+     ]
+    ]
+   ],
+   "im": [
+    [
+     [
+      -1.045994480466331,
+      -1.987121349537457,
+      -1.0004720533195464,
+      -0.4606773689596997,
+      -0.1815548419807335
+     ],
+     [
+      -0.3845348478126671,
+      -0.6533150839663447,
+      -0.19396802641466349,
+      -0.03021535206553834,
+      -0.0021423694439749877
+     ]
+    ],
+    [
+     [
+      -0.3329742709763631,
+      -0.6666062035189552,
+      -0.36196374180931296,
+      -0.17129710499268158,
+      -0.06799104275815447
+     ],
+     [
+      -0.1710660706784601,
+      -0.4533897808662012,
+      -0.444883336796958,
+      -0.2980659769605756,
+      -0.1328050059151597
+     ]
+    ]
+   ]
+  },
+  "ls_Lo": {
+   "re": [
+    [
+     [
+      3.8761691601957646,
+      1.3296876344513897,
+      0.2461793802909661,
+      0.05219830453568756,
+      0.008213148555010983
+     ],
+     [
+      0.7459948434108121,
+      0.16676113191860342,
+      -0.07195128206518027,
+      -0.038298721421614265,
+      -0.007488517829981408
+     ]
+    ],
+    [
+     [
+      2.213177464403915,
+      0.710892092672634,
+      0.09643400802555631,
+      0.013649649037901194,
+      0.0017313165455467294
+     ],
+     [
+      1.1748605802091727,
+      0.7607416687101594,
+      0.3529113565775901,
+      0.11175335758495625,
+      0.01978068953861754
+     ]
+    ]
+   ],
+   "im": [
+    [
+     [
+      -1.036446855762473,
+      -1.9557316842110792,
+      -0.9842244512660777,
+      -0.4577343814715031,
+      -0.1813384485381105
+     ],
+     [
+      -0.2277607515341935,
+      -0.43864936370280083,
+      -0.1538429034850346,
+      -0.02536889764305123,
+      -0.0018250667568024336
+     ]
+    ],
+    [
+     [
+      -0.6091655369235116,
+      -1.1358746304038603,
+      -0.5406235245103002,
+      -0.23651911524815192,
+      -0.09121355416596247
+     ],
+     [
+      -0.18061369538231817,
+      -0.48477944619257896,
+      -0.4611309388504269,
+      -0.3010089644487723,
+      -0.13302139935778265
+     ]
+    ]
+   ]
+  },
+  "ls": {
+   "poles": [
+    [
+     -1.0482368590482154,
+     0
+    ],
+    [
+     -2.9758815704758925,
+     0.43620107500062194
+    ],
+    [
+     -2.9758815704758925,
+     -0.43620107500062194
+    ]
+   ],
+   "stable": 1
+  },
+  "sb": {
+   "in": [
+    "a",
+    "b",
+    "c"
+   ],
+   "D": [
+    1,
+    1,
+    -1
+   ]
+  }
+ }
+}

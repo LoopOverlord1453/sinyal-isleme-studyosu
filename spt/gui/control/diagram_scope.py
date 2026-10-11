@@ -1,0 +1,172 @@
+"""Benzetim sonuçları: her Skop bloğu ayrı kartta, sinyaller ölçülerek seçilmiş zıt renklerle, veri ipuçlarıyla.
+
+Renkler: ilk altı renk Sensör Füzyonu görünümünde ölçülen paletten (kırmızı, sarı, yeşil, camgöbeği, mavi, eflatun;
+normal görüşte her çift OKLab ΔE ≥ 19), sonra açık nötr (#f5f5f5); daha fazla seri gerekirse renkler OKLab'da en uzak
+nokta seçimiyle (zemin #121110 ve önceki tüm renklerden en uzak, açıklık 0.62–0.92 bandında) eklenir. Aynı görünümde
+(tüm skop kartları birlikte) hiçbir renk iki seride kullanılmaz; renk seriye (skop + kanal) bağlıdır.
+"""
+from __future__ import annotations
+
+from functools import lru_cache
+
+import numpy as np
+import pyqtgraph as pg
+from PyQt6.QtCore import Qt
+from PyQt6.QtWidgets import QScrollArea, QVBoxLayout, QWidget
+
+from spt.gui.widgets.common import Card, label, legend_chip
+from spt.gui.widgets.inspector import DataTips, PlotAnalysis, Trace, curve_stats, fmt, visible_slice
+from spt.gui.widgets.plot import make_plot, pen
+
+BASE_COLORS = ("#f54748", "#dfa11a", "#45f27f", "#4cd1ee", "#488bfb", "#e03fc7", "#f5f5f5")
+SURFACE = "#121110"
+PLOT_MIN_HEIGHT = 120
+
+
+def _srgb_to_oklab(rgb: np.ndarray) -> np.ndarray:
+    """sRGB (0–1, (..., 3)) → OKLab (Björn Ottosson tanımı)."""
+    c = np.where(rgb <= 0.04045, rgb / 12.92, ((rgb + 0.055) / 1.055) ** 2.4)
+    m1 = np.array([[0.4122214708, 0.5363325363, 0.0514459929],
+                   [0.2119034982, 0.6806995451, 0.1073969566],
+                   [0.0883024619, 0.2817188376, 0.6299787005]])
+    m2 = np.array([[0.2104542553, 0.7936177850, -0.0040720468],
+                   [1.9779984951, -2.4285922050, 0.4505937099],
+                   [0.0259040371, 0.7827717662, -0.8086757660]])
+    lms = c @ m1.T
+    return np.cbrt(lms) @ m2.T
+
+
+def _hex_rgb(h: str) -> np.ndarray:
+    h = h.lstrip("#")
+    return np.array([int(h[i:i + 2], 16) / 255.0 for i in (0, 2, 4)])
+
+
+def delta_e(a: str, b: str) -> float:
+    """İki rengin OKLab uzaklığı (×100, ΔE ölçeği)."""
+    la, lb = _srgb_to_oklab(_hex_rgb(a)), _srgb_to_oklab(_hex_rgb(b))
+    return float(np.linalg.norm(la - lb) * 100.0)
+
+
+@lru_cache(maxsize=8)
+def distinct_colors(n: int) -> tuple[str, ...]:
+    """n farklı seri rengi: önce ölçülmüş taban palet, sonra OKLab'da en uzak nokta seçimiyle genişletme."""
+    out = list(BASE_COLORS[:n])
+    if n <= len(out):
+        return tuple(out)
+    steps = np.linspace(0.0, 1.0, 18)
+    grid = np.stack(np.meshgrid(steps, steps, steps, indexing="ij"), axis=-1).reshape(-1, 3)
+    lab = _srgb_to_oklab(grid)
+    ok = (lab[:, 0] >= 0.62) & (lab[:, 0] <= 0.92) & (np.hypot(lab[:, 1], lab[:, 2]) >= 0.06)
+    grid, lab = grid[ok], lab[ok]
+    ref = [_srgb_to_oklab(_hex_rgb(c)) for c in out + [SURFACE]]
+    dmin = np.min(np.stack([np.linalg.norm(lab - r, axis=1) for r in ref]), axis=0)
+    while len(out) < n:
+        k = int(np.argmax(dmin))
+        rgb = grid[k]
+        out.append("#" + "".join(f"{int(round(v * 255)):02x}" for v in rgb))
+        dmin = np.minimum(dmin, np.linalg.norm(lab - lab[k], axis=1))
+        dmin[k] = -1.0
+    return tuple(out)
+
+
+class ScopePanel(QWidget):
+    """Skop sonuç kartları. `set_result(sonuç, sıra)`: sıra = kartların gösterim sırası (diyagramdaki skoplar)."""
+
+    def __init__(self, theme, parent: QWidget | None = None):
+        super().__init__(parent)
+        self._theme = theme
+        self.cards: dict[str, Card] = {}
+        self.plots: dict[str, pg.PlotWidget] = {}
+        self.traces: dict[str, list[Trace]] = {}
+        self._tips: list[DataTips] = []
+        outer = QVBoxLayout(self)
+        outer.setContentsMargins(0, 0, 0, 0)
+        self.scroll = QScrollArea()
+        self.scroll.setWidgetResizable(True)
+        self.scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        outer.addWidget(self.scroll)
+        self.clear()
+
+    def clear(self, text: str = "Benzetim sonuçları burada: diyagrama Skop bloğu ekleyip Çalıştır'a basın.") -> None:
+        self.cards.clear()
+        self.plots.clear()
+        self.traces.clear()
+        self._tips.clear()
+        w = QWidget()
+        lay = QVBoxLayout(w)
+        lay.setContentsMargins(0, 0, 0, 0)
+        empty = label(text, "EmptyState")
+        empty.setWordWrap(True)
+        empty.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        lay.addWidget(empty)
+        lay.addStretch(1)
+        self.scroll.setWidget(w)
+
+    def series_colors(self) -> list[str]:
+        return [tr.color for trs in self.traces.values() for tr in trs]
+
+    def set_result(self, result, order: list[str] | None = None) -> None:
+        scopes = dict(result.scopes)
+        names = [n for n in (order or []) if n in scopes] + [n for n in scopes if n not in (order or [])]
+        if not names:
+            self.clear("Diyagramda Skop bloğu yok: sonuçları görmek için 'Gözlem' kategorisinden Skop ekleyin.")
+            return
+        self.cards.clear()
+        self.plots.clear()
+        self.traces.clear()
+        self._tips.clear()
+        series: list[tuple[str, str, np.ndarray, np.ndarray]] = []   # (skop, ad, t, y)
+        for name in names:
+            sd = scopes[name]
+            t = np.asarray(sd.t, dtype=np.float64)
+            for data, lab in zip(sd.data, sd.labels):
+                arr = np.asarray(data, dtype=np.float64)
+                if arr.ndim == 1:
+                    arr = arr[:, None]
+                for j in range(arr.shape[1]):
+                    series.append((name, lab if arr.shape[1] == 1 else f"{lab}[{j + 1}]", t, arr[:, j]))
+        colors = distinct_colors(len(series))
+        w = QWidget()
+        lay = QVBoxLayout(w)
+        lay.setContentsMargins(0, 0, 4, 0)
+        lay.setSpacing(12)
+        k = 0
+        for name in names:
+            mine = [s for s in series if s[0] == name]
+            card = Card(name)
+            plot = make_plot(self._theme, "Zaman", "", x_units="s")
+            plot.setMinimumHeight(PLOT_MIN_HEIGHT)
+            card.body.addWidget(plot, 1)
+            traces: list[Trace] = []
+            for _scope, sname, t, y in mine:
+                color = colors[k]
+                k += 1
+                item = plot.plot(t, y, pen=pen(color), name=sname)
+                traces.append(Trace(item, sname, color, self._describe(sname)))
+                card.add_left(legend_chip(color, sname), optional=True)
+            if result.cancelled:
+                card.add_right(label("İptal edildi: kısmi sonuç", "Muted"))
+            self._tips.append(DataTips(plot, self._theme, lambda trs=traces: trs))
+            PlotAnalysis(card, plot, self._theme, lambda x0, x1, trs=traces: self._stats(trs, x0, x1))
+            lay.addWidget(card, 1)                 # kartlar alanı paylaşır; sığmazsa kaydırılır
+            self.cards[name] = card
+            self.plots[name] = plot
+            self.traces[name] = traces
+        self.scroll.setWidget(w)
+
+    @staticmethod
+    def _describe(name: str):
+        def f(x: float, y: float) -> list[str]:
+            return [f"t = {fmt(x, 's')}", f"{name} = {y:.6g}"]
+        return f
+
+    @staticmethod
+    def _stats(traces: list[Trace], x0: float, x1: float):
+        out = []
+        for tr in traces:
+            x, y = tr.item.xData, tr.item.yData
+            if x is None or y is None:
+                continue
+            sl = visible_slice(np.asarray(x), x0, x1)
+            out.append((tr.name, tr.color, curve_stats(np.asarray(x)[sl], np.asarray(y)[sl], "s", "")))
+        return out

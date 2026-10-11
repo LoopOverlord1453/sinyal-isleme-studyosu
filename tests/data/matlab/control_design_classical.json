@@ -1,0 +1,3914 @@
+{
+ "script_sha": "8e188f161ae5233ae4d8b38753787482fef9f4ef4d431cd3671f0943fe168891",
+ "matlab": "R2025b",
+ "script": "F = {'ForwardEuler', 'BackwardEuler', 'Trapezoidal'};\nP = [1 2 3 0.5; 1 2 0 0.5; 1 0 3 0.5; 1 2 3 0; 0 2 0 0; 2 0 0 0; 0 0 3 0.2; -1.5 -0.7 -0.4 0.3; 0 0 0 0;\n     1 1 0.5 0.04; 1 1 0.5 0.05; 0.3 0 0.2 0];\nk = 0;\nfor i = 1:size(P, 1)\n  for Ts = [0 0.1]\n    for a = 1:3\n      for b = 1:3\n        if Ts == 0 && (a > 1 || b > 1), continue; end\n        k = k + 1;\n        r = struct('p', P(i, :), 'Ts', Ts, 'IF', F{a}, 'DF', F{b}, 'n', [], 'd', [], 'err', '');\n        try\n          if Ts == 0\n            C = pid(P(i, 1), P(i, 2), P(i, 3), P(i, 4));\n          else\n            C = pid(P(i, 1), P(i, 2), P(i, 3), P(i, 4), Ts, 'IFormula', F{a}, 'DFormula', F{b});\n          end\n          [n, d] = tfdata(tf(C), 'v'); r.n = n; r.d = d;\n        catch e\n          r.err = e.message;\n        end\n        out.pid{k} = r;\n      end\n    end\n  end\nend\nQ = [1 2 3 0.5; -1 -2 -3 0.5; 2 0 1 0.1; 2 1 0 0; 1 2 3 0; 0 2 0 0; -1 2 0 0; 1 -2 1 0.1; 0 0 0 0];\nfor i = 1:size(Q, 1)\n  r = struct('p', Q(i, :), 'std', [], 'err', '');\n  try\n    S = pidstd(pid(Q(i, 1), Q(i, 2), Q(i, 3), Q(i, 4))); r.std = [S.Kp S.Ti S.Td S.N];\n  catch e\n    r.err = e.message;\n  end\n  out.p2s{i} = r;\nend\nS2 = [2 3 0.5 10; 2 Inf 0.5 10; 2 3 0 10; 2 3 0.5 Inf; -1 0.5 3 6; 1 Inf 0 Inf];\nfor i = 1:size(S2, 1)\n  r = struct('s', S2(i, :), 'par', [], 'n', [], 'd', [], 'err', '');\n  try\n    C = pid(pidstd(S2(i, 1), S2(i, 2), S2(i, 3), S2(i, 4))); r.par = [C.Kp C.Ki C.Kd C.Tf];\n    Cd = pidstd(S2(i, 1), S2(i, 2), S2(i, 3), S2(i, 4), 0.05, 'IFormula', 'Trapezoidal', 'DFormula', 'BackwardEuler');\n    [n, d] = tfdata(tf(Cd), 'v'); r.n = n; r.d = d;\n  catch e\n    r.err = e.message;\n  end\n  out.s2p{i} = r;\nend\nC2 = pid2(1, 2, 3, 0.5, 0.6, 0.2); [n, d] = tfdata(tf(C2));\nout.p2a = struct('n1', n{1}, 'd1', d{1}, 'n2', n{2}, 'd2', d{2});\nC2 = pid2(1, 2, 3, 0.5, 0.6, 0.2, 0.1, 'IFormula', 'Trapezoidal', 'DFormula', 'BackwardEuler');\n[n, d] = tfdata(tf(C2)); out.p2b = struct('n1', n{1}, 'd1', d{1}, 'n2', n{2}, 'd2', d{2});\nC2 = pidstd2(2, 3, 0.5, 10, 0.7, 0.3); [n, d] = tfdata(tf(C2));\nout.p2c = struct('n1', n{1}, 'd1', d{1}, 'n2', n{2}, 'd2', d{2});\nC2 = pidstd2(2, 3, 0.5, 10, 0.7, 0.3, 0.05, 'IFormula', 'BackwardEuler', 'DFormula', 'Trapezoidal');\n[n, d] = tfdata(tf(C2)); out.p2d = struct('n1', n{1}, 'd1', d{1}, 'n2', n{2}, 'd2', d{2});\nG = {tf(1, [1 3 3 1]), tf(10, conv([1 0], conv([1 2], [1 5]))), tf(1, [2 1], 'InputDelay', 0.3), ...\n     c2d(tf(1, [1 3 3 1]), 0.1), c2d(tf(2, [1 3 2]), 0.05)};\nG{5}.InputDelay = 2;\nT = {'P', 'I', 'PI', 'PD', 'PDF', 'PID', 'PIDF'};\nopt = pidtuneOptions('PhaseMargin', 60);\nfor gi = 1:numel(G)\n  [n, d] = tfdata(G{gi}, 'v');\n  pl = struct('n', n, 'd', d, 'Ts', G{gi}.Ts, 'delay', G{gi}.InputDelay);\n  for ti = 1:numel(T)\n    r = struct('type', T{ti}, 'p', [], 'info', [], 'IF', '', 'DF', '', 'p60', [], 'info60', [], 'Pm60', [], ...\n               'Wcp60', [], 'err', '', 'err60', '', 'errm', '');\n    try\n      [C, info] = pidtune(G{gi}, T{ti});\n      r.p = [C.Kp C.Ki C.Kd C.Tf]; r.info = info; r.IF = C.IFormula; r.DF = C.DFormula;\n      try\n        [C2, info2] = pidtune(G{gi}, T{ti}, info.CrossoverFrequency, opt);\n        r.p60 = [C2.Kp C2.Ki C2.Kd C2.Tf]; r.info60 = info2;\n        try\n          [~, Pm, ~, Wcp] = margin(C2 * G{gi}); r.Pm60 = Pm; r.Wcp60 = Wcp;\n        catch e3\n          r.errm = e3.message;\n        end\n      catch e2\n        r.err60 = e2.message;\n      end\n    catch e\n      r.err = e.message;\n    end\n    pl.cases{ti} = r;\n  end\n  out.tune{gi} = pl;\nend\nG = tf([1 3], [1 4 5 0]); p = [-1+2i, -0.5, -2+0.3i, -4];\n[K, Pl] = rlocfind(G, p); out.rl.K = K; out.rl.p = spt_c(p);\nGd = c2d(G, 0.1); pd = [0.9+0.1i, 0.95, 0.7];\n[K, Pl] = rlocfind(Gd, pd); out.rld.K = K; out.rld.p = spt_c(pd);\n[n, d] = tfdata(Gd, 'v'); out.rld.n = n; out.rld.d = d;",
+ "out": {
+  "pid": [
+   {
+    "p": [
+     1,
+     2,
+     3,
+     0.5
+    ],
+    "Ts": 0,
+    "IF": "ForwardEuler",
+    "DF": "ForwardEuler",
+    "n": [
+     7,
+     4,
+     4
+    ],
+    "d": [
+     1,
+     2,
+     0
+    ],
+    "err": ""
+   },
+   {
+    "p": [
+     1,
+     2,
+     3,
+     0.5
+    ],
+    "Ts": 0.1,
+    "IF": "ForwardEuler",
+    "DF": "ForwardEuler",
+    "n": [
+     7,
+     -13.6,
+     6.640000000000001
+    ],
+    "d": [
+     1,
+     -1.8,
+     0.8
+    ],
+    "err": ""
+   },
+   {
+    "p": [
+     1,
+     2,
+     3,
+     0.5
+    ],
+    "Ts": 0.1,
+    "IF": "ForwardEuler",
+    "DF": "BackwardEuler",
+    "n": [
+     6,
+     -11.633333333333335,
+     5.666666666666667
+    ],
+    "d": [
+     1,
+     -1.8333333333333335,
+     0.8333333333333334
+    ],
+    "err": ""
+   },
+   {
+    "p": [
+     1,
+     2,
+     3,
+     0.5
+    ],
+    "Ts": 0.1,
+    "IF": "ForwardEuler",
+    "DF": "Trapezoidal",
+    "n": [
+     6.454545454545454,
+     -12.527272727272727,
+     6.1090909090909085
+    ],
+    "d": [
+     1,
+     -1.8181818181818181,
+     0.8181818181818181
+    ],
+    "err": ""
+   },
+   {
+    "p": [
+     1,
+     2,
+     3,
+     0.5
+    ],
+    "Ts": 0.1,
+    "IF": "BackwardEuler",
+    "DF": "ForwardEuler",
+    "n": [
+     7.2,
+     -13.96,
+     6.8
+    ],
+    "d": [
+     1,
+     -1.8,
+     0.8
+    ],
+    "err": ""
+   },
+   {
+    "p": [
+     1,
+     2,
+     3,
+     0.5
+    ],
+    "Ts": 0.1,
+    "IF": "BackwardEuler",
+    "DF": "BackwardEuler",
+    "n": [
+     6.2,
+     -12,
+     5.833333333333334
+    ],
+    "d": [
+     1,
+     -1.8333333333333335,
+     0.8333333333333334
+    ],
+    "err": ""
+   },
+   {
+    "p": [
+     1,
+     2,
+     3,
+     0.5
+    ],
+    "Ts": 0.1,
+    "IF": "BackwardEuler",
+    "DF": "Trapezoidal",
+    "n": [
+     6.654545454545454,
+     -12.890909090909089,
+     6.2727272727272725
+    ],
+    "d": [
+     1,
+     -1.8181818181818181,
+     0.8181818181818181
+    ],
+    "err": ""
+   },
+   {
+    "p": [
+     1,
+     2,
+     3,
+     0.5
+    ],
+    "Ts": 0.1,
+    "IF": "Trapezoidal",
+    "DF": "ForwardEuler",
+    "n": [
+     7.1,
+     -13.780000000000001,
+     6.72
+    ],
+    "d": [
+     1,
+     -1.8,
+     0.8
+    ],
+    "err": ""
+   },
+   {
+    "p": [
+     1,
+     2,
+     3,
+     0.5
+    ],
+    "Ts": 0.1,
+    "IF": "Trapezoidal",
+    "DF": "BackwardEuler",
+    "n": [
+     6.1000000000000005,
+     -11.816666666666666,
+     5.750000000000001
+    ],
+    "d": [
+     1,
+     -1.8333333333333335,
+     0.8333333333333334
+    ],
+    "err": ""
+   },
+   {
+    "p": [
+     1,
+     2,
+     3,
+     0.5
+    ],
+    "Ts": 0.1,
+    "IF": "Trapezoidal",
+    "DF": "Trapezoidal",
+    "n": [
+     6.554545454545454,
+     -12.709090909090909,
+     6.1909090909090905
+    ],
+    "d": [
+     1,
+     -1.8181818181818181,
+     0.8181818181818181
+    ],
+    "err": ""
+   },
+   {
+    "p": [
+     1,
+     2,
+     0,
+     0.5
+    ],
+    "Ts": 0,
+    "IF": "ForwardEuler",
+    "DF": "ForwardEuler",
+    "n": [
+     1,
+     2
+    ],
+    "d": [
+     1,
+     0
+    ],
+    "err": ""
+   },
+   {
+    "p": [
+     1,
+     2,
+     0,
+     0.5
+    ],
+    "Ts": 0.1,
+    "IF": "ForwardEuler",
+    "DF": "ForwardEuler",
+    "n": [
+     1,
+     -0.8
+    ],
+    "d": [
+     1,
+     -1
+    ],
+    "err": ""
+   },
+   {
+    "p": [
+     1,
+     2,
+     0,
+     0.5
+    ],
+    "Ts": 0.1,
+    "IF": "ForwardEuler",
+    "DF": "BackwardEuler",
+    "n": [
+     1,
+     -0.8
+    ],
+    "d": [
+     1,
+     -1
+    ],
+    "err": ""
+   },
+   {
+    "p": [
+     1,
+     2,
+     0,
+     0.5
+    ],
+    "Ts": 0.1,
+    "IF": "ForwardEuler",
+    "DF": "Trapezoidal",
+    "n": [
+     1,
+     -0.8
+    ],
+    "d": [
+     1,
+     -1
+    ],
+    "err": ""
+   },
+   {
+    "p": [
+     1,
+     2,
+     0,
+     0.5
+    ],
+    "Ts": 0.1,
+    "IF": "BackwardEuler",
+    "DF": "ForwardEuler",
+    "n": [
+     1.2,
+     -1
+    ],
+    "d": [
+     1,
+     -1
+    ],
+    "err": ""
+   },
+   {
+    "p": [
+     1,
+     2,
+     0,
+     0.5
+    ],
+    "Ts": 0.1,
+    "IF": "BackwardEuler",
+    "DF": "BackwardEuler",
+    "n": [
+     1.2,
+     -1
+    ],
+    "d": [
+     1,
+     -1
+    ],
+    "err": ""
+   },
+   {
+    "p": [
+     1,
+     2,
+     0,
+     0.5
+    ],
+    "Ts": 0.1,
+    "IF": "BackwardEuler",
+    "DF": "Trapezoidal",
+    "n": [
+     1.2,
+     -1
+    ],
+    "d": [
+     1,
+     -1
+    ],
+    "err": ""
+   },
+   {
+    "p": [
+     1,
+     2,
+     0,
+     0.5
+    ],
+    "Ts": 0.1,
+    "IF": "Trapezoidal",
+    "DF": "ForwardEuler",
+    "n": [
+     1.1,
+     -0.9
+    ],
+    "d": [
+     1,
+     -1
+    ],
+    "err": ""
+   },
+   {
+    "p": [
+     1,
+     2,
+     0,
+     0.5
+    ],
+    "Ts": 0.1,
+    "IF": "Trapezoidal",
+    "DF": "BackwardEuler",
+    "n": [
+     1.1,
+     -0.9
+    ],
+    "d": [
+     1,
+     -1
+    ],
+    "err": ""
+   },
+   {
+    "p": [
+     1,
+     2,
+     0,
+     0.5
+    ],
+    "Ts": 0.1,
+    "IF": "Trapezoidal",
+    "DF": "Trapezoidal",
+    "n": [
+     1.1,
+     -0.9
+    ],
+    "d": [
+     1,
+     -1
+    ],
+    "err": ""
+   },
+   {
+    "p": [
+     1,
+     0,
+     3,
+     0.5
+    ],
+    "Ts": 0,
+    "IF": "ForwardEuler",
+    "DF": "ForwardEuler",
+    "n": [
+     7,
+     2
+    ],
+    "d": [
+     1,
+     2
+    ],
+    "err": ""
+   },
+   {
+    "p": [
+     1,
+     0,
+     3,
+     0.5
+    ],
+    "Ts": 0.1,
+    "IF": "ForwardEuler",
+    "DF": "ForwardEuler",
+    "n": [
+     7,
+     -6.8
+    ],
+    "d": [
+     1,
+     -0.8
+    ],
+    "err": ""
+   },
+   {
+    "p": [
+     1,
+     0,
+     3,
+     0.5
+    ],
+    "Ts": 0.1,
+    "IF": "ForwardEuler",
+    "DF": "BackwardEuler",
+    "n": [
+     6,
+     -5.833333333333334
+    ],
+    "d": [
+     1,
+     -0.8333333333333334
+    ],
+    "err": ""
+   },
+   {
+    "p": [
+     1,
+     0,
+     3,
+     0.5
+    ],
+    "Ts": 0.1,
+    "IF": "ForwardEuler",
+    "DF": "Trapezoidal",
+    "n": [
+     6.454545454545454,
+     -6.2727272727272725
+    ],
+    "d": [
+     1,
+     -0.8181818181818181
+    ],
+    "err": ""
+   },
+   {
+    "p": [
+     1,
+     0,
+     3,
+     0.5
+    ],
+    "Ts": 0.1,
+    "IF": "BackwardEuler",
+    "DF": "ForwardEuler",
+    "n": [
+     7,
+     -6.8
+    ],
+    "d": [
+     1,
+     -0.8
+    ],
+    "err": ""
+   },
+   {
+    "p": [
+     1,
+     0,
+     3,
+     0.5
+    ],
+    "Ts": 0.1,
+    "IF": "BackwardEuler",
+    "DF": "BackwardEuler",
+    "n": [
+     6,
+     -5.833333333333334
+    ],
+    "d": [
+     1,
+     -0.8333333333333334
+    ],
+    "err": ""
+   },
+   {
+    "p": [
+     1,
+     0,
+     3,
+     0.5
+    ],
+    "Ts": 0.1,
+    "IF": "BackwardEuler",
+    "DF": "Trapezoidal",
+    "n": [
+     6.454545454545454,
+     -6.2727272727272725
+    ],
+    "d": [
+     1,
+     -0.8181818181818181
+    ],
+    "err": ""
+   },
+   {
+    "p": [
+     1,
+     0,
+     3,
+     0.5
+    ],
+    "Ts": 0.1,
+    "IF": "Trapezoidal",
+    "DF": "ForwardEuler",
+    "n": [
+     7,
+     -6.8
+    ],
+    "d": [
+     1,
+     -0.8
+    ],
+    "err": ""
+   },
+   {
+    "p": [
+     1,
+     0,
+     3,
+     0.5
+    ],
+    "Ts": 0.1,
+    "IF": "Trapezoidal",
+    "DF": "BackwardEuler",
+    "n": [
+     6,
+     -5.833333333333334
+    ],
+    "d": [
+     1,
+     -0.8333333333333334
+    ],
+    "err": ""
+   },
+   {
+    "p": [
+     1,
+     0,
+     3,
+     0.5
+    ],
+    "Ts": 0.1,
+    "IF": "Trapezoidal",
+    "DF": "Trapezoidal",
+    "n": [
+     6.454545454545454,
+     -6.2727272727272725
+    ],
+    "d": [
+     1,
+     -0.8181818181818181
+    ],
+    "err": ""
+   },
+   {
+    "p": [
+     1,
+     2,
+     3,
+     0
+    ],
+    "Ts": 0,
+    "IF": "ForwardEuler",
+    "DF": "ForwardEuler",
+    "n": [
+     3,
+     1,
+     2
+    ],
+    "d": [
+     0,
+     1,
+     0
+    ],
+    "err": ""
+   },
+   {
+    "p": [
+     1,
+     2,
+     3,
+     0
+    ],
+    "Ts": 0.1,
+    "IF": "ForwardEuler",
+    "DF": "ForwardEuler",
+    "n": [
+     30,
+     -59,
+     29.2
+    ],
+    "d": [
+     0,
+     1,
+     -1
+    ],
+    "err": ""
+   },
+   {
+    "p": [
+     1,
+     2,
+     3,
+     0
+    ],
+    "Ts": 0.1,
+    "IF": "ForwardEuler",
+    "DF": "BackwardEuler",
+    "n": [
+     31,
+     -60.8,
+     30
+    ],
+    "d": [
+     1,
+     -1,
+     0
+    ],
+    "err": ""
+   },
+   {
+    "p": [
+     1,
+     2,
+     3,
+     0
+    ],
+    "Ts": 0.1,
+    "IF": "ForwardEuler",
+    "DF": "Trapezoidal",
+    "n": [],
+    "d": [],
+    "err": "Using the trapezoidal formula for the derivative term results in an unstable PID controller."
+   },
+   {
+    "p": [
+     1,
+     2,
+     3,
+     0
+    ],
+    "Ts": 0.1,
+    "IF": "BackwardEuler",
+    "DF": "ForwardEuler",
+    "n": [
+     30,
+     -58.8,
+     28.999999999999996
+    ],
+    "d": [
+     0,
+     1,
+     -1
+    ],
+    "err": ""
+   },
+   {
+    "p": [
+     1,
+     2,
+     3,
+     0
+    ],
+    "Ts": 0.1,
+    "IF": "BackwardEuler",
+    "DF": "BackwardEuler",
+    "n": [
+     31.2,
+     -60.99999999999999,
+     30
+    ],
+    "d": [
+     1,
+     -1,
+     0
+    ],
+    "err": ""
+   },
+   {
+    "p": [
+     1,
+     2,
+     3,
+     0
+    ],
+    "Ts": 0.1,
+    "IF": "BackwardEuler",
+    "DF": "Trapezoidal",
+    "n": [],
+    "d": [],
+    "err": "Using the trapezoidal formula for the derivative term results in an unstable PID controller."
+   },
+   {
+    "p": [
+     1,
+     2,
+     3,
+     0
+    ],
+    "Ts": 0.1,
+    "IF": "Trapezoidal",
+    "DF": "ForwardEuler",
+    "n": [
+     30,
+     -58.89999999999999,
+     29.1
+    ],
+    "d": [
+     0,
+     1,
+     -1
+    ],
+    "err": ""
+   },
+   {
+    "p": [
+     1,
+     2,
+     3,
+     0
+    ],
+    "Ts": 0.1,
+    "IF": "Trapezoidal",
+    "DF": "BackwardEuler",
+    "n": [
+     31.099999999999998,
+     -60.9,
+     30
+    ],
+    "d": [
+     1,
+     -1,
+     0
+    ],
+    "err": ""
+   },
+   {
+    "p": [
+     1,
+     2,
+     3,
+     0
+    ],
+    "Ts": 0.1,
+    "IF": "Trapezoidal",
+    "DF": "Trapezoidal",
+    "n": [],
+    "d": [],
+    "err": "Using the trapezoidal formula for the derivative term results in an unstable PID controller."
+   },
+   {
+    "p": [
+     0,
+     2,
+     0,
+     0
+    ],
+    "Ts": 0,
+    "IF": "ForwardEuler",
+    "DF": "ForwardEuler",
+    "n": [
+     0,
+     2
+    ],
+    "d": [
+     1,
+     0
+    ],
+    "err": ""
+   },
+   {
+    "p": [
+     0,
+     2,
+     0,
+     0
+    ],
+    "Ts": 0.1,
+    "IF": "ForwardEuler",
+    "DF": "ForwardEuler",
+    "n": [
+     0,
+     0.2
+    ],
+    "d": [
+     1,
+     -1
+    ],
+    "err": ""
+   },
+   {
+    "p": [
+     0,
+     2,
+     0,
+     0
+    ],
+    "Ts": 0.1,
+    "IF": "ForwardEuler",
+    "DF": "BackwardEuler",
+    "n": [
+     0,
+     0.2
+    ],
+    "d": [
+     1,
+     -1
+    ],
+    "err": ""
+   },
+   {
+    "p": [
+     0,
+     2,
+     0,
+     0
+    ],
+    "Ts": 0.1,
+    "IF": "ForwardEuler",
+    "DF": "Trapezoidal",
+    "n": [
+     0,
+     0.2
+    ],
+    "d": [
+     1,
+     -1
+    ],
+    "err": ""
+   },
+   {
+    "p": [
+     0,
+     2,
+     0,
+     0
+    ],
+    "Ts": 0.1,
+    "IF": "BackwardEuler",
+    "DF": "ForwardEuler",
+    "n": [
+     0.2,
+     0
+    ],
+    "d": [
+     1,
+     -1
+    ],
+    "err": ""
+   },
+   {
+    "p": [
+     0,
+     2,
+     0,
+     0
+    ],
+    "Ts": 0.1,
+    "IF": "BackwardEuler",
+    "DF": "BackwardEuler",
+    "n": [
+     0.2,
+     0
+    ],
+    "d": [
+     1,
+     -1
+    ],
+    "err": ""
+   },
+   {
+    "p": [
+     0,
+     2,
+     0,
+     0
+    ],
+    "Ts": 0.1,
+    "IF": "BackwardEuler",
+    "DF": "Trapezoidal",
+    "n": [
+     0.2,
+     0
+    ],
+    "d": [
+     1,
+     -1
+    ],
+    "err": ""
+   },
+   {
+    "p": [
+     0,
+     2,
+     0,
+     0
+    ],
+    "Ts": 0.1,
+    "IF": "Trapezoidal",
+    "DF": "ForwardEuler",
+    "n": [
+     0.1,
+     0.1
+    ],
+    "d": [
+     1,
+     -1
+    ],
+    "err": ""
+   },
+   {
+    "p": [
+     0,
+     2,
+     0,
+     0
+    ],
+    "Ts": 0.1,
+    "IF": "Trapezoidal",
+    "DF": "BackwardEuler",
+    "n": [
+     0.1,
+     0.1
+    ],
+    "d": [
+     1,
+     -1
+    ],
+    "err": ""
+   },
+   {
+    "p": [
+     0,
+     2,
+     0,
+     0
+    ],
+    "Ts": 0.1,
+    "IF": "Trapezoidal",
+    "DF": "Trapezoidal",
+    "n": [
+     0.1,
+     0.1
+    ],
+    "d": [
+     1,
+     -1
+    ],
+    "err": ""
+   },
+   {
+    "p": [
+     2,
+     0,
+     0,
+     0
+    ],
+    "Ts": 0,
+    "IF": "ForwardEuler",
+    "DF": "ForwardEuler",
+    "n": 2,
+    "d": 1,
+    "err": ""
+   },
+   {
+    "p": [
+     2,
+     0,
+     0,
+     0
+    ],
+    "Ts": 0.1,
+    "IF": "ForwardEuler",
+    "DF": "ForwardEuler",
+    "n": 2,
+    "d": 1,
+    "err": ""
+   },
+   {
+    "p": [
+     2,
+     0,
+     0,
+     0
+    ],
+    "Ts": 0.1,
+    "IF": "ForwardEuler",
+    "DF": "BackwardEuler",
+    "n": 2,
+    "d": 1,
+    "err": ""
+   },
+   {
+    "p": [
+     2,
+     0,
+     0,
+     0
+    ],
+    "Ts": 0.1,
+    "IF": "ForwardEuler",
+    "DF": "Trapezoidal",
+    "n": 2,
+    "d": 1,
+    "err": ""
+   },
+   {
+    "p": [
+     2,
+     0,
+     0,
+     0
+    ],
+    "Ts": 0.1,
+    "IF": "BackwardEuler",
+    "DF": "ForwardEuler",
+    "n": 2,
+    "d": 1,
+    "err": ""
+   },
+   {
+    "p": [
+     2,
+     0,
+     0,
+     0
+    ],
+    "Ts": 0.1,
+    "IF": "BackwardEuler",
+    "DF": "BackwardEuler",
+    "n": 2,
+    "d": 1,
+    "err": ""
+   },
+   {
+    "p": [
+     2,
+     0,
+     0,
+     0
+    ],
+    "Ts": 0.1,
+    "IF": "BackwardEuler",
+    "DF": "Trapezoidal",
+    "n": 2,
+    "d": 1,
+    "err": ""
+   },
+   {
+    "p": [
+     2,
+     0,
+     0,
+     0
+    ],
+    "Ts": 0.1,
+    "IF": "Trapezoidal",
+    "DF": "ForwardEuler",
+    "n": 2,
+    "d": 1,
+    "err": ""
+   },
+   {
+    "p": [
+     2,
+     0,
+     0,
+     0
+    ],
+    "Ts": 0.1,
+    "IF": "Trapezoidal",
+    "DF": "BackwardEuler",
+    "n": 2,
+    "d": 1,
+    "err": ""
+   },
+   {
+    "p": [
+     2,
+     0,
+     0,
+     0
+    ],
+    "Ts": 0.1,
+    "IF": "Trapezoidal",
+    "DF": "Trapezoidal",
+    "n": 2,
+    "d": 1,
+    "err": ""
+   },
+   {
+    "p": [
+     0,
+     0,
+     3,
+     0.2
+    ],
+    "Ts": 0,
+    "IF": "ForwardEuler",
+    "DF": "ForwardEuler",
+    "n": [
+     15,
+     0
+    ],
+    "d": [
+     1,
+     5
+    ],
+    "err": ""
+   },
+   {
+    "p": [
+     0,
+     0,
+     3,
+     0.2
+    ],
+    "Ts": 0.1,
+    "IF": "ForwardEuler",
+    "DF": "ForwardEuler",
+    "n": [
+     15,
+     -15
+    ],
+    "d": [
+     1,
+     -0.5
+    ],
+    "err": ""
+   },
+   {
+    "p": [
+     0,
+     0,
+     3,
+     0.2
+    ],
+    "Ts": 0.1,
+    "IF": "ForwardEuler",
+    "DF": "BackwardEuler",
+    "n": [
+     9.999999999999998,
+     -9.999999999999998
+    ],
+    "d": [
+     1,
+     -0.6666666666666666
+    ],
+    "err": ""
+   },
+   {
+    "p": [
+     0,
+     0,
+     3,
+     0.2
+    ],
+    "Ts": 0.1,
+    "IF": "ForwardEuler",
+    "DF": "Trapezoidal",
+    "n": [
+     12,
+     -12
+    ],
+    "d": [
+     1,
+     -0.6000000000000001
+    ],
+    "err": ""
+   },
+   {
+    "p": [
+     0,
+     0,
+     3,
+     0.2
+    ],
+    "Ts": 0.1,
+    "IF": "BackwardEuler",
+    "DF": "ForwardEuler",
+    "n": [
+     15,
+     -15
+    ],
+    "d": [
+     1,
+     -0.5
+    ],
+    "err": ""
+   },
+   {
+    "p": [
+     0,
+     0,
+     3,
+     0.2
+    ],
+    "Ts": 0.1,
+    "IF": "BackwardEuler",
+    "DF": "BackwardEuler",
+    "n": [
+     9.999999999999998,
+     -9.999999999999998
+    ],
+    "d": [
+     1,
+     -0.6666666666666666
+    ],
+    "err": ""
+   },
+   {
+    "p": [
+     0,
+     0,
+     3,
+     0.2
+    ],
+    "Ts": 0.1,
+    "IF": "BackwardEuler",
+    "DF": "Trapezoidal",
+    "n": [
+     12,
+     -12
+    ],
+    "d": [
+     1,
+     -0.6000000000000001
+    ],
+    "err": ""
+   },
+   {
+    "p": [
+     0,
+     0,
+     3,
+     0.2
+    ],
+    "Ts": 0.1,
+    "IF": "Trapezoidal",
+    "DF": "ForwardEuler",
+    "n": [
+     15,
+     -15
+    ],
+    "d": [
+     1,
+     -0.5
+    ],
+    "err": ""
+   },
+   {
+    "p": [
+     0,
+     0,
+     3,
+     0.2
+    ],
+    "Ts": 0.1,
+    "IF": "Trapezoidal",
+    "DF": "BackwardEuler",
+    "n": [
+     9.999999999999998,
+     -9.999999999999998
+    ],
+    "d": [
+     1,
+     -0.6666666666666666
+    ],
+    "err": ""
+   },
+   {
+    "p": [
+     0,
+     0,
+     3,
+     0.2
+    ],
+    "Ts": 0.1,
+    "IF": "Trapezoidal",
+    "DF": "Trapezoidal",
+    "n": [
+     12,
+     -12
+    ],
+    "d": [
+     1,
+     -0.6000000000000001
+    ],
+    "err": ""
+   },
+   {
+    "p": [
+     -1.5,
+     -0.7,
+     -0.4,
+     0.3
+    ],
+    "Ts": 0,
+    "IF": "ForwardEuler",
+    "DF": "ForwardEuler",
+    "n": [
+     -2.8333333333333335,
+     -5.7,
+     -2.3333333333333335
+    ],
+    "d": [
+     1,
+     3.3333333333333335,
+     0
+    ],
+    "err": ""
+   },
+   {
+    "p": [
+     -1.5,
+     -0.7,
+     -0.4,
+     0.3
+    ],
+    "Ts": 0.1,
+    "IF": "ForwardEuler",
+    "DF": "ForwardEuler",
+    "n": [
+     -2.8333333333333335,
+     5.096666666666667,
+     -2.2866666666666666
+    ],
+    "d": [
+     1,
+     -1.6666666666666665,
+     0.6666666666666666
+    ],
+    "err": ""
+   },
+   {
+    "p": [
+     -1.5,
+     -0.7,
+     -0.4,
+     0.3
+    ],
+    "Ts": 0.1,
+    "IF": "ForwardEuler",
+    "DF": "BackwardEuler",
+    "n": [
+     -2.5,
+     4.555,
+     -2.0725
+    ],
+    "d": [
+     1,
+     -1.75,
+     0.7499999999999999
+    ],
+    "err": ""
+   },
+   {
+    "p": [
+     -1.5,
+     -0.7,
+     -0.4,
+     0.3
+    ],
+    "Ts": 0.1,
+    "IF": "ForwardEuler",
+    "DF": "Trapezoidal",
+    "n": [
+     -2.642857142857143,
+     4.787142857142857,
+     -2.1642857142857146
+    ],
+    "d": [
+     1,
+     -1.7142857142857144,
+     0.7142857142857143
+    ],
+    "err": ""
+   },
+   {
+    "p": [
+     -1.5,
+     -0.7,
+     -0.4,
+     0.3
+    ],
+    "Ts": 0.1,
+    "IF": "BackwardEuler",
+    "DF": "ForwardEuler",
+    "n": [
+     -2.9033333333333333,
+     5.213333333333334,
+     -2.3333333333333335
+    ],
+    "d": [
+     1,
+     -1.6666666666666665,
+     0.6666666666666666
+    ],
+    "err": ""
+   },
+   {
+    "p": [
+     -1.5,
+     -0.7,
+     -0.4,
+     0.3
+    ],
+    "Ts": 0.1,
+    "IF": "BackwardEuler",
+    "DF": "BackwardEuler",
+    "n": [
+     -2.57,
+     4.6775,
+     -2.125
+    ],
+    "d": [
+     1,
+     -1.75,
+     0.7499999999999999
+    ],
+    "err": ""
+   },
+   {
+    "p": [
+     -1.5,
+     -0.7,
+     -0.4,
+     0.3
+    ],
+    "Ts": 0.1,
+    "IF": "BackwardEuler",
+    "DF": "Trapezoidal",
+    "n": [
+     -2.712857142857143,
+     4.9071428571428575,
+     -2.2142857142857144
+    ],
+    "d": [
+     1,
+     -1.7142857142857144,
+     0.7142857142857143
+    ],
+    "err": ""
+   },
+   {
+    "p": [
+     -1.5,
+     -0.7,
+     -0.4,
+     0.3
+    ],
+    "Ts": 0.1,
+    "IF": "Trapezoidal",
+    "DF": "ForwardEuler",
+    "n": [
+     -2.8683333333333336,
+     5.155,
+     -2.3100000000000005
+    ],
+    "d": [
+     1,
+     -1.6666666666666665,
+     0.6666666666666666
+    ],
+    "err": ""
+   },
+   {
+    "p": [
+     -1.5,
+     -0.7,
+     -0.4,
+     0.3
+    ],
+    "Ts": 0.1,
+    "IF": "Trapezoidal",
+    "DF": "BackwardEuler",
+    "n": [
+     -2.5349999999999997,
+     4.61625,
+     -2.09875
+    ],
+    "d": [
+     1,
+     -1.75,
+     0.7499999999999999
+    ],
+    "err": ""
+   },
+   {
+    "p": [
+     -1.5,
+     -0.7,
+     -0.4,
+     0.3
+    ],
+    "Ts": 0.1,
+    "IF": "Trapezoidal",
+    "DF": "Trapezoidal",
+    "n": [
+     -2.677857142857143,
+     4.847142857142858,
+     -2.1892857142857145
+    ],
+    "d": [
+     1,
+     -1.7142857142857144,
+     0.7142857142857143
+    ],
+    "err": ""
+   },
+   {
+    "p": [
+     0,
+     0,
+     0,
+     0
+    ],
+    "Ts": 0,
+    "IF": "ForwardEuler",
+    "DF": "ForwardEuler",
+    "n": 0,
+    "d": 1,
+    "err": ""
+   },
+   {
+    "p": [
+     0,
+     0,
+     0,
+     0
+    ],
+    "Ts": 0.1,
+    "IF": "ForwardEuler",
+    "DF": "ForwardEuler",
+    "n": 0,
+    "d": 1,
+    "err": ""
+   },
+   {
+    "p": [
+     0,
+     0,
+     0,
+     0
+    ],
+    "Ts": 0.1,
+    "IF": "ForwardEuler",
+    "DF": "BackwardEuler",
+    "n": 0,
+    "d": 1,
+    "err": ""
+   },
+   {
+    "p": [
+     0,
+     0,
+     0,
+     0
+    ],
+    "Ts": 0.1,
+    "IF": "ForwardEuler",
+    "DF": "Trapezoidal",
+    "n": 0,
+    "d": 1,
+    "err": ""
+   },
+   {
+    "p": [
+     0,
+     0,
+     0,
+     0
+    ],
+    "Ts": 0.1,
+    "IF": "BackwardEuler",
+    "DF": "ForwardEuler",
+    "n": 0,
+    "d": 1,
+    "err": ""
+   },
+   {
+    "p": [
+     0,
+     0,
+     0,
+     0
+    ],
+    "Ts": 0.1,
+    "IF": "BackwardEuler",
+    "DF": "BackwardEuler",
+    "n": 0,
+    "d": 1,
+    "err": ""
+   },
+   {
+    "p": [
+     0,
+     0,
+     0,
+     0
+    ],
+    "Ts": 0.1,
+    "IF": "BackwardEuler",
+    "DF": "Trapezoidal",
+    "n": 0,
+    "d": 1,
+    "err": ""
+   },
+   {
+    "p": [
+     0,
+     0,
+     0,
+     0
+    ],
+    "Ts": 0.1,
+    "IF": "Trapezoidal",
+    "DF": "ForwardEuler",
+    "n": 0,
+    "d": 1,
+    "err": ""
+   },
+   {
+    "p": [
+     0,
+     0,
+     0,
+     0
+    ],
+    "Ts": 0.1,
+    "IF": "Trapezoidal",
+    "DF": "BackwardEuler",
+    "n": 0,
+    "d": 1,
+    "err": ""
+   },
+   {
+    "p": [
+     0,
+     0,
+     0,
+     0
+    ],
+    "Ts": 0.1,
+    "IF": "Trapezoidal",
+    "DF": "Trapezoidal",
+    "n": 0,
+    "d": 1,
+    "err": ""
+   },
+   {
+    "p": [
+     1,
+     1,
+     0.5,
+     0.04
+    ],
+    "Ts": 0,
+    "IF": "ForwardEuler",
+    "DF": "ForwardEuler",
+    "n": [
+     13.5,
+     26,
+     25
+    ],
+    "d": [
+     1,
+     25,
+     0
+    ],
+    "err": ""
+   },
+   {
+    "p": [
+     1,
+     1,
+     0.5,
+     0.04
+    ],
+    "Ts": 0.1,
+    "IF": "ForwardEuler",
+    "DF": "ForwardEuler",
+    "n": [],
+    "d": [],
+    "err": "The sampling time Ts must be less than 2*Tf for the derivative filter using \"Forward Euler\" formula to be stable."
+   },
+   {
+    "p": [
+     1,
+     1,
+     0.5,
+     0.04
+    ],
+    "Ts": 0.1,
+    "IF": "ForwardEuler",
+    "DF": "BackwardEuler",
+    "n": [
+     4.571428571428571,
+     -8.328571428571427,
+     3.8285714285714283
+    ],
+    "d": [
+     1,
+     -1.2857142857142856,
+     0.2857142857142857
+    ],
+    "err": ""
+   },
+   {
+    "p": [
+     1,
+     1,
+     0.5,
+     0.04
+    ],
+    "Ts": 0.1,
+    "IF": "ForwardEuler",
+    "DF": "Trapezoidal",
+    "n": [
+     6.555555555555555,
+     -11.9,
+     5.455555555555556
+    ],
+    "d": [
+     1,
+     -0.8888888888888888,
+     -0.11111111111111113
+    ],
+    "err": ""
+   },
+   {
+    "p": [
+     1,
+     1,
+     0.5,
+     0.04
+    ],
+    "Ts": 0.1,
+    "IF": "BackwardEuler",
+    "DF": "ForwardEuler",
+    "n": [],
+    "d": [],
+    "err": "The sampling time Ts must be less than 2*Tf for the derivative filter using \"Forward Euler\" formula to be stable."
+   },
+   {
+    "p": [
+     1,
+     1,
+     0.5,
+     0.04
+    ],
+    "Ts": 0.1,
+    "IF": "BackwardEuler",
+    "DF": "BackwardEuler",
+    "n": [
+     4.671428571428571,
+     -8.457142857142856,
+     3.857142857142857
+    ],
+    "d": [
+     1,
+     -1.2857142857142856,
+     0.2857142857142857
+    ],
+    "err": ""
+   },
+   {
+    "p": [
+     1,
+     1,
+     0.5,
+     0.04
+    ],
+    "Ts": 0.1,
+    "IF": "BackwardEuler",
+    "DF": "Trapezoidal",
+    "n": [
+     6.655555555555556,
+     -11.988888888888889,
+     5.444444444444445
+    ],
+    "d": [
+     1,
+     -0.8888888888888888,
+     -0.11111111111111113
+    ],
+    "err": ""
+   },
+   {
+    "p": [
+     1,
+     1,
+     0.5,
+     0.04
+    ],
+    "Ts": 0.1,
+    "IF": "Trapezoidal",
+    "DF": "ForwardEuler",
+    "n": [],
+    "d": [],
+    "err": "The sampling time Ts must be less than 2*Tf for the derivative filter using \"Forward Euler\" formula to be stable."
+   },
+   {
+    "p": [
+     1,
+     1,
+     0.5,
+     0.04
+    ],
+    "Ts": 0.1,
+    "IF": "Trapezoidal",
+    "DF": "BackwardEuler",
+    "n": [
+     4.621428571428571,
+     -8.392857142857142,
+     3.8428571428571425
+    ],
+    "d": [
+     1,
+     -1.2857142857142856,
+     0.2857142857142857
+    ],
+    "err": ""
+   },
+   {
+    "p": [
+     1,
+     1,
+     0.5,
+     0.04
+    ],
+    "Ts": 0.1,
+    "IF": "Trapezoidal",
+    "DF": "Trapezoidal",
+    "n": [
+     6.605555555555556,
+     -11.944444444444445,
+     5.45
+    ],
+    "d": [
+     1,
+     -0.8888888888888888,
+     -0.11111111111111113
+    ],
+    "err": ""
+   },
+   {
+    "p": [
+     1,
+     1,
+     0.5,
+     0.05
+    ],
+    "Ts": 0,
+    "IF": "ForwardEuler",
+    "DF": "ForwardEuler",
+    "n": [
+     11,
+     21,
+     20
+    ],
+    "d": [
+     1,
+     20,
+     0
+    ],
+    "err": ""
+   },
+   {
+    "p": [
+     1,
+     1,
+     0.5,
+     0.05
+    ],
+    "Ts": 0.1,
+    "IF": "ForwardEuler",
+    "DF": "ForwardEuler",
+    "n": [],
+    "d": [],
+    "err": "The sampling time Ts must be less than 2*Tf for the derivative filter using \"Forward Euler\" formula to be stable."
+   },
+   {
+    "p": [
+     1,
+     1,
+     0.5,
+     0.05
+    ],
+    "Ts": 0.1,
+    "IF": "ForwardEuler",
+    "DF": "BackwardEuler",
+    "n": [
+     4.333333333333333,
+     -7.8999999999999995,
+     3.633333333333333
+    ],
+    "d": [
+     1,
+     -1.3333333333333333,
+     0.3333333333333333
+    ],
+    "err": ""
+   },
+   {
+    "p": [
+     1,
+     1,
+     0.5,
+     0.05
+    ],
+    "Ts": 0.1,
+    "IF": "ForwardEuler",
+    "DF": "Trapezoidal",
+    "n": [
+     5.999999999999999,
+     -10.9,
+     5
+    ],
+    "d": [
+     1,
+     -1,
+     0
+    ],
+    "err": ""
+   },
+   {
+    "p": [
+     1,
+     1,
+     0.5,
+     0.05
+    ],
+    "Ts": 0.1,
+    "IF": "BackwardEuler",
+    "DF": "ForwardEuler",
+    "n": [],
+    "d": [],
+    "err": "The sampling time Ts must be less than 2*Tf for the derivative filter using \"Forward Euler\" formula to be stable."
+   },
+   {
+    "p": [
+     1,
+     1,
+     0.5,
+     0.05
+    ],
+    "Ts": 0.1,
+    "IF": "BackwardEuler",
+    "DF": "BackwardEuler",
+    "n": [
+     4.433333333333333,
+     -8.033333333333333,
+     3.6666666666666665
+    ],
+    "d": [
+     1,
+     -1.3333333333333333,
+     0.3333333333333333
+    ],
+    "err": ""
+   },
+   {
+    "p": [
+     1,
+     1,
+     0.5,
+     0.05
+    ],
+    "Ts": 0.1,
+    "IF": "BackwardEuler",
+    "DF": "Trapezoidal",
+    "n": [
+     6.1,
+     -11,
+     5
+    ],
+    "d": [
+     1,
+     -1,
+     0
+    ],
+    "err": ""
+   },
+   {
+    "p": [
+     1,
+     1,
+     0.5,
+     0.05
+    ],
+    "Ts": 0.1,
+    "IF": "Trapezoidal",
+    "DF": "ForwardEuler",
+    "n": [],
+    "d": [],
+    "err": "The sampling time Ts must be less than 2*Tf for the derivative filter using \"Forward Euler\" formula to be stable."
+   },
+   {
+    "p": [
+     1,
+     1,
+     0.5,
+     0.05
+    ],
+    "Ts": 0.1,
+    "IF": "Trapezoidal",
+    "DF": "BackwardEuler",
+    "n": [
+     4.383333333333333,
+     -7.966666666666666,
+     3.6499999999999995
+    ],
+    "d": [
+     1,
+     -1.3333333333333333,
+     0.3333333333333333
+    ],
+    "err": ""
+   },
+   {
+    "p": [
+     1,
+     1,
+     0.5,
+     0.05
+    ],
+    "Ts": 0.1,
+    "IF": "Trapezoidal",
+    "DF": "Trapezoidal",
+    "n": [
+     6.05,
+     -10.95,
+     5
+    ],
+    "d": [
+     1,
+     -1,
+     0
+    ],
+    "err": ""
+   },
+   {
+    "p": [
+     0.3,
+     0,
+     0.2,
+     0
+    ],
+    "Ts": 0,
+    "IF": "ForwardEuler",
+    "DF": "ForwardEuler",
+    "n": [
+     0.2,
+     0.3
+    ],
+    "d": [
+     0,
+     1
+    ],
+    "err": ""
+   },
+   {
+    "p": [
+     0.3,
+     0,
+     0.2,
+     0
+    ],
+    "Ts": 0.1,
+    "IF": "ForwardEuler",
+    "DF": "ForwardEuler",
+    "n": [
+     2,
+     -1.7
+    ],
+    "d": [
+     0,
+     1
+    ],
+    "err": ""
+   },
+   {
+    "p": [
+     0.3,
+     0,
+     0.2,
+     0
+    ],
+    "Ts": 0.1,
+    "IF": "ForwardEuler",
+    "DF": "BackwardEuler",
+    "n": [
+     2.3,
+     -2
+    ],
+    "d": [
+     1,
+     0
+    ],
+    "err": ""
+   },
+   {
+    "p": [
+     0.3,
+     0,
+     0.2,
+     0
+    ],
+    "Ts": 0.1,
+    "IF": "ForwardEuler",
+    "DF": "Trapezoidal",
+    "n": [],
+    "d": [],
+    "err": "Using the trapezoidal formula for the derivative term results in an unstable PID controller."
+   },
+   {
+    "p": [
+     0.3,
+     0,
+     0.2,
+     0
+    ],
+    "Ts": 0.1,
+    "IF": "BackwardEuler",
+    "DF": "ForwardEuler",
+    "n": [
+     2,
+     -1.7
+    ],
+    "d": [
+     0,
+     1
+    ],
+    "err": ""
+   },
+   {
+    "p": [
+     0.3,
+     0,
+     0.2,
+     0
+    ],
+    "Ts": 0.1,
+    "IF": "BackwardEuler",
+    "DF": "BackwardEuler",
+    "n": [
+     2.3,
+     -2
+    ],
+    "d": [
+     1,
+     0
+    ],
+    "err": ""
+   },
+   {
+    "p": [
+     0.3,
+     0,
+     0.2,
+     0
+    ],
+    "Ts": 0.1,
+    "IF": "BackwardEuler",
+    "DF": "Trapezoidal",
+    "n": [],
+    "d": [],
+    "err": "Using the trapezoidal formula for the derivative term results in an unstable PID controller."
+   },
+   {
+    "p": [
+     0.3,
+     0,
+     0.2,
+     0
+    ],
+    "Ts": 0.1,
+    "IF": "Trapezoidal",
+    "DF": "ForwardEuler",
+    "n": [
+     2,
+     -1.7
+    ],
+    "d": [
+     0,
+     1
+    ],
+    "err": ""
+   },
+   {
+    "p": [
+     0.3,
+     0,
+     0.2,
+     0
+    ],
+    "Ts": 0.1,
+    "IF": "Trapezoidal",
+    "DF": "BackwardEuler",
+    "n": [
+     2.3,
+     -2
+    ],
+    "d": [
+     1,
+     0
+    ],
+    "err": ""
+   },
+   {
+    "p": [
+     0.3,
+     0,
+     0.2,
+     0
+    ],
+    "Ts": 0.1,
+    "IF": "Trapezoidal",
+    "DF": "Trapezoidal",
+    "n": [],
+    "d": [],
+    "err": "Using the trapezoidal formula for the derivative term results in an unstable PID controller."
+   }
+  ],
+  "p2s": [
+   {
+    "p": [
+     1,
+     2,
+     3,
+     0.5
+    ],
+    "std": [
+     1,
+     0.5,
+     3,
+     6
+    ],
+    "err": ""
+   },
+   {
+    "p": [
+     -1,
+     -2,
+     -3,
+     0.5
+    ],
+    "std": [
+     -1,
+     0.5,
+     3,
+     6
+    ],
+    "err": ""
+   },
+   {
+    "p": [
+     2,
+     0,
+     1,
+     0.1
+    ],
+    "std": [
+     2,
+     Infinity,
+     0.5,
+     5
+    ],
+    "err": ""
+   },
+   {
+    "p": [
+     2,
+     1,
+     0,
+     0
+    ],
+    "std": [
+     2,
+     2,
+     0,
+     Infinity
+    ],
+    "err": ""
+   },
+   {
+    "p": [
+     1,
+     2,
+     3,
+     0
+    ],
+    "std": [
+     1,
+     0.5,
+     3,
+     Infinity
+    ],
+    "err": ""
+   },
+   {
+    "p": [
+     0,
+     2,
+     0,
+     0
+    ],
+    "std": [],
+    "err": "Specified PID controller cannot be represented in Standard form. Use the Parallel form instead."
+   },
+   {
+    "p": [
+     -1,
+     2,
+     0,
+     0
+    ],
+    "std": [],
+    "err": "Failed to convert to a PIDSTD controller because Ti and Td cannot be negative."
+   },
+   {
+    "p": [
+     1,
+     -2,
+     1,
+     0.1
+    ],
+    "std": [],
+    "err": "Failed to convert to a PIDSTD controller because Ti and Td cannot be negative."
+   },
+   {
+    "p": [
+     0,
+     0,
+     0,
+     0
+    ],
+    "std": [
+     0,
+     Infinity,
+     0,
+     Infinity
+    ],
+    "err": ""
+   }
+  ],
+  "s2p": [
+   {
+    "s": [
+     2,
+     3,
+     0.5,
+     10
+    ],
+    "par": [
+     2,
+     0.6666666666666666,
+     1,
+     0.05
+    ],
+    "n": [
+     12.016666666666666,
+     -22.991666666666667,
+     10.991666666666665
+    ],
+    "d": [
+     1,
+     -1.5,
+     0.5
+    ],
+    "err": ""
+   },
+   {
+    "s": [
+     2,
+     Infinity,
+     0.5,
+     10
+    ],
+    "par": [
+     2,
+     0,
+     1,
+     0.05
+    ],
+    "n": [
+     11.999999999999998,
+     -11
+    ],
+    "d": [
+     1,
+     -0.5
+    ],
+    "err": ""
+   },
+   {
+    "s": [
+     2,
+     3,
+     0,
+     10
+    ],
+    "par": [
+     2,
+     0.6666666666666666,
+     0,
+     0
+    ],
+    "n": [
+     2.0166666666666666,
+     -1.9833333333333334
+    ],
+    "d": [
+     1,
+     -1
+    ],
+    "err": ""
+   },
+   {
+    "s": [
+     2,
+     3,
+     0.5,
+     Infinity
+    ],
+    "par": [
+     2,
+     0.6666666666666666,
+     1,
+     0
+    ],
+    "n": [
+     22.016666666666666,
+     -41.98333333333333,
+     20
+    ],
+    "d": [
+     1,
+     -1,
+     0
+    ],
+    "err": ""
+   },
+   {
+    "s": [
+     -1,
+     0.5,
+     3,
+     6
+    ],
+    "par": [
+     -1,
+     -2,
+     -3,
+     0.5
+    ],
+    "n": [
+     -6.504545454545454,
+     12.81363636363636,
+     -6.3181818181818175
+    ],
+    "d": [
+     1,
+     -1.9090909090909092,
+     0.9090909090909091
+    ],
+    "err": ""
+   },
+   {
+    "s": [
+     1,
+     Infinity,
+     0,
+     Infinity
+    ],
+    "par": [
+     1,
+     0,
+     0,
+     0
+    ],
+    "n": 1,
+    "d": 1,
+    "err": ""
+   }
+  ],
+  "p2a": {
+   "n1": [
+    1.8000000000000003,
+    3.2,
+    4
+   ],
+   "d1": [
+    1,
+    2,
+    0
+   ],
+   "n2": [
+    -7,
+    -4,
+    -4
+   ],
+   "d2": [
+    1,
+    2,
+    0
+   ]
+  },
+  "p2b": {
+   "n1": [
+    1.7000000000000002,
+    -3.0833333333333335,
+    1.416666666666667
+   ],
+   "d1": [
+    1,
+    -1.8333333333333335,
+    0.8333333333333334
+   ],
+   "n2": [
+    -6.1000000000000005,
+    11.816666666666666,
+    -5.750000000000001
+   ],
+   "d2": [
+    1,
+    -1.8333333333333335,
+    0.8333333333333334
+   ]
+  },
+  "p2c": {
+   "n1": [
+    7.3999999999999995,
+    28.666666666666664,
+    13.333333333333332
+   ],
+   "d1": [
+    1,
+    20,
+    0
+   ],
+   "n2": [
+    -22,
+    -40.666666666666664,
+    -13.333333333333332
+   ],
+   "d2": [
+    1,
+    20,
+    0
+   ]
+  },
+  "p2d": {
+   "n1": [
+    5.433333333333332,
+    -9.877777777777776,
+    4.466666666666666
+   ],
+   "d1": [
+    1,
+    -1.3333333333333333,
+    0.3333333333333333
+   ],
+   "n2": [
+    -15.366666666666665,
+    29.344444444444438,
+    -13.999999999999998
+   ],
+   "d2": [
+    1,
+    -1.3333333333333333,
+    0.3333333333333333
+   ]
+  },
+  "tune": [
+   {
+    "n": [
+     0,
+     0,
+     0,
+     1
+    ],
+    "d": [
+     1,
+     3,
+     3,
+     1
+    ],
+    "Ts": 0,
+    "delay": 0,
+    "cases": [
+     {
+      "type": "P",
+      "p": [
+       2.2241676738615355,
+       0,
+       0,
+       0
+      ],
+      "info": {
+       "Stable": true,
+       "CrossoverFrequency": 0.8389896205745258,
+       "PhaseMargin": 60.08671257039493
+      },
+      "IF": "",
+      "DF": "",
+      "p60": [
+       2.2241676738615355,
+       0,
+       0,
+       0
+      ],
+      "info60": {
+       "Stable": true,
+       "CrossoverFrequency": 0.8389896205745258,
+       "PhaseMargin": 60.01109710997594
+      },
+      "Pm60": 60.011145082024626,
+      "Wcp60": 0.8389891450320729,
+      "err": "",
+      "err60": "",
+      "errm": ""
+     },
+     {
+      "type": "I",
+      "p": [
+       0,
+       0.18458610569201592,
+       0,
+       0
+      ],
+      "info": {
+       "Stable": true,
+       "CrossoverFrequency": 0.17630263687517084,
+       "PhaseMargin": 60.00065932718828
+      },
+      "IF": "",
+      "DF": "",
+      "p60": [
+       0,
+       0.18458610569201592,
+       0,
+       0
+      ],
+      "info60": {
+       "Stable": true,
+       "CrossoverFrequency": 0.17630263687517084,
+       "PhaseMargin": 60.00405823860888
+      },
+      "Pm60": 60.00424098716088,
+      "Wcp60": 0.17630154064073,
+      "err": "",
+      "err60": "",
+      "errm": ""
+     },
+     {
+      "type": "PI",
+      "p": [
+       1.1366566363745656,
+       0.4540835842903483,
+       0,
+       0
+      ],
+      "info": {
+       "Stable": true,
+       "CrossoverFrequency": 0.5205287324836929,
+       "PhaseMargin": 59.999999999999986
+      },
+      "IF": "",
+      "DF": "",
+      "p60": [
+       1.1366566363745656,
+       0.4540835842903483,
+       0,
+       0
+      ],
+      "info60": {
+       "Stable": true,
+       "CrossoverFrequency": 0.5205287324836929,
+       "PhaseMargin": 59.999999999999986
+      },
+      "Pm60": 60.00222834288872,
+      "Wcp60": 0.5205015839032623,
+      "err": "",
+      "err60": "",
+      "errm": ""
+     },
+     {
+      "type": "PD",
+      "p": [
+       3.992066150852837,
+       0,
+       3.7615587810446462,
+       0
+      ],
+      "info": {
+       "Stable": true,
+       "CrossoverFrequency": 1.6802359999627046,
+       "PhaseMargin": 59.999999999999986
+      },
+      "IF": "",
+      "DF": "",
+      "p60": [
+       3.992066150852837,
+       0,
+       3.7615587810446462,
+       0
+      ],
+      "info60": {
+       "Stable": true,
+       "CrossoverFrequency": 1.6802359999627046,
+       "PhaseMargin": 59.999999999999986
+      },
+      "Pm60": 60.000080034550436,
+      "Wcp60": 1.6802332927163104,
+      "err": "",
+      "err60": "",
+      "errm": ""
+     },
+     {
+      "type": "PDF",
+      "p": [
+       3.9367620577400766,
+       0,
+       3.7618467900891694,
+       0.0052077346957956645
+      ],
+      "info": {
+       "Stable": true,
+       "CrossoverFrequency": 1.6802359999627046,
+       "PhaseMargin": 59.999999999999986
+      },
+      "IF": "",
+      "DF": "",
+      "p60": [
+       3.9367620577400766,
+       0,
+       3.7618467900891694,
+       0.0052077346957956645
+      ],
+      "info60": {
+       "Stable": true,
+       "CrossoverFrequency": 1.6802359999627046,
+       "PhaseMargin": 59.999999999999986
+      },
+      "Pm60": 60.000451772719586,
+      "Wcp60": 1.6802209369303744,
+      "err": "",
+      "err60": "",
+      "errm": ""
+     },
+     {
+      "type": "PID",
+      "p": [
+       2.175134289432956,
+       0.847382331235475,
+       1.3958307255973093,
+       0
+      ],
+      "info": {
+       "Stable": true,
+       "CrossoverFrequency": 0.824982444593817,
+       "PhaseMargin": 64.70676575857723
+      },
+      "IF": "",
+      "DF": "",
+      "p60": [
+       2.175134289432956,
+       0.847382331235475,
+       1.3958307255973093,
+       0
+      ],
+      "info60": {
+       "Stable": true,
+       "CrossoverFrequency": 0.824982444593817,
+       "PhaseMargin": 64.70676575857723
+      },
+      "Pm60": 64.70809506468883,
+      "Wcp60": 0.824942089472116,
+      "err": "",
+      "err60": "",
+      "errm": ""
+     },
+     {
+      "type": "PIDF",
+      "p": [
+       2.169411046043191,
+       0.8552792068643814,
+       1.190668388714395,
+       0.010606556989753727
+      ],
+      "info": {
+       "Stable": true,
+       "CrossoverFrequency": 0.824982444593817,
+       "PhaseMargin": 59.999999999999986
+      },
+      "IF": "",
+      "DF": "",
+      "p60": [
+       2.169411046043191,
+       0.8552792068643814,
+       1.190668388714395,
+       0.010606556989753727
+      ],
+      "info60": {
+       "Stable": true,
+       "CrossoverFrequency": 0.824982444593817,
+       "PhaseMargin": 59.999999999999986
+      },
+      "Pm60": 60.00014509380649,
+      "Wcp60": 0.8249786193555496,
+      "err": "",
+      "err60": "",
+      "errm": ""
+     }
+    ]
+   },
+   {
+    "n": [
+     0,
+     0,
+     0,
+     10
+    ],
+    "d": [
+     1,
+     7,
+     10,
+     0
+    ],
+    "Ts": 0,
+    "delay": 0,
+    "cases": [
+     {
+      "type": "P",
+      "p": [
+       0.8406177654801826,
+       0,
+       0,
+       0
+      ],
+      "info": {
+       "Stable": true,
+       "CrossoverFrequency": 0.7746338298647756,
+       "PhaseMargin": 60.00615098200687
+      },
+      "IF": "",
+      "DF": "",
+      "p60": [
+       0.8406177654801826,
+       0,
+       0,
+       0
+      ],
+      "info60": {
+       "Stable": true,
+       "CrossoverFrequency": 0.7746338298647756,
+       "PhaseMargin": 60.02113617994756
+      },
+      "Pm60": 60.02114638775677,
+      "Wcp60": 0.7746335471113714,
+      "err": "",
+      "err60": "",
+      "errm": ""
+     },
+     {
+      "type": "I",
+      "p": [
+       0,
+       22.13594362117866,
+       0,
+       0
+      ],
+      "info": {
+       "Stable": false,
+       "CrossoverFrequency": 3.1622776601683795,
+       "PhaseMargin": NaN
+      },
+      "IF": "",
+      "DF": "",
+      "p60": [
+       0,
+       22.13594362117866,
+       0,
+       0
+      ],
+      "info60": {
+       "Stable": false,
+       "CrossoverFrequency": 3.1622776601683795,
+       "PhaseMargin": NaN
+      },
+      "Pm60": -89.99995694621589,
+      "Wcp60": 3.162275030163465,
+      "err": "",
+      "err60": "",
+      "errm": ""
+     },
+     {
+      "type": "PI",
+      "p": [
+       0.46955205627110497,
+       0.04481738421606909,
+       0,
+       0
+      ],
+      "info": {
+       "Stable": true,
+       "CrossoverFrequency": 0.46489334627270507,
+       "PhaseMargin": 59.999999999999986
+      },
+      "IF": "",
+      "DF": "",
+      "p60": [
+       0.46955205627110497,
+       0.04481738421606909,
+       0,
+       0
+      ],
+      "info60": {
+       "Stable": true,
+       "CrossoverFrequency": 0.46489334627270507,
+       "PhaseMargin": 59.999999999999986
+      },
+      "Pm60": 60.00000706327114,
+      "Wcp60": 0.46489285096344657,
+      "err": "",
+      "err60": "",
+      "errm": ""
+     },
+     {
+      "type": "PD",
+      "p": [
+       3.5000000000000058,
+       0,
+       1.9170289512680807,
+       0
+      ],
+      "info": {
+       "Stable": true,
+       "CrossoverFrequency": 3.1622776601683795,
+       "PhaseMargin": 59.999999999999986
+      },
+      "IF": "",
+      "DF": "",
+      "p60": [
+       3.5000000000000058,
+       0,
+       1.9170289512680807,
+       0
+      ],
+      "info60": {
+       "Stable": true,
+       "CrossoverFrequency": 3.1622776601683795,
+       "PhaseMargin": 59.999999999999986
+      },
+      "Pm60": 60.00009444964224,
+      "Wcp60": 3.16226658061954,
+      "err": "",
+      "err60": "",
+      "errm": ""
+     },
+     {
+      "type": "PDF",
+      "p": [
+       3.4469545902482364,
+       0,
+       1.9171757312890008,
+       0.002767063570776003
+      ],
+      "info": {
+       "Stable": true,
+       "CrossoverFrequency": 3.1622776601683795,
+       "PhaseMargin": 59.999999999999986
+      },
+      "IF": "",
+      "DF": "",
+      "p60": [
+       3.4469545902482364,
+       0,
+       1.9171757312890008,
+       0.002767063570776003
+      ],
+      "info60": {
+       "Stable": true,
+       "CrossoverFrequency": 3.1622776601683795,
+       "PhaseMargin": 59.999999999999986
+      },
+      "Pm60": 60.000099223165115,
+      "Wcp60": 3.1622663380767015,
+      "err": "",
+      "err60": "",
+      "errm": ""
+     },
+     {
+      "type": "PID",
+      "p": [
+       3.500000000000005,
+       0.9008351671188494,
+       2.007112467979966,
+       0
+      ],
+      "info": {
+       "Stable": true,
+       "CrossoverFrequency": 3.1622776601683795,
+       "PhaseMargin": 59.999999999999986
+      },
+      "IF": "",
+      "DF": "",
+      "p60": [
+       3.500000000000005,
+       0.9008351671188494,
+       2.007112467979966,
+       0
+      ],
+      "info60": {
+       "Stable": true,
+       "CrossoverFrequency": 3.1622776601683795,
+       "PhaseMargin": 59.999999999999986
+      },
+      "Pm60": 60.000104201260754,
+      "Wcp60": 3.162264279305039,
+      "err": "",
+      "err60": "",
+      "errm": ""
+     },
+     {
+      "type": "PIDF",
+      "p": [
+       3.4445852877516767,
+       0.8562515590823724,
+       2.002807443207866,
+       0.002767063570775992
+      ],
+      "info": {
+       "Stable": true,
+       "CrossoverFrequency": 3.1622776601683795,
+       "PhaseMargin": 59.999999999999986
+      },
+      "IF": "",
+      "DF": "",
+      "p60": [
+       3.4445852877516767,
+       0.8562515590823724,
+       2.002807443207866,
+       0.002767063570775992
+      ],
+      "info60": {
+       "Stable": true,
+       "CrossoverFrequency": 3.1622776601683795,
+       "PhaseMargin": 59.999999999999986
+      },
+      "Pm60": 60.00010854915198,
+      "Wcp60": 3.1622642150460303,
+      "err": "",
+      "err60": "",
+      "errm": ""
+     }
+    ]
+   },
+   {
+    "n": [
+     0,
+     1
+    ],
+    "d": [
+     2,
+     1
+    ],
+    "Ts": 0,
+    "delay": 0.3,
+    "cases": [
+     {
+      "type": "P",
+      "p": [
+       4.948927276346693,
+       0,
+       0,
+       0
+      ],
+      "info": {
+       "Stable": true,
+       "CrossoverFrequency": 2.4234211967056147,
+       "PhaseMargin": 60.00029132812654
+      },
+      "IF": "",
+      "DF": "",
+      "p60": [
+       4.948927276346693,
+       0,
+       0,
+       0
+      ],
+      "info60": {
+       "Stable": true,
+       "CrossoverFrequency": 2.4234211967056147,
+       "PhaseMargin": 60.00213969524724
+      },
+      "Pm60": 60.00215707631274,
+      "Wcp60": 2.4234204018698247,
+      "err": "",
+      "err60": "",
+      "errm": ""
+     },
+     {
+      "type": "I",
+      "p": [
+       0,
+       0.26886975510459704,
+       0,
+       0
+      ],
+      "info": {
+       "Stable": true,
+       "CrossoverFrequency": 0.24201122252967192,
+       "PhaseMargin": 60.004471578645926
+      },
+      "IF": "",
+      "DF": "",
+      "p60": [
+       0,
+       0.26886975510459704,
+       0,
+       0
+      ],
+      "info60": {
+       "Stable": true,
+       "CrossoverFrequency": 0.24201122252967192,
+       "PhaseMargin": 60.01210946278353
+      },
+      "Pm60": 60.01212944872429,
+      "Wcp60": 0.24201104088839573,
+      "err": "",
+      "err60": "",
+      "errm": ""
+     },
+     {
+      "type": "PI",
+      "p": [
+       1.4691269133193035,
+       1.263668614043851,
+       0,
+       0
+      ],
+      "info": {
+       "Stable": true,
+       "CrossoverFrequency": 0.8905077632390356,
+       "PhaseMargin": 59.999999999999986
+      },
+      "IF": "",
+      "DF": "",
+      "p60": [
+       1.4691269133193035,
+       1.263668614043851,
+       0,
+       0
+      ],
+      "info60": {
+       "Stable": true,
+       "CrossoverFrequency": 0.8905077632390356,
+       "PhaseMargin": 59.999999999999986
+      },
+      "Pm60": 59.999989477441375,
+      "Wcp60": 0.8905086047411096,
+      "err": "",
+      "err60": "",
+      "errm": ""
+     },
+     {
+      "type": "PD",
+      "p": [
+       5.42444389850391,
+       0,
+       0.19367833213561514,
+       0
+      ],
+      "info": {
+       "Stable": true,
+       "CrossoverFrequency": 2.678323909299654,
+       "PhaseMargin": 59.999999999999986
+      },
+      "IF": "",
+      "DF": "",
+      "p60": [
+       5.42444389850391,
+       0,
+       0.19367833213561514,
+       0
+      ],
+      "info60": {
+       "Stable": true,
+       "CrossoverFrequency": 2.678323909299654,
+       "PhaseMargin": 59.999999999999986
+      },
+      "Pm60": 60.000117959020706,
+      "Wcp60": 2.678317707678038,
+      "err": "",
+      "err60": "",
+      "errm": ""
+     },
+     {
+      "type": "PDF",
+      "p": [
+       4.996262911637192,
+       0,
+       0.32563991752806737,
+       0.3081911374862822
+      ],
+      "info": {
+       "Stable": true,
+       "CrossoverFrequency": 2.678323909299654,
+       "PhaseMargin": 59.999999999999986
+      },
+      "IF": "",
+      "DF": "",
+      "p60": [
+       4.996262911637192,
+       0,
+       0.32563991752806737,
+       0.3081911374862822
+      ],
+      "info60": {
+       "Stable": true,
+       "CrossoverFrequency": 2.678323909299654,
+       "PhaseMargin": 59.999999999999986
+      },
+      "Pm60": 59.999999999999986,
+      "Wcp60": 2.6783239092996545,
+      "err": "",
+      "err60": "",
+      "errm": ""
+     },
+     {
+      "type": "PID",
+      "p": [
+       1.5807845641164324,
+       1.1518698012401274,
+       0,
+       0
+      ],
+      "info": {
+       "Stable": true,
+       "CrossoverFrequency": 0.8905077632390356,
+       "PhaseMargin": 64.71432762987607
+      },
+      "IF": "",
+      "DF": "",
+      "p60": [
+       1.5807845641164324,
+       1.1518698012401274,
+       0,
+       0
+      ],
+      "info60": {
+       "Stable": true,
+       "CrossoverFrequency": 0.8905077632390356,
+       "PhaseMargin": 64.71432762987607
+      },
+      "Pm60": 64.7141813511185,
+      "Wcp60": 0.8905189112204435,
+      "err": "",
+      "err60": "",
+      "errm": ""
+     },
+     {
+      "type": "PIDF",
+      "p": [
+       1.5470324530648178,
+       1.1937236609800754,
+       0.0688576075157492,
+       0.7895599667141302
+      ],
+      "info": {
+       "Stable": true,
+       "CrossoverFrequency": 0.8905077632390356,
+       "PhaseMargin": 64.49771869177697
+      },
+      "IF": "",
+      "DF": "",
+      "p60": [
+       1.5470324530648178,
+       1.1937236609800754,
+       0.0688576075157492,
+       0.7895599667141302
+      ],
+      "info60": {
+       "Stable": true,
+       "CrossoverFrequency": 0.8905077632390356,
+       "PhaseMargin": 64.49771869177697
+      },
+      "Pm60": 64.4977186917769,
+      "Wcp60": 0.8905077632390384,
+      "err": "",
+      "err60": "",
+      "errm": ""
+     }
+    ]
+   },
+   {
+    "n": [
+     0,
+     0.00015465307026467164,
+     0.0005740205202286056,
+     0.00013311085385571587
+    ],
+    "d": [
+     1,
+     -2.7145122541078797,
+     2.4561922592339474,
+     -0.7408182206817187
+    ],
+    "Ts": 0.1,
+    "delay": 0,
+    "cases": [
+     {
+      "type": "P",
+      "p": [
+       2.1502080953996625,
+       0,
+       0,
+       0
+      ],
+      "info": {
+       "Stable": true,
+       "CrossoverFrequency": 0.8158491983423205,
+       "PhaseMargin": 60.1848823671019
+      },
+      "IF": "ForwardEuler",
+      "DF": "ForwardEuler",
+      "p60": [
+       2.1502080953996625,
+       0,
+       0,
+       0
+      ],
+      "info60": {
+       "Stable": true,
+       "CrossoverFrequency": 0.8158491983423205,
+       "PhaseMargin": 60.0349836234038
+      },
+      "Pm60": 60.0362901851171,
+      "Wcp60": 0.8158368796432833,
+      "err": "",
+      "err60": "",
+      "errm": ""
+     },
+     {
+      "type": "I",
+      "p": [
+       0,
+       0.1779460172380799,
+       0,
+       0
+      ],
+      "info": {
+       "Stable": true,
+       "CrossoverFrequency": 0.17046249020033763,
+       "PhaseMargin": 60.000318148716545
+      },
+      "IF": "ForwardEuler",
+      "DF": "ForwardEuler",
+      "p60": [
+       0,
+       0.1779460172380799,
+       0,
+       0
+      ],
+      "info60": {
+       "Stable": true,
+       "CrossoverFrequency": 0.17046249020033763,
+       "PhaseMargin": 60.00192977186838
+      },
+      "Pm60": 60.001781184841654,
+      "Wcp60": 0.17046335025603288,
+      "err": "",
+      "err60": "",
+      "errm": ""
+     },
+     {
+      "type": "PI",
+      "p": [
+       1.0367377334336194,
+       0.4356917303555291,
+       0,
+       0
+      ],
+      "info": {
+       "Stable": true,
+       "CrossoverFrequency": 0.4788043521415789,
+       "PhaseMargin": 59.99999999999988
+      },
+      "IF": "ForwardEuler",
+      "DF": "ForwardEuler",
+      "p60": [
+       1.0367377334336194,
+       0.4356917303555291,
+       0,
+       0
+      ],
+      "info60": {
+       "Stable": true,
+       "CrossoverFrequency": 0.4788043521415789,
+       "PhaseMargin": 59.99999999999988
+      },
+      "Pm60": 59.99512093092757,
+      "Wcp60": 0.4788629964668422,
+      "err": "",
+      "err60": "",
+      "errm": ""
+     },
+     {
+      "type": "PD",
+      "p": [
+       3.5865508845992,
+       0,
+       2.3815607825960448,
+       0
+      ],
+      "info": {
+       "Stable": true,
+       "CrossoverFrequency": 1.3323156148485957,
+       "PhaseMargin": 59.999999999999986
+      },
+      "IF": "ForwardEuler",
+      "DF": "ForwardEuler",
+      "p60": [
+       3.5865508845992,
+       0,
+       2.3815607825960448,
+       0
+      ],
+      "info60": {
+       "Stable": true,
+       "CrossoverFrequency": 1.3323156148485957,
+       "PhaseMargin": 59.999999999999986
+      },
+      "Pm60": 59.98909909387344,
+      "Wcp60": 1.3325828650796414,
+      "err": "",
+      "err60": "",
+      "errm": ""
+     },
+     {
+      "type": "PDF",
+      "p": [
+       3.4532096962188983,
+       0,
+       2.9180511661966126,
+       0.056007958329203945
+      ],
+      "info": {
+       "Stable": true,
+       "CrossoverFrequency": 1.45387239491235,
+       "PhaseMargin": 59.999999999999986
+      },
+      "IF": "ForwardEuler",
+      "DF": "ForwardEuler",
+      "p60": [
+       3.4532096962188983,
+       0,
+       2.9180511661966126,
+       0.056007958329203945
+      ],
+      "info60": {
+       "Stable": true,
+       "CrossoverFrequency": 1.45387239491235,
+       "PhaseMargin": 59.999999999999986
+      },
+      "Pm60": 59.99996944357388,
+      "Wcp60": 1.4538731766722972,
+      "err": "",
+      "err60": "",
+      "errm": ""
+     },
+     {
+      "type": "PID",
+      "p": [
+       2.357709819424763,
+       0.867990287674076,
+       1.6010535116435094,
+       0
+      ],
+      "info": {
+       "Stable": true,
+       "CrossoverFrequency": 0.8566364718572184,
+       "PhaseMargin": 64.79116360494082
+      },
+      "IF": "ForwardEuler",
+      "DF": "ForwardEuler",
+      "p60": [
+       2.357709819424763,
+       0.867990287674076,
+       1.6010535116435094,
+       0
+      ],
+      "info60": {
+       "Stable": true,
+       "CrossoverFrequency": 0.8566364718572184,
+       "PhaseMargin": 64.79116360494082
+      },
+      "Pm60": 64.79066768480371,
+      "Wcp60": 0.8566516806299567,
+      "err": "",
+      "err60": "",
+      "errm": ""
+     },
+     {
+      "type": "PIDF",
+      "p": [
+       2.287090165612047,
+       0.8221162506762135,
+       1.5223148158661737,
+       0.06020838126252112
+      ],
+      "info": {
+       "Stable": true,
+       "CrossoverFrequency": 0.8566364718572184,
+       "PhaseMargin": 64.497718691777
+      },
+      "IF": "ForwardEuler",
+      "DF": "ForwardEuler",
+      "p60": [
+       2.287090165612047,
+       0.8221162506762135,
+       1.5223148158661737,
+       0.06020838126252112
+      ],
+      "info60": {
+       "Stable": true,
+       "CrossoverFrequency": 0.8566364718572184,
+       "PhaseMargin": 64.497718691777
+      },
+      "Pm60": 64.49769967259022,
+      "Wcp60": 0.8566369930824742,
+      "err": "",
+      "err60": "",
+      "errm": ""
+     }
+    ]
+   },
+   {
+    "n": [
+     0,
+     0.0023785690345315556,
+     0.0022625648538526695
+    ],
+    "d": [
+     1,
+     -1.8560668425366735,
+     0.8607079764250578
+    ],
+    "Ts": 0.05,
+    "delay": 2,
+    "cases": [
+     {
+      "type": "P",
+      "p": [
+       2.997903785473673,
+       0,
+       0,
+       0
+      ],
+      "info": {
+       "Stable": true,
+       "CrossoverFrequency": 1.9179060465981177,
+       "PhaseMargin": 60.06751130987308
+      },
+      "IF": "ForwardEuler",
+      "DF": "ForwardEuler",
+      "p60": [
+       2.997903785473673,
+       0,
+       0,
+       0
+      ],
+      "info60": {
+       "Stable": true,
+       "CrossoverFrequency": 1.9179060465981177,
+       "PhaseMargin": 60.00204441395565
+      },
+      "Pm60": 60.00202701927806,
+      "Wcp60": 1.9179065532466228,
+      "err": "",
+      "err60": "",
+      "errm": ""
+     },
+     {
+      "type": "I",
+      "p": [
+       0,
+       0.3456687482224321,
+       0,
+       0
+      ],
+      "info": {
+       "Stable": true,
+       "CrossoverFrequency": 0.32454187732899387,
+       "PhaseMargin": 60.00308845702256
+      },
+      "IF": "ForwardEuler",
+      "DF": "ForwardEuler",
+      "p60": [
+       0,
+       0.3456687482224321,
+       0,
+       0
+      ],
+      "info60": {
+       "Stable": true,
+       "CrossoverFrequency": 0.32454187732899387,
+       "PhaseMargin": 60.013250536833546
+      },
+      "Pm60": 60.013221878575834,
+      "Wcp60": 0.3245422017234002,
+      "err": "",
+      "err60": "",
+      "errm": ""
+     },
+     {
+      "type": "PI",
+      "p": [
+       2.026695905370208,
+       1.0180314476772772,
+       0,
+       0
+      ],
+      "info": {
+       "Stable": true,
+       "CrossoverFrequency": 1.4171479328553098,
+       "PhaseMargin": 60.000000000000234
+      },
+      "IF": "ForwardEuler",
+      "DF": "ForwardEuler",
+      "p60": [
+       2.026695905370208,
+       1.0180314476772772,
+       0,
+       0
+      ],
+      "info60": {
+       "Stable": true,
+       "CrossoverFrequency": 1.4171479328553098,
+       "PhaseMargin": 60.000000000000234
+      },
+      "Pm60": 59.99998637486692,
+      "Wcp60": 1.4171483531629556,
+      "err": "",
+      "err60": "",
+      "errm": ""
+     },
+     {
+      "type": "PD",
+      "p": [
+       7.725051667165901,
+       0,
+       2.326807694564135,
+       0
+      ],
+      "info": {
+       "Stable": true,
+       "CrossoverFrequency": 4.798935549873914,
+       "PhaseMargin": 60.000000000000036
+      },
+      "IF": "ForwardEuler",
+      "DF": "ForwardEuler",
+      "p60": [
+       7.725051667165901,
+       0,
+       2.326807694564135,
+       0
+      ],
+      "info60": {
+       "Stable": true,
+       "CrossoverFrequency": 4.798935549873914,
+       "PhaseMargin": 60.000000000000036
+      },
+      "Pm60": 59.99997607560269,
+      "Wcp60": 4.798939194106816,
+      "err": "",
+      "err60": "",
+      "errm": ""
+     },
+     {
+      "type": "PDF",
+      "p": [
+       6.326100877961107,
+       0,
+       2.1395026996480944,
+       0.02690127934427205
+      ],
+      "info": {
+       "Stable": true,
+       "CrossoverFrequency": 4.582133068658191,
+       "PhaseMargin": 59.999999999999986
+      },
+      "IF": "ForwardEuler",
+      "DF": "ForwardEuler",
+      "p60": [
+       6.326100877961107,
+       0,
+       2.1395026996480944,
+       0.02690127934427205
+      ],
+      "info60": {
+       "Stable": true,
+       "CrossoverFrequency": 4.582133068658191,
+       "PhaseMargin": 59.999999999999986
+      },
+      "Pm60": 59.99998728416898,
+      "Wcp60": 4.582134523858839,
+      "err": "",
+      "err60": "",
+      "errm": ""
+     },
+     {
+      "type": "PID",
+      "p": [
+       2.1663423842729213,
+       1.7414290556682213,
+       0.6017281273084204,
+       0
+      ],
+      "info": {
+       "Stable": true,
+       "CrossoverFrequency": 1.4171479328553098,
+       "PhaseMargin": 69.54461151385699
+      },
+      "IF": "ForwardEuler",
+      "DF": "ForwardEuler",
+      "p60": [
+       2.1663423842729213,
+       1.7414290556682213,
+       0.6017281273084204,
+       0
+      ],
+      "info60": {
+       "Stable": true,
+       "CrossoverFrequency": 1.4171479328553098,
+       "PhaseMargin": 69.54461151385699
+      },
+      "Pm60": 69.54387453814105,
+      "Wcp60": 1.417260346016501,
+      "err": "",
+      "err60": "",
+      "errm": ""
+     },
+     {
+      "type": "PIDF",
+      "p": [
+       2.125344986789633,
+       1.7512098943882763,
+       0.5917495286625258,
+       0.031171947002085306
+      ],
+      "info": {
+       "Stable": true,
+       "CrossoverFrequency": 1.4171479328553098,
+       "PhaseMargin": 68.99543738355406
+      },
+      "IF": "ForwardEuler",
+      "DF": "ForwardEuler",
+      "p60": [
+       2.125344986789633,
+       1.7512098943882763,
+       0.5917495286625258,
+       0.031171947002085306
+      ],
+      "info60": {
+       "Stable": true,
+       "CrossoverFrequency": 1.4171479328553098,
+       "PhaseMargin": 68.99543738355406
+      },
+      "Pm60": 68.99496220323415,
+      "Wcp60": 1.4172216171272918,
+      "err": "",
+      "err60": "",
+      "errm": ""
+     }
+    ]
+   }
+  ],
+  "rl": {
+   "K": [
+    1.3545709229571927,
+    0.22011777498054394,
+    0.24928996417531982,
+    2.709141845914385
+   ],
+   "p": [
+    [
+     -1,
+     2
+    ],
+    [
+     -0.5,
+     0
+    ],
+    [
+     -2,
+     0.3
+    ],
+    [
+     -4,
+     0
+    ]
+   ]
+  },
+  "rld": {
+   "K": [
+    1.4601064223066649,
+    0.645472010818259,
+    18.096172662441155
+   ],
+   "p": [
+    [
+     0.9,
+     0.1
+    ],
+    [
+     0.95,
+     0
+    ],
+    [
+     0.7,
+     0
+    ]
+   ],
+   "n": [
+    0,
+    0.004829875139321672,
+    0.0010924610350526284,
+    -0.0034599945586927558
+   ],
+   "d": [
+    1,
+    -2.6292810191076135,
+    2.2996010651432526,
+    -0.6703200460356393
+   ]
+  }
+ }
+}
