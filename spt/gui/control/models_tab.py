@@ -49,7 +49,9 @@ C2D_METHODS = [("zoh", "Sıfır dereceli tutucu (zoh)"), ("foh", "Birinci derece
 D2C_METHODS = ("zoh", "tustin", "matched")
 COLUMNS = ("Ad", "Tür", "Ts", "G/Ç", "Derece", "Kararlılık")
 EXAMPLES = ("Örnekler: 1/(s^2 + 2*s + 1) · tf([1 3], [1 2 5]) · zpk([-1], [-2 -3], 5) · "
-            "ss([0 1; -2 -3], [0; 1], [1 0], 0) · 0.5/(z - 0.8) (Ts ile) · G*C/(1 + G*C)")
+            "ss([0 1; -2 -3], [0; 1], [1 0], 0) · 0.5/(z - 0.8) (Ts ile) · exp(-0.2*s)/(s + 1) · "
+            "feedback(C*G, 1) · c2d(G, 0.01) (zoh) · d2c(Gd) · series(C, G) · parallel(G1, G2) · minreal(G) · "
+            "pid(Kp, Ki, Kd, Tf)")
 
 
 def _fmt_ts(Ts: float) -> str:

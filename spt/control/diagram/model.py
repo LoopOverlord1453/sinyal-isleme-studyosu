@@ -317,6 +317,19 @@ class Model:
         dup = {n for n in names if names.count(n) > 1}
         for n in sorted(dup):
             rep.issues.append(Issue("error", f"'{n}' sinyal adı birden çok sinyalde kullanılmış."))
+        # kaydedilen sinyallerin sonuç anahtarları çakışmamalı (adlı sinyal ile başka bloğun adsız çıkışı)
+        seen: dict[str, tuple[str, int]] = {}
+        for (bn, p), v in self.signals.items():
+            if not v.get("log") or bn not in self.blocks or not 0 <= p < self.blocks[bn].n_outputs():
+                continue
+            key = self.signal_key(bn, p)
+            if key in seen and seen[key] != (bn, p):
+                ob, op = seen[key]
+                rep.issues.append(Issue("error", f"Kaydedilen iki sinyal aynı adı taşıyor: '{prefix}{key}' "
+                                                 f"('{prefix}{ob}' bloğunun {op + 1}. çıkışı ve '{prefix}{bn}' "
+                                                 f"bloğunun {p + 1}. çıkışı); birini yeniden adlandırın.",
+                                        prefix + bn, p))
+            seen[key] = (bn, p)
 
     # ------------------------------------------------------------------ dosya
     def to_dict(self) -> dict[str, Any]:

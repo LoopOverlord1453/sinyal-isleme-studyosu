@@ -295,8 +295,19 @@ def build_data(table: SourceTable, inputs: list[int], outputs: list[int], Ts: fl
     if (prep.P, prep.Q) != (1, 1):
         data = si.resample(data, int(prep.P), int(prep.Q))
     if prep.fraction >= 1.0:
-        return data, data, data
-    est, val = si.split(data, prep.fraction)
+        est, val = data, data
+    else:
+        est, val = si.split(data, prep.fraction)
+    for part, what in ((est, "tahmin"), (val, "doğrulama")):
+        if min(part.lengths) < MIN_SAMPLES:
+            raise ControlError(f"Bölme sonrası {what} verisinde {min(part.lengths)} örnek kalıyor; en az {MIN_SAMPLES} "
+                               "gerekli (aralığı genişletin ya da bölme oranını değiştirin)")
+    const = si.excitation_warnings(data) if hasattr(si, "excitation_warnings") else []
+    if const:
+        import warnings
+        from spt.control.errors import ControlWarning
+        for msg in const:
+            warnings.warn(msg, ControlWarning, stacklevel=2)
     return data, est, val
 
 
@@ -394,6 +405,9 @@ def plan(method: str, opts: dict, nu: int, ny: int, Ts: float = 0.0) -> tuple[tu
         discrete = bool(opts.get("discrete"))
         if not discrete and any(z > p for z, p in zip(nz, np_)):
             raise ControlError("Sürekli zamanda sıfır sayısı kutup sayısını aşamaz")
+        if discrete and opts.get("estimate_delay"):
+            raise ControlError("Ayrık zamanlı transfer fonksiyonunda gecikme tahmin edilemez: gecikmeyi tamsayı örnek "
+                               "olarak girin ya da sürekli zamanlı modeli seçin")
         delay = np.nan if opts.get("estimate_delay") else float(opts.get("delay") or 0.0)
         return ((np_ if nu > 1 else np_[0]), (nz if nu > 1 else nz[0]), delay), {"Ts": Ts if discrete else 0.0}
     if method == "procest":
@@ -497,6 +511,13 @@ def evaluate(model, est, val, w: np.ndarray, max_lag: int = 25) -> Evaluation:
     fit = getattr(rep, "fit", None)
     if fit is not None:
         ev.fpe, ev.aic = float(fit.FPE), float(fit.AIC)
+    # uyarılar durum sınıflandırmasına girer (yeşil "iyi" gösterilmez): yetersiz uyarım, kısa veri, negatif uyum
+    for msg in list(getattr(rep, "warnings", []) or []):
+        if msg not in ev.errors:
+            ev.errors.append(msg)
+    if ev.fit_val is not None and np.any(np.asarray(ev.fit_val, float) < 0):
+        ev.errors.append(f"Doğrulama uyumu negatif (%{float(np.min(ev.fit_val)):.1f}): model, çıkışın ortalamasından "
+                         "daha kötü öngörüyor")
     try:
         lag = int(min(max_lag, max(sum(val.lengths) // 4, 1)))
         ev.resid = si.resid(val, model, max_lag=lag)
@@ -548,8 +569,8 @@ def run_job(job: dict, progress=None) -> dict:
             try:
                 g = _call(spa, work, w=w)
                 out["spa"] = (np.asarray(g.frequency, float), np.asarray(g.response, complex))
-            except ControlError as exc:
-                out["spa_error"] = str(exc)
+            except (ControlError, np.linalg.LinAlgError, ValueError, FloatingPointError) as exc:
+                out["spa_error"] = error_text(exc)  # spa hatası işi düşürmez; tahmin edilen model korunur
     return out
 
 

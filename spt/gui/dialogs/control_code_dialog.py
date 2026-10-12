@@ -16,6 +16,7 @@ import logging
 import math
 import re
 import threading
+import warnings
 from dataclasses import replace
 
 from PyQt6.QtCore import QObject, pyqtSignal
@@ -31,7 +32,7 @@ from PyQt6.QtWidgets import (
 
 from spt.codegen import control_c as cc
 from spt.codegen import mcu
-from spt.control.errors import ControlError
+from spt.control.errors import ControlError, ControlWarning
 from spt.gui.dialogs.code_dialog import CodeDialog
 from spt.gui.theme import TERRAFLUX_DARK, Tokens
 from spt.gui.widgets.common import CollapsibleSection, combo, label
@@ -41,7 +42,8 @@ log = logging.getLogger("spt.gui")
 _AW_KEYS = ("none", "back-calculation", "clamping")
 _AW_LABELS = ("Yok", "Geri hesaplama (Kb)", "Sıkıştırma (clamping)")
 _REAL_KEYS = ("auto", "sos", "ss")
-_REAL_LABELS = ("Otomatik (SISO: bölümler, MIMO: durum uzayı)", "İkinci derece bölümler (SISO)", "Durum uzayı")
+_REAL_LABELS = ("Otomatik (SISO: bölümler, MIMO: durum uzayı)", "İkinci derece bölümler (SISO)",
+                "Durum uzayı (tf / zpk: bölümlerin kademesi; ss: modelin kendisi)")
 _TR = str.maketrans("çğıöşüÇĞİÖŞÜ", "cgiosuCGIOSU")
 
 
@@ -89,10 +91,15 @@ def _measure(bridge: _Bridge, generation: int, spec, opts, compilers) -> None:
     try:
         fp = cc.footprint(spec, opts, compilers)
         cost = cc.cost(spec, opts)
-        bridge.done.emit(generation, spec, opts, fp, cost, "")
+        err = ""
     except Exception as exc:  # noqa: BLE001 — ölçüm başarısız olsa da kod üretilmiş olmalı
         log.exception("Kontrolcü C kodu ölçümü başarısız")
-        bridge.done.emit(generation, spec, opts, None, None, f"{type(exc).__name__}: {exc}")
+        fp = cost = None
+        err = f"{type(exc).__name__}: {exc}"
+    try:
+        bridge.done.emit(generation, spec, opts, fp, cost, err)
+    except RuntimeError:  # pencere ölçüm sürerken kapatıldı (köprü silindi): sonucu bekleyen yok
+        pass
 
 
 def _spin(lo: float, hi: float, dec: int, value: float, suffix: str = "") -> QDoubleSpinBox:
@@ -188,6 +195,7 @@ class ControlCodeDialog(CodeDialog):
         self._generation = 0
         self._base = None          # nesneden çevrilmiş tanım (uygulama seçenekleri eklenmeden)
         self._name = ""
+        self._warnings: list[str] = []     # son üretimin ControlWarning iletileri (ör. float doğruluğu)
         self._on_mcu()
 
     # ---------------------------------------------------------------- kontrolcü
@@ -291,19 +299,24 @@ class ControlCodeDialog(CodeDialog):
         try:
             spec = self.current_spec()
             opts = self.options()
-            files = cc.generate(spec, opts)
+            with warnings.catch_warnings(record=True) as caught:
+                warnings.simplefilter("always", ControlWarning)
+                files = cc.generate(spec, opts)
         except ControlError as exc:
             self.set_files([])
             self.set_summary(f"<p>Kod üretilemedi: {html.escape(str(exc))}</p>")
             self.set_status(html.escape(str(exc)), "critical")
             return
+        self._warnings = list(dict.fromkeys(str(w.message) for w in caught if issubclass(w.category, ControlWarning)))
         self.set_files(files)
         self._generation += 1
         if not measure:
             self.set_summary(self._summary_html(spec, opts, None, None))
-            self.set_status(f"{len(files)} dosya üretildi.")
+            self.set_status(self._warnings[0] if self._warnings else f"{len(files)} dosya üretildi.",
+                            "warning" if self._warnings else "good")
             return
-        self.set_summary("<p>Kod üretildi. Bellek ve maliyet <b>ölçülüyor</b> (derleme birkaç saniye sürebilir)…</p>")
+        self.set_summary(self._summary_html(spec, opts, None, None)
+                         + "<p>Kod üretildi. Bellek ve maliyet <b>ölçülüyor</b> (derleme birkaç saniye sürebilir)…</p>")
         self.set_status(f"{len(files)} dosya üretildi · ölçüm sürüyor…")
         self.generate_button.setEnabled(False)
         threading.Thread(target=_measure, args=(self._bridge, self._generation, spec, opts, tuple(mcu.COMPILERS)),
@@ -319,12 +332,14 @@ class ControlCodeDialog(CodeDialog):
             self.set_status("Ölçüm başarısız (kod yine de kaydedilebilir).", "warning")
             return
         try:
-            self.set_files(cc.generate(spec, opts, footprint_rows=fp, cost_rows=cost))
+            with warnings.catch_warnings():
+                warnings.simplefilter("ignore", ControlWarning)      # aynı uyarılar refresh'te gösterildi
+                self.set_files(cc.generate(spec, opts, footprint_rows=fp, cost_rows=cost))
         except ControlError:
             pass
         self.set_summary(self._summary_html(spec, opts, fp, cost))
         worst = max((c.cpu_load_percent for c in cost), default=0.0)
-        state = "critical" if worst > 100 else "warning" if worst > 50 else "good"
+        state = "critical" if worst > 100 else "warning" if (worst > 50 or self._warnings) else "good"
         self.set_status(f"Ölçüm tamamlandı · en yüksek CPU yükü %{worst:.3g} @ {cc._rate(spec, opts):g} Hz", state)
 
     def _summary_html(self, spec, opts, fp, cost) -> str:
@@ -342,6 +357,8 @@ class ControlCodeDialog(CodeDialog):
         if opts.real == "double" and prof.double_is_soft():
             head += (f"<p><span style='color:{t.warning}'>⚠ Bu çekirdekte double yazılım kayan noktadır "
                      "(10–100× yavaş).</span></p>")
+        for msg in self._warnings:
+            head += f"<p><span style='color:{t.warning}'>⚠ {html.escape(msg)}</span></p>"
         if fp is None or cost is None:
             return head
         methods: list[str] = []

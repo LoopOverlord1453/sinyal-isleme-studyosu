@@ -1,0 +1,170 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "https://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" lang="tr">
+<head>
+<meta http-equiv="Content-Type" content="text/xhtml;charset=UTF-8"/>
+<meta http-equiv="X-UA-Compatible" content="IE=11"/>
+<meta name="generator" content="Doxygen 1.13.2"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>SPTF-UDP: port/lwip_raw/sptf_port_lwip_raw.h Kaynak Dosyası</title>
+<link href="tabs.css" rel="stylesheet" type="text/css"/>
+<script type="text/javascript" src="jquery.js"></script>
+<script type="text/javascript" src="dynsections.js"></script>
+<script type="text/javascript" src="clipboard.js"></script>
+<link href="navtree.css" rel="stylesheet" type="text/css"/>
+<script type="text/javascript" src="navtreedata.js"></script>
+<script type="text/javascript" src="navtree.js"></script>
+<script type="text/javascript" src="resize.js"></script>
+<script type="text/javascript" src="cookie.js"></script>
+<link href="search/search.css" rel="stylesheet" type="text/css"/>
+<script type="text/javascript" src="search/searchdata.js"></script>
+<script type="text/javascript" src="search/search.js"></script>
+<script type="text/javascript">
+/* @license magnet:?xt=urn:btih:d3d9a9a6595521f9666a5e94cc830dab83b65699&amp;dn=expat.txt MIT */
+  $(function() { init_search(); });
+/* @license-end */
+</script>
+<link href="doxygen.css" rel="stylesheet" type="text/css" />
+</head>
+<body>
+<div id="top"><!-- do not remove this div, it is closed by doxygen! -->
+<div id="titlearea">
+<table cellspacing="0" cellpadding="0">
+ <tbody>
+ <tr id="projectrow">
+  <td id="projectalign">
+   <div id="projectname">SPTF-UDP<span id="projectnumber">&#160;1.0.0</span>
+   </div>
+   <div id="projectbrief">Signal Processing Toolbox için gömülü UDP gönderici kütüphanesi</div>
+  </td>
+    <td>        <div id="MSearchBox" class="MSearchBoxInactive">
+        <span class="left">
+          <span id="MSearchSelect"                onmouseover="return searchBox.OnSearchSelectShow()"                onmouseout="return searchBox.OnSearchSelectHide()">&#160;</span>
+          <input type="text" id="MSearchField" value="" placeholder="Ara" accesskey="S"
+               onfocus="searchBox.OnSearchFieldFocus(true)" 
+               onblur="searchBox.OnSearchFieldFocus(false)" 
+               onkeyup="searchBox.OnSearchFieldChange(event)"/>
+          </span><span class="right">
+            <a id="MSearchClose" href="javascript:searchBox.CloseResultsWindow()"><img id="MSearchCloseImg" border="0" src="search/close.svg" alt=""/></a>
+          </span>
+        </div>
+</td>
+ </tr>
+ </tbody>
+</table>
+</div>
+<!-- end header part -->
+<!-- Oluşturan Doxygen 1.13.2 -->
+<script type="text/javascript">
+/* @license magnet:?xt=urn:btih:d3d9a9a6595521f9666a5e94cc830dab83b65699&amp;dn=expat.txt MIT */
+var searchBox = new SearchBox("searchBox", "search/",'.html');
+/* @license-end */
+</script>
+<script type="text/javascript">
+/* @license magnet:?xt=urn:btih:d3d9a9a6595521f9666a5e94cc830dab83b65699&amp;dn=expat.txt MIT */
+$(function() { codefold.init(0); });
+/* @license-end */
+</script>
+</div><!-- top -->
+<div id="side-nav" class="ui-resizable side-nav-resizable">
+  <div id="nav-tree">
+    <div id="nav-tree-contents">
+      <div id="nav-sync" class="sync"></div>
+    </div>
+  </div>
+  <div id="splitbar" style="-moz-user-select:none;" 
+       class="ui-resizable-handle">
+  </div>
+</div>
+<script type="text/javascript">
+/* @license magnet:?xt=urn:btih:d3d9a9a6595521f9666a5e94cc830dab83b65699&amp;dn=expat.txt MIT */
+$(function(){initNavTree('sptf__port__lwip__raw_8h_source.html',''); initResizable(true); });
+/* @license-end */
+</script>
+<div id="doc-content">
+<!-- window showing the filter options -->
+<div id="MSearchSelectWindow"
+     onmouseover="return searchBox.OnSearchSelectShow()"
+     onmouseout="return searchBox.OnSearchSelectHide()"
+     onkeydown="return searchBox.OnSearchSelectKey(event)">
+</div>
+
+<!-- iframe showing the search results (closed by default) -->
+<div id="MSearchResultsWindow">
+<div id="MSearchResults">
+<div class="SRPage">
+<div id="SRIndex">
+<div id="SRResults"></div>
+<div class="SRStatus" id="Loading">Yüklüyor...</div>
+<div class="SRStatus" id="Searching">Arıyor...</div>
+<div class="SRStatus" id="NoMatches">Eşleşme Yok</div>
+</div>
+</div>
+</div>
+</div>
+
+<div class="header">
+  <div class="headertitle"><div class="title">sptf_port_lwip_raw.h</div></div>
+</div><!--header-->
+<div class="contents">
+<a href="sptf__port__lwip__raw_8h.html">Bu dosyanın dokümantasyonuna git.</a><div class="fragment"><div class="line"><a id="l00001" name="l00001"></a><span class="lineno">    1</span><span class="comment">/* SPDX-License-Identifier: LGPL-2.1-only */</span></div>
+<div class="line"><a id="l00017" name="l00017"></a><span class="lineno">   17</span><span class="preprocessor">#ifndef SPTF_PORT_LWIP_RAW_H</span></div>
+<div class="line"><a id="l00018" name="l00018"></a><span class="lineno">   18</span><span class="preprocessor">#define SPTF_PORT_LWIP_RAW_H</span></div>
+<div class="line"><a id="l00019" name="l00019"></a><span class="lineno">   19</span> </div>
+<div class="line"><a id="l00020" name="l00020"></a><span class="lineno">   20</span><span class="preprocessor">#include &quot;lwip/ip_addr.h&quot;</span></div>
+<div class="line"><a id="l00021" name="l00021"></a><span class="lineno">   21</span><span class="preprocessor">#include &quot;lwip/pbuf.h&quot;</span></div>
+<div class="line"><a id="l00022" name="l00022"></a><span class="lineno">   22</span><span class="preprocessor">#include &quot;lwip/udp.h&quot;</span></div>
+<div class="line"><a id="l00023" name="l00023"></a><span class="lineno">   23</span> </div>
+<div class="line"><a id="l00024" name="l00024"></a><span class="lineno">   24</span><span class="preprocessor">#include &quot;<a class="code" href="sptf_8h.html">sptf.h</a>&quot;</span></div>
+<div class="line"><a id="l00025" name="l00025"></a><span class="lineno">   25</span> </div>
+<div class="line"><a id="l00026" name="l00026"></a><span class="lineno">   26</span><span class="preprocessor">#ifdef __cplusplus</span></div>
+<div class="line"><a id="l00027" name="l00027"></a><span class="lineno">   27</span><span class="keyword">extern</span> <span class="stringliteral">&quot;C&quot;</span> {</div>
+<div class="line"><a id="l00028" name="l00028"></a><span class="lineno">   28</span><span class="preprocessor">#endif</span></div>
+<div class="line"><a id="l00029" name="l00029"></a><span class="lineno">   29</span></div>
+<div class="line"><a id="l00035" name="l00035"></a><span class="lineno">   35</span></div>
+<div class="foldopen" id="foldopen00037" data-start="{" data-end="};">
+<div class="line"><a id="l00037" name="l00037"></a><span class="lineno"><a class="line" href="structsptf__lwip__raw__t.html">   37</a></span><span class="keyword">typedef</span> <span class="keyword">struct</span></div>
+<div class="line"><a id="l00038" name="l00038"></a><span class="lineno">   38</span>{</div>
+<div class="line"><a id="l00039" name="l00039"></a><span class="lineno"><a class="line" href="structsptf__lwip__raw__t.html#a8fb31076525230216af71d3db03d12e6">   39</a></span>    <span class="keyword">struct </span>udp_pcb *<a class="code hl_variable" href="structsptf__lwip__raw__t.html#a8fb31076525230216af71d3db03d12e6">pcb</a>;      </div>
+<div class="line"><a id="l00040" name="l00040"></a><span class="lineno"><a class="line" href="structsptf__lwip__raw__t.html#ab83cfb9aeb8b5cffa5f759e343c667b9">   40</a></span>    ip_addr_t       <a class="code hl_variable" href="structsptf__lwip__raw__t.html#ab83cfb9aeb8b5cffa5f759e343c667b9">dst_ip</a>;   </div>
+<div class="line"><a id="l00041" name="l00041"></a><span class="lineno"><a class="line" href="structsptf__lwip__raw__t.html#a0759be7fa325a7f799e0861b1c3e71b0">   41</a></span>    u16_t           <a class="code hl_variable" href="structsptf__lwip__raw__t.html#a0759be7fa325a7f799e0861b1c3e71b0">dst_port</a>; </div>
+<div class="line"><a id="l00042" name="l00042"></a><span class="lineno"><a class="line" href="structsptf__lwip__raw__t.html#a4bd0f8fdaa48941a0b5d9ceeb7234d02">   42</a></span>    <span class="keyword">struct </span>pbuf    *<a class="code hl_variable" href="structsptf__lwip__raw__t.html#a4bd0f8fdaa48941a0b5d9ceeb7234d02">pending</a>;  </div>
+<div class="line"><a id="l00043" name="l00043"></a><span class="lineno">   43</span>} <a class="code hl_struct" href="structsptf__lwip__raw__t.html">sptf_lwip_raw_t</a>;</div>
+</div>
+<div class="line"><a id="l00044" name="l00044"></a><span class="lineno">   44</span></div>
+<div class="line"><a id="l00056" name="l00056"></a><span class="lineno">   56</span><a class="code hl_enumeration" href="group__sptf__types.html#ga07cbec476e18a5e7bda27c7b2f40b3ae">sptf_status_t</a> <a class="code hl_function" href="group__sptf__port.html#gac47fac34d0f402c73c19c4f7b4955144">sptf_lwip_raw_open</a>(<a class="code hl_struct" href="structsptf__lwip__raw__t.html">sptf_lwip_raw_t</a> *port, <span class="keyword">const</span> ip_addr_t *dst_ip, u16_t dst_port, u16_t local_port);</div>
+<div class="line"><a id="l00057" name="l00057"></a><span class="lineno">   57</span></div>
+<div class="line"><a id="l00065" name="l00065"></a><span class="lineno">   65</span><a class="code hl_enumeration" href="group__sptf__types.html#ga07cbec476e18a5e7bda27c7b2f40b3ae">sptf_status_t</a> <a class="code hl_function" href="group__sptf__port.html#ga4db571397f1af6ad848fb7914ab328bc">sptf_lwip_raw_set_destination</a>(<a class="code hl_struct" href="structsptf__lwip__raw__t.html">sptf_lwip_raw_t</a> *port, <span class="keyword">const</span> ip_addr_t *dst_ip, u16_t dst_port);</div>
+<div class="line"><a id="l00066" name="l00066"></a><span class="lineno">   66</span></div>
+<div class="line"><a id="l00071" name="l00071"></a><span class="lineno">   71</span><span class="keywordtype">void</span> <a class="code hl_function" href="group__sptf__port.html#ga681acf23a0052e645ba9aa5ba83693fe">sptf_lwip_raw_close</a>(<a class="code hl_struct" href="structsptf__lwip__raw__t.html">sptf_lwip_raw_t</a> *port);</div>
+<div class="line"><a id="l00072" name="l00072"></a><span class="lineno">   72</span></div>
+<div class="line"><a id="l00078" name="l00078"></a><span class="lineno">   78</span><span class="keywordtype">void</span> <a class="code hl_function" href="group__sptf__port.html#ga99be8885a9a9316d01aa6aed01c3b2fa">sptf_lwip_raw_transport</a>(<a class="code hl_struct" href="structsptf__lwip__raw__t.html">sptf_lwip_raw_t</a> *port, <a class="code hl_struct" href="structsptf__transport__t.html">sptf_transport_t</a> *out);</div>
+<div class="line"><a id="l00079" name="l00079"></a><span class="lineno">   79</span></div>
+<div class="line"><a id="l00081" name="l00081"></a><span class="lineno">   81</span> </div>
+<div class="line"><a id="l00082" name="l00082"></a><span class="lineno">   82</span><span class="preprocessor">#ifdef __cplusplus</span></div>
+<div class="line"><a id="l00083" name="l00083"></a><span class="lineno">   83</span>}</div>
+<div class="line"><a id="l00084" name="l00084"></a><span class="lineno">   84</span><span class="preprocessor">#endif</span></div>
+<div class="line"><a id="l00085" name="l00085"></a><span class="lineno">   85</span> </div>
+<div class="line"><a id="l00086" name="l00086"></a><span class="lineno">   86</span><span class="preprocessor">#endif </span><span class="comment">/* SPTF_PORT_LWIP_RAW_H */</span><span class="preprocessor"></span></div>
+<div class="ttc" id="agroup__sptf__port_html_ga4db571397f1af6ad848fb7914ab328bc"><div class="ttname"><a href="group__sptf__port.html#ga4db571397f1af6ad848fb7914ab328bc">sptf_lwip_raw_set_destination</a></div><div class="ttdeci">sptf_status_t sptf_lwip_raw_set_destination(sptf_lwip_raw_t *port, const ip_addr_t *dst_ip, u16_t dst_port)</div><div class="ttdoc">Hedef adresi / portu değiştirir (ör. PC&#39;nin IP&#39;si DHCP ile değişti).</div><div class="ttdef"><b>Definition</b> <a href="sptf__port__lwip__raw_8c_source.html#l00145">sptf_port_lwip_raw.c:145</a></div></div>
+<div class="ttc" id="agroup__sptf__port_html_ga681acf23a0052e645ba9aa5ba83693fe"><div class="ttname"><a href="group__sptf__port.html#ga681acf23a0052e645ba9aa5ba83693fe">sptf_lwip_raw_close</a></div><div class="ttdeci">void sptf_lwip_raw_close(sptf_lwip_raw_t *port)</div><div class="ttdoc">Denetim bloğunu kapatır; bekleyen pbuf varsa serbest bırakır.</div><div class="ttdef"><b>Definition</b> <a href="sptf__port__lwip__raw_8c_source.html#l00158">sptf_port_lwip_raw.c:158</a></div></div>
+<div class="ttc" id="agroup__sptf__port_html_ga99be8885a9a9316d01aa6aed01c3b2fa"><div class="ttname"><a href="group__sptf__port.html#ga99be8885a9a9316d01aa6aed01c3b2fa">sptf_lwip_raw_transport</a></div><div class="ttdeci">void sptf_lwip_raw_transport(sptf_lwip_raw_t *port, sptf_transport_t *out)</div><div class="ttdoc">sptf_transport_t yapısını bu portla doldurur (sptf_link_config_t::transport için).</div><div class="ttdef"><b>Definition</b> <a href="sptf__port__lwip__raw_8c_source.html#l00177">sptf_port_lwip_raw.c:177</a></div></div>
+<div class="ttc" id="agroup__sptf__port_html_gac47fac34d0f402c73c19c4f7b4955144"><div class="ttname"><a href="group__sptf__port.html#gac47fac34d0f402c73c19c4f7b4955144">sptf_lwip_raw_open</a></div><div class="ttdeci">sptf_status_t sptf_lwip_raw_open(sptf_lwip_raw_t *port, const ip_addr_t *dst_ip, u16_t dst_port, u16_t local_port)</div><div class="ttdoc">UDP denetim bloğunu oluşturur ve hedefi ayarlar.</div><div class="ttdef"><b>Definition</b> <a href="sptf__port__lwip__raw_8c_source.html#l00115">sptf_port_lwip_raw.c:115</a></div></div>
+<div class="ttc" id="agroup__sptf__types_html_ga07cbec476e18a5e7bda27c7b2f40b3ae"><div class="ttname"><a href="group__sptf__types.html#ga07cbec476e18a5e7bda27c7b2f40b3ae">sptf_status_t</a></div><div class="ttdeci">sptf_status_t</div><div class="ttdoc">Fonksiyon dönüş kodları. Başarı 0, hatalar negatiftir.</div><div class="ttdef"><b>Definition</b> <a href="sptf_8h_source.html#l00072">sptf.h:73</a></div></div>
+<div class="ttc" id="asptf_8h_html"><div class="ttname"><a href="sptf_8h.html">sptf.h</a></div><div class="ttdoc">SPTF-UDP gömülü gönderici kütüphanesi — genel API.</div></div>
+<div class="ttc" id="astructsptf__lwip__raw__t_html"><div class="ttname"><a href="structsptf__lwip__raw__t.html">sptf_lwip_raw_t</a></div><div class="ttdoc">lwIP raw portu bağlamı. Alanları doğrudan değiştirmeyin.</div><div class="ttdef"><b>Definition</b> <a href="#l00037">sptf_port_lwip_raw.h:38</a></div></div>
+<div class="ttc" id="astructsptf__lwip__raw__t_html_a0759be7fa325a7f799e0861b1c3e71b0"><div class="ttname"><a href="structsptf__lwip__raw__t.html#a0759be7fa325a7f799e0861b1c3e71b0">sptf_lwip_raw_t::dst_port</a></div><div class="ttdeci">u16_t dst_port</div><div class="ttdef"><b>Definition</b> <a href="#l00041">sptf_port_lwip_raw.h:41</a></div></div>
+<div class="ttc" id="astructsptf__lwip__raw__t_html_a4bd0f8fdaa48941a0b5d9ceeb7234d02"><div class="ttname"><a href="structsptf__lwip__raw__t.html#a4bd0f8fdaa48941a0b5d9ceeb7234d02">sptf_lwip_raw_t::pending</a></div><div class="ttdeci">struct pbuf * pending</div><div class="ttdef"><b>Definition</b> <a href="#l00042">sptf_port_lwip_raw.h:42</a></div></div>
+<div class="ttc" id="astructsptf__lwip__raw__t_html_a8fb31076525230216af71d3db03d12e6"><div class="ttname"><a href="structsptf__lwip__raw__t.html#a8fb31076525230216af71d3db03d12e6">sptf_lwip_raw_t::pcb</a></div><div class="ttdeci">struct udp_pcb * pcb</div><div class="ttdef"><b>Definition</b> <a href="#l00039">sptf_port_lwip_raw.h:39</a></div></div>
+<div class="ttc" id="astructsptf__lwip__raw__t_html_ab83cfb9aeb8b5cffa5f759e343c667b9"><div class="ttname"><a href="structsptf__lwip__raw__t.html#ab83cfb9aeb8b5cffa5f759e343c667b9">sptf_lwip_raw_t::dst_ip</a></div><div class="ttdeci">ip_addr_t dst_ip</div><div class="ttdef"><b>Definition</b> <a href="#l00040">sptf_port_lwip_raw.h:40</a></div></div>
+<div class="ttc" id="astructsptf__transport__t_html"><div class="ttname"><a href="structsptf__transport__t.html">sptf_transport_t</a></div><div class="ttdoc">Taşıma katmanı arayüzü (port). Kütüphane ağ yığınını yalnız bu iki fonksiyonla kullanır.</div><div class="ttdef"><b>Definition</b> <a href="sptf_8h_source.html#l00290">sptf.h:291</a></div></div>
+</div><!-- fragment --></div><!-- contents -->
+</div><!-- doc-content -->
+<!-- start footer part -->
+<div id="nav-path" class="navpath"><!-- id is needed for treeview function! -->
+  <ul>
+    <li class="navelem"><a class="el" href="dir_651562d8bf6cfd3e81eff5b570d7df50.html">port</a></li><li class="navelem"><a class="el" href="dir_a9e211f02409707e38430ef4259e67fb.html">lwip_raw</a></li><li class="navelem"><a class="el" href="sptf__port__lwip__raw_8h.html">sptf_port_lwip_raw.h</a></li>
+    <li class="footer">Oluşturan <a href="https://www.doxygen.org/index.html"><img class="footer" src="doxygen.svg" width="104" height="31" alt="doxygen"/></a> 1.13.2 </li>
+  </ul>
+</div>
+</body>
+</html>

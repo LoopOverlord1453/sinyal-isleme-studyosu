@@ -114,6 +114,7 @@ SPECS: tuple[ActionSpec, ...] = (
     # Yardım
     ActionSpec("help.docs", "Kullanım Kılavuzu", "ph.book-open", "F1", phase=5),
     ActionSpec("help.protocol", "SPTF Protokol Dokümanı", "ph.file-text"),
+    ActionSpec("help.embedded", "Gömülü UDP Kılavuzu (SPTF-UDP)", "ph.share-network"),
     ActionSpec("help.shortcuts", "Klavye Kısayolları", "ph.keyboard"),
     ActionSpec("help.about", "Hakkında", "ph.info"),
 )

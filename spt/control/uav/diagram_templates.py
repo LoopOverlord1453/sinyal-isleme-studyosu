@@ -44,18 +44,6 @@ def _pid(m: Model, name: str, gains: dict, Ts: float, *, limit: tuple[float, flo
     return m.add("PIDController", name, **kw)
 
 
-def _pid2(m: Model, name: str, gains: dict, Ts: float, ref, meas, *, b: float, c: float,
-          limit: tuple[float, float], ref_port: int = 0, meas_port: int = 0):
-    """2-DOF PID (ayar noktası ağırlıklı: e_p = b·r − y, e_i = r − y, e_d = c·r − y) — c = 0 türev vuruşunu,
-    b < 1 PID sıfırının yol açtığı aşımı azaltır; kapalı çevrim kutupları (kararlılık) 1-DOF ile aynıdır."""
-    blk = m.add("PIDController2DOF", name, controller=gains.get("controller", "PID"), form="parallel",
-                P=gains["P"], I=gains.get("I", 0.0), D=gains.get("D", 0.0), N=gains.get("N", 100.0), b=b, c=c, Ts=Ts,
-                limit_output=True, lower=limit[0], upper=limit[1], anti_windup="clamping")
-    m.connect(ref, blk, src_port=ref_port, dst_port=0)
-    m.connect(meas, blk, src_port=meas_port, dst_port=1)
-    return blk
-
-
 def _gain_block(m: Model, name: str, k: float, Ts: float):
     """Ayrık oransal kazanç (P denetleyici olarak — örnekleme hızında tutulur)."""
     return m.add("PIDController", name, controller="P", P=float(k), Ts=Ts)
@@ -127,11 +115,6 @@ def _attitude_core(m: Model, d, p: QuadrotorParams, plant, att_ref, yaw_ref, thr
 
 
 # ============================================================================ 1. kademeli otopilot
-ALT_WEIGHTS = (1.0, 0.0)          # tek çevrim irtifa 2-DOF PIDF (LQR şablonu): b = 1, c = 0 (türev yalnız ölçümde)
-# Not: b ≠ 1 mutlak koordinatlarda (pd = −10 m) dengede sabit bir P ofseti yaratır (b·r − y ≠ 0).
-
-
-
 def build_quad_cascade(params: QuadrotorParams | None = None, *, step=(2.0, 1.0, -1.0, 0.5), t_step: float = 1.0,
                        stop_time: float = 8.0, design=None) -> Model:
     """Dörtrotor kademeli otopilot. Senaryo: t_step anında konum adımı [Δpn Δpe Δpd] ve yaw adımı (rad); başlangıç
@@ -212,8 +195,9 @@ def build_quad_lqr(params: QuadrotorParams | None = None, *, step=(0.3, -0.2, 0.
     # irtifa: PIDF (aynı hızda) → a_d → T = m·(g − a_d)
     hr = m.add("Constant", "pd ref", value=[-10.0])
     hm = _sel(m, "pd ölçüm", plant, 0, 3)
-    ch = _pid2(m, "İrtifa PIDF (2-DOF)", d.altitude, Ts, hr, hm, b=ALT_WEIGHTS[0], c=ALT_WEIGHTS[1],
-               limit=(-d.limits["accel_v"], d.limits["accel_v"]))
+    eh = _err(m, "İrtifa hatası (pd)", hr, hm)      # hata üzerinde PIDF: askıda e = 0 → türev süzgeci geçicisiz
+    ch = _pid(m, "İrtifa PIDF", d.altitude, Ts, limit=(-d.limits["accel_v"], d.limits["accel_v"]))
+    m.connect(eh, ch)
     gm = m.add("Gain", "−m", K=[[-p.mass]])
     m.connect(ch, gm)
     mg = m.add("Constant", "m·g (askı itkisi)", value=[p.mass * p.g])

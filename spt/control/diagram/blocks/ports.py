@@ -81,6 +81,9 @@ class Wire(Block):
     def output(self, t, x, xd, u):
         return [u[0]]
 
+    def route(self):
+        return [[(0, e) for e in range(self.in_widths[0])]]
+
     def linearize(self, t, x, xd, u):
         w = self.in_widths[0]
         return np.zeros((0, 0)), np.zeros((0, w)), np.zeros((w, 0)), np.eye(w)

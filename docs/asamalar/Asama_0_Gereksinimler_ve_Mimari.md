@@ -11,10 +11,9 @@ Bu dosya, sonraki aşamalarda dönüp bakılacak **karar kaydıdır**.
 | Konu | Karar |
 |---|---|
 | Ürün | PC'de çalışan, gerçek zamanlı sinyal görselleştirme ve analiz arayüzü |
-| Gömülü taraf | Bu projede gömülü kod yazılmaz. Cihaz, veriyi tanımlanan formatta gönderir |
+| Gömülü taraf | Uygulama PC'de çalışır. Cihaz tarafı için yalnız gönderici kütüphanesi sağlanır: [`embedded/sptf_udp`](../../embedded/sptf_udp) (SPTF-UDP, C99) |
 | Sinyal türü | Bağımsız. Formatta gelen her sinyal analiz edilebilmeli |
-| Veri yolu (ilk aşama) | Ethernet, **UDP port 50505** |
-| Veri yolu (sonra) | TCP (Aşama 5) |
+| Veri yolu | Ethernet, **yalnız UDP**, port 50505. TCP desteklenmez (karar: 2026-10-12). Uygulama katmanı: [SPTF_UDP_Uygulama_Protokolu.md](../SPTF_UDP_Uygulama_Protokolu.md) |
 | Veri formatı | **SPTF v1** — kendini tanımlayan ikili çerçeve formatı. Bkz. [SPTF_Protokol_v1.md](../SPTF_Protokol_v1.md) |
 | Kayıt dosyası | `.sptr` — gelen çerçeveler değiştirilmeden, alınma zamanlarıyla saklanır |
 | Dil | Python 3.14, proje içi sanal ortam (`.venv`) |

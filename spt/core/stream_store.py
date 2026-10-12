@@ -35,6 +35,7 @@ from spt.protocol.format import (
 from spt.protocol.parser import FrameError, check_frame, samples_view, unpack_descriptor, unpack_marker
 
 MAX_MARKER_EVENTS_PER_TICK = 50
+MAX_PENDING_MARKERS = 32   # tampon açılmadan (ilk DATA'dan önce) gelen işaretler, açılınca konumlanır
 MAX_ERROR_LOGS = 20
 RESTART_RUN = 4  # geriye düşen ama kendi içinde ardışık bu kadar çerçeve: reset çerçevesi kaybolmuş, yeniden başla
 
@@ -92,6 +93,7 @@ class _Stream:
         self.packets = self.bytes = self.samples = 0
         self.lost = self.duplicates = self.restarts = 0
         self.last_rx_ns = 0
+        self.pending_markers: list[tuple[int, int, str]] = []  # (örnek indeksi, kod, metin)
 
     def close(self) -> None:
         if self.ring is not None:
@@ -226,6 +228,10 @@ class StreamStore:
             st._back_run = 0
         st.ring.write(samples_view(mv, pstart + DATA.size, count, st.desc))
         st.next_sample = first + count
+        if st.pending_markers:
+            for sample_index, code, text in st.pending_markers:
+                self._emit_marker(st, sample_index, code, text)
+            st.pending_markers.clear()
         st.packets += 1
         st.bytes += nbytes
         st.samples += count
@@ -266,9 +272,19 @@ class StreamStore:
         st = self._streams.get((source, sid))
         if st is None:
             return
+        if st.ring is None or st.next_sample is None:
+            if len(st.pending_markers) < MAX_PENDING_MARKERS:
+                st.pending_markers.append((sample_index, code, text))
+            return
+        self._emit_marker(st, sample_index, code, text)
+
+    def _emit_marker(self, st: _Stream, sample_index: int, code: int, text: str) -> None:
+        """İşareti olay olarak iletir. Konum, akışın `first_sample` ekseninden halka tampon indeksine çevrilir
+        (tampon indeksi = yazılan + atlanan örnek; arayüzde zaman = t0 + indeks / fs)."""
         if self._marker_budget > 0:
             self._marker_budget -= 1
-            self._emit(("marker", st.key, sample_index, code, text))
+            pos = st.ring.write_count + (sample_index - st.next_sample)
+            self._emit(("marker", st.key, sample_index, code, text, pos))
         else:
             self._dropped_markers += 1
 

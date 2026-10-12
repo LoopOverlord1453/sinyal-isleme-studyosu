@@ -19,7 +19,7 @@ from dataclasses import dataclass
 import numpy as np
 
 from spt.control.errors import ControlError
-from spt.control.lti import LTI, TransferFunction, ZPK, ss, tf, zpk
+from spt.control.lti import LTI, StateSpace, TransferFunction, ZPK, ss, tf, zpk
 from spt.control import convert
 
 MAX_LEN = 10_000
@@ -385,6 +385,17 @@ def _mat(v, pos, what: str) -> np.ndarray:
     return np.atleast_2d(a.astype(float)) if a.size else np.zeros((0, 0))
 
 
+def _realv(v, pos, what):
+    """Sayı / dizi gerçel olmalı: sanal kısmı sıfırdan farklıysa sessizce atmak yerine hata (MATLAB'de karmaşık
+    katsayılı model ayrı bir kavramdır; burada desteklenmez)."""
+    a = np.asarray(v)
+    if np.iscomplexobj(a):
+        if np.any(a.imag != 0):
+            raise _err(f"{what} gerçel olmalı (karmaşık sayı verildi)", pos)
+        a = a.real
+    return a.item() if a.ndim == 0 else a
+
+
 def _ts_arg(args, idx, Ts, pos):
     if len(args) > idx:
         v = args[idx]
@@ -399,7 +410,7 @@ def _call(name: str, args: list, pos: int, Ts: float):
         if name == "tf":
             if len(args) not in (2, 3):
                 raise _err("tf(pay, payda[, Ts]) biçiminde yazın", pos)
-            return tf(np.real(_vec(args[0], pos, "pay")), np.real(_vec(args[1], pos, "payda")),
+            return tf(_realv(_vec(args[0], pos, "pay"), pos, "pay"), _realv(_vec(args[1], pos, "payda"), pos, "payda"),
                       _ts_arg(args, 2, Ts, pos))
         if name == "zpk":
             if len(args) not in (3, 4):
@@ -426,11 +437,51 @@ def _call(name: str, args: list, pos: int, Ts: float):
                 raise _err("sqrt bir sayı alır", pos)
             v = complex(args[0]) ** 0.5
             return v.real if v.imag == 0 else v
+        # MATLAB'deki model işlemleri (varsayılanlarıyla; ayrıştırıcıda metin değişmezi yok → yöntem seçilemez)
+        if name in ("c2d", "d2c", "feedback", "series", "parallel", "minreal"):
+            from spt.control import connect as _cn
+            from spt.control import discretize as _dz
+            for a in args:
+                if not isinstance(a, LTI):
+                    _realv(a, pos, "argüman")
+            sys_args = [a if isinstance(a, LTI) else tf(np.real(np.atleast_1d(a)), [1.0], Ts) if _is_num(a) else a
+                        for a in args]
+            if name == "c2d":
+                if len(args) != 2 or not isinstance(args[0], LTI) or not _is_num(args[1]):
+                    raise _err("c2d(model, Ts) biçiminde yazın (yöntem: sıfır dereceli tutucu, MATLAB varsayılanı)",
+                               pos)
+                return _dz.c2d(args[0], float(np.real(args[1])), "zoh")
+            if name == "d2c":
+                if len(args) != 1 or not isinstance(args[0], LTI):
+                    raise _err("d2c(model) biçiminde yazın (yöntem: sıfır dereceli tutucu)", pos)
+                return _dz.d2c(args[0], "zoh")
+            if name == "feedback":
+                if not 1 <= len(args) <= 3 or not isinstance(args[0], LTI):
+                    raise _err("feedback(G[, H[, işaret]]) biçiminde yazın (işaret −1: negatif geri besleme)", pos)
+                sign = -1 if len(args) < 3 else args[2]
+                if not _is_num(sign) or np.real(sign) not in (-1, 1):
+                    raise _err("feedback işareti −1 ya da +1 olmalı", pos)
+                H = sys_args[1] if len(args) >= 2 else 1.0
+                return _cn.feedback(args[0], H, int(np.real(sign)))
+            if name in ("series", "parallel"):
+                if len(args) != 2 or not any(isinstance(a, LTI) for a in args):
+                    raise _err(f"{name}(model1, model2) biçiminde yazın", pos)
+                return (_cn.series if name == "series" else _cn.parallel)(sys_args[0], sys_args[1])
+            if len(args) != 1 or not isinstance(args[0], LTI):
+                raise _err("minreal(model) biçiminde yazın", pos)
+            return convert.minreal(args[0])
+        if name == "pid":
+            if not 1 <= len(args) <= 5 or not all(_is_num(a) for a in args):
+                raise _err("pid(Kp[, Ki[, Kd[, Tf[, Ts]]]]) biçiminde yazın (sayılarla)", pos)
+            from spt.control.classical import pid as _pid
+            vals = [float(_realv(a, pos, "PID parametresi")) for a in args] + [0.0] * (5 - len(args))
+            return _pid(vals[0], vals[1], vals[2], vals[3], vals[4] if len(args) == 5 else Ts)
     except ControlError as e:
         if getattr(e, "position", None) is None:
             raise _err(str(e), pos) from None
         raise
-    raise _err(f"bilinmeyen fonksiyon {name!r} (tf, zpk, ss, exp, sqrt)", pos)
+    raise _err(f"bilinmeyen fonksiyon {name!r} (tf, zpk, ss, exp, sqrt, c2d, d2c, feedback, series, parallel, "
+               "minreal, pid)", pos)
 
 
 def _exp(arg, pos):
@@ -498,7 +549,63 @@ def _lti_concat(rows, pos):
             raise _err("model matrisinin satırındaki blokların çıkış sayıları farklı", pos)
     if len({sum(b.ninputs for b in row) for row in blocks}) != 1:
         raise _err("model matrisinin satırlarının giriş sayıları farklı", pos)
-    # Her bloğu büyük modelin alt bloğu olarak yerleştir: Σ E_i · G_ij · F_j (seçici statik matrislerle)
+    blocks = [[b if b.Ts == Ts else b._retime(Ts) for b in row] for row in blocks]
+    if cls is StateSpace:
+        out = _ss_concat(blocks)
+        if out is not None:
+            return convert.sminreal(out)
+        return convert.sminreal(convert.to_ss(_sum_concat(blocks)))
+    # tf / zpk: elemanlar doğrudan yerleştirilir (her elemanın toplam gecikmesi io gecikmesi olur)
+    ny = sum(row[0].noutputs for row in blocks)
+    nu = sum(b.ninputs for b in blocks[0])
+    io = np.zeros((ny, nu))
+    is_tf = cls is TransferFunction
+    A_ = [[None] * nu for _ in range(ny)]
+    B_ = [[None] * nu for _ in range(ny)]
+    K = np.zeros((ny, nu))
+    r0 = 0
+    for row in blocks:
+        c0 = 0
+        for b in row:
+            bb = convert.to_tf(b) if is_tf else convert.to_zpk(b)
+            tot = bb.total_delay()
+            for i in range(bb.noutputs):
+                for j in range(bb.ninputs):
+                    if is_tf:
+                        A_[r0 + i][c0 + j], B_[r0 + i][c0 + j] = bb._num[i][j], bb._den[i][j]
+                    else:
+                        A_[r0 + i][c0 + j], B_[r0 + i][c0 + j] = bb._z[i][j], bb._p[i][j]
+                        K[r0 + i, c0 + j] = bb._k[i, j]
+                    io[r0 + i, c0 + j] = tot[i, j]
+            c0 += b.ninputs
+        r0 += row[0].noutputs
+    if is_tf:
+        return TransferFunction(A_, B_, Ts, io_delay=io)
+    return ZPK(A_, B_, K, Ts, io_delay=io)
+
+
+def _ss_concat(blocks):
+    """Durum uzayı blok birleştirme (satır: yatay, sonra dikey). Gecikmeler blok sınırlarında uyuşmuyorsa None."""
+    from spt.control.lti import _blkdiag
+    rows = []
+    for row in blocks:
+        ss_row = [convert.to_ss(b) for b in row]
+        od = ss_row[0].output_delay
+        if any(not np.allclose(b.output_delay, od) for b in ss_row):
+            return None
+        rows.append(StateSpace(_blkdiag(*[b.A for b in ss_row]), _blkdiag(*[b.B for b in ss_row]),
+                               np.hstack([b.C for b in ss_row]), np.hstack([b.D for b in ss_row]), ss_row[0].Ts,
+                               input_delay=np.concatenate([b.input_delay for b in ss_row]), output_delay=od))
+    ind = rows[0].input_delay
+    if any(not np.allclose(r.input_delay, ind) for r in rows):
+        return None
+    return StateSpace(_blkdiag(*[r.A for r in rows]), np.vstack([r.B for r in rows]), _blkdiag(*[r.C for r in rows]),
+                      np.vstack([r.D for r in rows]), rows[0].Ts, input_delay=ind,
+                      output_delay=np.concatenate([r.output_delay for r in rows]))
+
+
+def _sum_concat(blocks):
+    """Genel (gecikmeleri uyuşmayan) durum: Σ E_i · G_ij · F_j."""
     ny = sum(row[0].noutputs for row in blocks)
     nu = sum(b.ninputs for b in blocks[0])
     total = None
@@ -510,16 +617,11 @@ def _lti_concat(rows, pos):
             E[r0:r0 + b.noutputs, :] = np.eye(b.noutputs)
             F = np.zeros((b.ninputs, nu))
             F[:, c0:c0 + b.ninputs] = np.eye(b.ninputs)
-            bb = b if b.Ts == Ts else b._retime(Ts)
-            term = E * bb * F
+            term = E * b * F
             total = term if total is None else total + term
             c0 += b.ninputs
         r0 += row[0].noutputs
-    if cls is TransferFunction:
-        return convert.to_tf(total)
-    if cls is ZPK:
-        return convert.to_zpk(total)
-    return convert.sminreal(convert.to_ss(total))
+    return total
 
 
 def parse_model(text: str, Ts: float = 0.0) -> LTI:

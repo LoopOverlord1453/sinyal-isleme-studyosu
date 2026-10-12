@@ -1,7 +1,12 @@
 # SPTF — Signal Processing Toolbox Frame Formatı (v1)
 
 Bu doküman, bir kaynağın (gömülü cihaz, PC simülatörü, kayıt dosyası) sinyal verisini
-Signal Processing Toolbox arayüzüne göndermek için kullandığı ikili veri formatını tanımlar.
+Signal Processing Toolbox arayüzüne göndermek için kullandığı ikili veri formatını (bayt düzenini) tanımlar.
+
+- Gönderici ve alıcı davranışının normatif tanımı (oturum, zamanlama, hata yönetimi, uyumluluk):
+  [SPTF_UDP_Uygulama_Protokolu.md](SPTF_UDP_Uygulama_Protokolu.md)
+- Cihaz tarafı referans gerçekleme (C99, lwIP / BSD soket): [`embedded/sptf_udp`](../embedded/sptf_udp),
+  kullanım kılavuzu [SPTF_UDP_Kullanim_Kilavuzu.md](SPTF_UDP_Kullanim_Kilavuzu.md)
 
 ## 1. Tasarım hedefleri
 
@@ -11,7 +16,7 @@ Signal Processing Toolbox arayüzüne göndermek için kullandığı ikili veri 
 | Yüksek veri genişliği | 8–64 bit tamsayı, 24 bit paketli, float16/32/64, karmaşık (I/Q) tipler; 64 bit örnek sayacı ve ns zaman damgası |
 | Yüksek bant genişliği | 1472 baytlık datagramda %96.5 verimlilik; başlık sabit ve küçük |
 | Kayıp tespiti | 64 bit `first_sample` ile eksik örnek sayısı tam olarak bulunur |
-| Taşıma bağımsızlığı | Aynı çerçeve UDP, TCP ve dosyada değiştirilmeden kullanılır |
+| Tek taşıma | Canlı akış yalnız UDP ile taşınır; aynı çerçeve kayıt dosyasında (`.sptr`) değiştirilmeden saklanır |
 | Ortaya katılabilme | Tanımlayıcı (DESCRIPTOR) periyodik tekrarlanır; alıcı akışın ortasında bağlanabilir |
 
 ## 2. Genel kurallar
@@ -146,11 +151,13 @@ Arayüzde grafik üzerinde dikey çizgi ve etiket olarak gösterilir.
 - Algoritma: **CRC-32/ISO-HDLC** (Ethernet/zlib CRC'si). Polinom `0x04C11DB7` (yansıtılmış), init `0xFFFFFFFF`, xorout `0xFFFFFFFF`.
 - Kapsam: çerçevenin ilk baytından CRC'den önceki son bayta kadar.
 - Kontrol değeri: `crc32("123456789") = 0xCBF43926`.
-- UDP'de opsiyoneldir (UDP'nin kendi checksum'ı var). TCP ve dosyada senkron kurtarma için önerilir.
+- İsteğe bağlıdır: UDP'nin kendi sağlama toplamı vardır. Uçtan uca bütünlük istendiğinde (ör. UDP sağlama
+  toplamı göndericide kapalıysa) ve kayıt dosyasındaki bozulmayı yakalamak için açın.
 
-## 10. Taşıma
+## 10. Taşıma: UDP
 
-### 10.1 UDP (Aşama 1, varsayılan)
+Taşıma yalnızca UDP'dir (TCP desteklenmez). Gönderici davranışının normatif kuralları
+[SPTF_UDP_Uygulama_Protokolu.md](SPTF_UDP_Uygulama_Protokolu.md)'dedir; bu bölüm özetidir.
 
 - Arayüz, tüm arayüzlerde (`0.0.0.0`) **UDP 50505** portunu dinler (ayarlanabilir).
 - Gönderen, PC'nin IP adresine unicast gönderir.
@@ -175,11 +182,6 @@ Gigabit'e yakın hızlarda cihaz tarafının yükünü azaltmak için, ağ deste
 devrik kopyayla tampona yazılır) ancak en yüksek hızlarda **interleaved önerilir**.
 
 > Windows: Güvenlik duvarında Python için UDP 50505 gelen trafiğine izin verilmelidir.
-
-### 10.2 TCP (sonraki aşama)
-
-- Arayüz TCP 50505 üzerinde sunucu olur. Çerçeveler bayt akışında art arda gelir.
-- Senkron kaybında alıcı `"SPTF"` dizisini arar, `frame_len` ve CRC ile doğrular.
 
 ## 11. Kayıt dosyası (`.sptr`)
 
@@ -220,6 +222,10 @@ DATA çerçevesi: `stream_id = 1`, `desc_rev = 1`, `seq = 1`, `timestamp_ns = 1 
 ```
 
 ## Ek A — C referans tanımları
+
+Aşağıdaki `packed` yapılar yalnızca bayt düzenini göstermek içindir. Cihazda doğrudan
+[`embedded/sptf_udp`](../embedded/sptf_udp) kütüphanesini kullanın: alanları bayt bayt küçük uçlu yazar, hizalama ve
+bayt sırası varsayımı yapmaz ve bu dokümanın tüm kurallarını uygular.
 
 ```c
 #include <stdint.h>

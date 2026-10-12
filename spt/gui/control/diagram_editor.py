@@ -26,7 +26,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from PyQt6.QtCore import QObject, QPointF, Qt, pyqtSignal
+from PyQt6.QtCore import QObject, QPointF, Qt, QTimer, pyqtSignal
 from PyQt6.QtGui import QAction, QKeySequence, QUndoStack
 from PyQt6.QtWidgets import (
     QApplication,
@@ -38,6 +38,7 @@ from PyQt6.QtWidgets import (
     QProgressBar,
     QPushButton,
     QSplitter,
+    QTabWidget,
     QToolButton,
     QVBoxLayout,
     QWidget,
@@ -236,7 +237,7 @@ class DiagramEditor(QWidget):
             b.clicked.connect(fn)
             canvas_card.add_right(b)
         canvas_card.body.addWidget(self.view, 1)
-        # durum satırı tuvalin alt kenarında yüzer (yer kaplamaz: küçük ekranda tuval yüksekliği korunur)
+        # durum satırı tuvalin ALTINDA ayrı satırda (tuvalin üstüne binip blokları örtmez)
         self.status_badge = StatusBadge("Hazır", "idle")
         self.status_badge.setWordWrap(True)
         self.progress = QProgressBar()
@@ -245,25 +246,36 @@ class DiagramEditor(QWidget):
         self.progress.setFixedHeight(6)
         self.progress.setFixedWidth(140)
         self.progress.hide()
-        self.status_overlay = hbox(self.status_badge, self.progress, spacing=10)
+        self.status_overlay = hbox(self.status_badge, self.progress, spacing=10)   # (ad geriye uyum için)
         self.status_overlay.layout().setStretch(0, 1)
-        self.status_overlay.setParent(self.view)
-        self.view.viewport().installEventFilter(self)
 
         self.scopes = ScopePanel(self._theme)
-        scope_card = Card("Skop sonuçları")
+        scope_card = Card("Benzetim sonuçları")
         scope_card.body.addWidget(self.scopes, 1)
         self.scope_card = scope_card
 
-        self.vsplit = QSplitter(Qt.Orientation.Vertical)
-        self.vsplit.setChildrenCollapsible(False)
-        self.vsplit.addWidget(canvas_card)
-        self.vsplit.addWidget(scope_card)
-        self.vsplit.setStretchFactor(0, 1)              # oransal: küçük ekranda da skop kartı okunur boyda
-        self.vsplit.setStretchFactor(1, 1)
-        self.vsplit.setSizes([530, 470])
+        # Diyagram ve sonuçlar ayrı sekmelerde: tuval ve grafikler küçük ekranda da tam boy. Yan yana görmek için
+        # sonuç kartı başlığındaki düğmeyle ayrı pencereye alınır (Simulink'teki Scope penceresi gibi).
+        def page(card: Card) -> QWidget:
+            host = QWidget()
+            lay = QVBoxLayout(host)
+            lay.setContentsMargins(0, 0, 0, 0)
+            lay.addWidget(card)
+            return host
+
+        self.center_tabs = QTabWidget()
+        self.center_tabs.setDocumentMode(True)
+        self.center_tabs.addTab(page(canvas_card), icon("ph.flow-arrow"), "Diyagram")
+        self.center_tabs.addTab(page(scope_card), icon("ph.chart-line"), "Sonuçlar")
+        self.center_tabs.currentChanged.connect(self._center_tab_changed)
+        center = QWidget()
+        cl = QVBoxLayout(center)
+        cl.setContentsMargins(0, 0, 0, 0)
+        cl.setSpacing(6)
+        cl.addWidget(self.center_tabs, 1)
+        cl.addWidget(self.status_overlay)
+        self.vsplit = center                            # (ad geriye uyum için: orta sütun)
         canvas_card.setMinimumHeight(220)
-        scope_card.setMinimumHeight(140)
 
         self.params = ParamPanel(self._theme)
         par_card = Card("Blok parametreleri")
@@ -273,7 +285,7 @@ class DiagramEditor(QWidget):
         self.hsplit = QSplitter(Qt.Orientation.Horizontal)
         self.hsplit.setChildrenCollapsible(False)
         self.hsplit.addWidget(pal_card)
-        self.hsplit.addWidget(self.vsplit)
+        self.hsplit.addWidget(center)
         self.hsplit.addWidget(par_card)
         self.hsplit.setStretchFactor(0, 0)
         self.hsplit.setStretchFactor(1, 1)
@@ -282,24 +294,30 @@ class DiagramEditor(QWidget):
         root.addWidget(self.hsplit, 1)
         self._build_actions()
 
-    def eventFilter(self, obj, event) -> bool:  # noqa: N802
-        from PyQt6.QtCore import QEvent
+    def _center_tab_changed(self, index: int) -> None:
+        if index == 0:
+            QTimer.singleShot(0, self._fit_if_needed)
 
-        if obj is self.view.viewport() and event.type() in (QEvent.Type.Resize, QEvent.Type.Show):
-            self._place_overlay()
-        return super().eventFilter(obj, event)
+    def _fit_if_needed(self) -> None:
+        """Diyagram sekmesine dönünce bloklar görünür alanın dışındaysa sığdır."""
+        if not self.scene.blocks:
+            return
+        vis = self.view.mapToScene(self.view.viewport().rect()).boundingRect()
+        if not vis.contains(self.scene.itemsBoundingRect()):
+            self.view.fit_all()
 
-    def _place_overlay(self) -> None:
-        vp = self.view.viewport().geometry()
-        w = max(120, vp.width() - 16)
-        ov = self.status_overlay
-        ov.setFixedWidth(w)
-        lay = ov.layout()
-        h = lay.heightForWidth(w) if lay.hasHeightForWidth() else ov.sizeHint().height()
-        h = max(h, ov.minimumSizeHint().height())
-        ov.setGeometry(vp.left() + 8, vp.bottom() - h - 6, w, h)
-        ov.raise_()
-        self.view.reserve_bottom = h + 12          # Sığdır, diyagramı durum satırının altına sokmaz
+    def show_results(self) -> None:
+        """Sonuçlar sekmesine geç (sonuç kartı ayrı penceredeyse o pencere öne gelir)."""
+        page_index = 1
+        if self.center_tabs.widget(page_index).isAncestorOf(self.scope_card):
+            self.center_tabs.setCurrentIndex(page_index)
+        else:
+            win = self.scope_card.window()
+            win.raise_()
+            win.activateWindow()
+
+    def _place_overlay(self) -> None:  # durum satırı artık yerleşimde (eski API)
+        return
 
     def _tool(self, icon_name: str, tip: str, fn, text: str = "") -> QToolButton:
         b = icon_button(icon_name, tip, size=16)
@@ -468,8 +486,7 @@ class DiagramEditor(QWidget):
         self._status = (text, state)
         self.status_badge.set_state(text, state)
         self.status_badge.setToolTip(text)
-        if hasattr(self, "status_overlay"):
-            self._place_overlay()
+        pass
         self.status_changed.emit(text, state)
 
     @property
@@ -509,7 +526,8 @@ class DiagramEditor(QWidget):
 
         try:
             cls = block_class(type_name)
-            base = name or cls.display_name[:1].upper() + cls.display_name[1:]
+            disp = cls.display_name.split("/")[0].strip() or cls.display_name   # "Skop / kayıt" → "Skop"
+            base = name or disp[:1].upper() + disp[1:]
             block = create_block(type_name, self.scene.unique_name(base) if name is None else name, **params)
         except ControlError as exc:
             self._set_status(str(exc), "critical")
@@ -625,6 +643,11 @@ class DiagramEditor(QWidget):
                 a = sub.addAction(text, lambda w=item, k=key: self.set_lin_point(w.src.name, w.src_port, k))
                 a.setCheckable(True)
                 a.setChecked(cur == key)
+            entry = self._signals.get((item.src.name, item.src_port), {})
+            log = menu.addAction("Sinyali kaydet (Sonuçlar'da göster)",
+                                 lambda w=item, on=not entry.get("log"): self.set_signal_log(w.src.name, w.src_port, on))
+            log.setCheckable(True)
+            log.setChecked(bool(entry.get("log")))
             menu.addSeparator()
             hint = menu.addAction("Dal çekmek için: Ctrl + telden sürükle")
             hint.setEnabled(False)
@@ -633,6 +656,19 @@ class DiagramEditor(QWidget):
             menu.addAction("Yapıştır (Ctrl+V)", lambda: self.scene.paste())
             menu.addAction("Sığdır (Ctrl+0)", self.view.fit_all)
         menu.popup(screen_pos)
+
+    def set_signal_log(self, block: str, port: int, on: bool = True, name: str | None = None) -> None:
+        """Telin taşıdığı sinyali benzetim sonucuna kaydet / kaydetme (Simulink "Log signal" karşılığı); sonuç
+        Sonuçlar sekmesinde kendi kartında görünür. name: isteğe bağlı sinyal adı (yoksa "Blok" ya da "Blok:2")."""
+        entry = self._signals.setdefault((block, int(port)), {"name": None, "log": False})
+        entry["log"] = bool(on)
+        if name:
+            entry["name"] = str(name)
+        if not entry.get("log") and not entry.get("name"):
+            self._signals.pop((block, int(port)), None)
+        self._doc_changed()
+        self._set_status(f"'{block}' çıkışı {'kaydedilecek' if on else 'artık kaydedilmeyecek'}; sonuç için "
+                         "yeniden çalıştırın.", "good" if on else "idle")
 
     # ================================================================ model ↔ tuval
     def solver_settings(self) -> dict:
@@ -705,6 +741,7 @@ class DiagramEditor(QWidget):
         self.scene.clear_all()
         self.params.clear()
         self.scopes.clear()
+        self.center_tabs.setTabText(1, "Sonuçlar")
         self.last_result = None
         self.model_name = model.name
         self._signals = {k: dict(v) for k, v in model.signals.items()}
@@ -868,7 +905,11 @@ class DiagramEditor(QWidget):
         if not self.scene.blocks:
             self._error(["Diyagram boş: kütüphaneden blok ekleyin."])
             return False
-        model = self.to_model(settings=False)
+        try:
+            model = self.to_model(settings=False)
+        except ControlError as exc:              # (ör. geçersiz blok adı) istisna yerine durum satırında Türkçe
+            self._error([str(exc)])
+            return False
         if not self._check_structure(model):
             return False
         model = model.copy()             # benzetim, arayüzdeki blok nesnelerinden bağımsız çalışır
@@ -931,16 +972,10 @@ class DiagramEditor(QWidget):
             return
         self.last_result = result
         self.scopes.set_result(result, getattr(self, "_run_order", None))
-        sizes = self.vsplit.sizes()
-        total = sum(sizes)
-        want = min(max(240, int(total * 0.45)), total - 260)    # tuval kartı en az ~260 px kalır
-        if self.scopes.cards and total > 0 and sizes[1] < want and self.scope_card.parentWidget() is self.vsplit:
-            # sonuç gelince skop alanı okunur boyda açılır (ayrı pencereye alınmadıysa)
-            self.vsplit.setSizes([total - want, want])
-            QApplication.processEvents()
-            vis = self.view.mapToScene(self.view.viewport().rect()).boundingRect()
-            if not vis.contains(self.scene.itemsBoundingRect()):
-                self.view.fit_all()
+        n = self.scopes.count
+        self.center_tabs.setTabText(1, f"Sonuçlar ({n})" if n else "Sonuçlar")
+        if n:
+            self.show_results()
         st = result.stats
         wall = st.get("wall_time", time.perf_counter() - self._t_start)
         if result.cancelled:
@@ -960,12 +995,12 @@ class DiagramEditor(QWidget):
         self.wait(5.0)
 
     def detachable_cards(self) -> list[tuple[str, str, Card]]:
-        return [("scopes", "Blok diyagram · skop sonuçları", self.scope_card)]
+        return [("scopes", "Blok diyagram · benzetim sonuçları", self.scope_card)]
 
     def save_state(self, s) -> None:
         """Ayarlar: bölücü boyları, çözücü ayarları ve (1 MB'tan küçükse) açık diyagram."""
         s.setValue("control/diagram/hsplit", self.hsplit.sizes())
-        s.setValue("control/diagram/vsplit", self.vsplit.sizes())
+        s.setValue("control/diagram/tab", self.center_tabs.currentIndex())
         s.setValue("control/diagram/path", str(self.path) if self.path else "")
         try:
             import json as _json
@@ -978,7 +1013,7 @@ class DiagramEditor(QWidget):
     def restore_state(self, s) -> None:
         import json as _json
 
-        for key, split in (("hsplit", self.hsplit), ("vsplit", self.vsplit)):
+        for key, split in (("hsplit", self.hsplit),):
             sizes = s.value(f"control/diagram/{key}")
             try:
                 sizes = [int(v) for v in sizes] if sizes else None
@@ -1099,15 +1134,41 @@ def _auto_layout(model) -> None:
             deg[m] -= 1
             if deg[m] == 0:
                 queue.append(m)
-    rows: dict[int, int] = {}
+    # katman içi sıra: ağırlık merkezi (barycenter) süpürmeleri — kesişen tel sayısını azaltır (Sugiyama yerleşimi)
+    nlayers = max(layer.values(), default=0) + 1
+    layers: list[list[str]] = [[] for _ in range(nlayers)]
     for n in names:
-        b = model.blocks[n]
-        if "pos" in b.meta:
-            continue
-        L = layer[n]
-        r = rows.get(L, 0)
-        rows[L] = r + 1
-        b.meta["pos"] = [float(L * 16 * GRID), float(r * 10 * GRID)]
+        layers[layer[n]].append(n)
+    pred: dict[str, list[str]] = {n: [] for n in names}
+    for n in names:
+        for m in succ[n]:
+            pred[m].append(n)
+    rank = {n: float(i) for lay in layers for i, n in enumerate(lay)}
+
+    def sweep(order_range, neighbours) -> None:
+        for L in order_range:
+            lay = layers[L]
+            keyed = []
+            for i, n in enumerate(lay):
+                nb = [rank[m] for m in neighbours[n] if layer[m] != L]
+                keyed.append((sum(nb) / len(nb) if nb else rank[n], i, n))
+            keyed.sort()
+            layers[L] = [n for _k, _i, n in keyed]
+            for i, n in enumerate(layers[L]):
+                rank[n] = float(i)
+
+    for _ in range(4):
+        sweep(range(1, nlayers), pred)
+        sweep(range(nlayers - 2, -1, -1), succ)
+    tallest = max((len(lay) for lay in layers), default=1)
+    row_h, col_w = 8 * GRID, 18 * GRID
+    for L, lay in enumerate(layers):
+        top = (tallest - len(lay)) * row_h / 2.0         # katmanlar dikeyde ortalanır (tek uzun sütun oluşmaz)
+        for r, n in enumerate(lay):
+            b = model.blocks[n]
+            if "pos" in b.meta:
+                continue
+            b.meta["pos"] = [float(L * col_w), float(round((top + r * row_h) / GRID) * GRID)]
 
 
 __all__ = ["DiagramEditor", "register_template", "templates", "Template", "TEMPLATE_MODULES"]

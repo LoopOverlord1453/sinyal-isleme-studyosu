@@ -351,8 +351,8 @@ def c2d(sys: LTI, Ts: float, method: str = "zoh", prewarp: float | None = None) 
                          name=sys.name)
         out = _as_type(out, sys)
     else:   # matched
-        if isinstance(sys, StateSpace) and not sys.is_siso:
-            raise ControlError("'matched' yöntemi durum uzayında yalnız SISO modeli destekler (MATLAB gibi).")
+        if not sys.is_siso:
+            raise ControlError("'matched' yöntemi yalnız SISO modeli destekler (MATLAB gibi).")
         z = convert.to_zpk(_strip_delays(sys))
         ny, nu = z.shape
         Z = [[None] * nu for _ in range(ny)]
@@ -531,8 +531,8 @@ def d2c(sys: LTI, method: str = "zoh", prewarp: float | None = None) -> LTI:
         A, B, C, D = _d2c_tustin_ss(s.A, s.B, s.C, s.D, _tustin_c(T, prewarp))
         out = _as_type(StateSpace(A, B, C, D, 0.0), sys)
     else:
-        if isinstance(sys, StateSpace) and not sys.is_siso:
-            raise ControlError("'matched' yöntemi durum uzayında yalnız SISO modeli destekler.")
+        if not sys.is_siso:
+            raise ControlError("'matched' yöntemi yalnız SISO modeli destekler (MATLAB gibi).")
         z = convert.to_zpk(base)
         ny, nu = z.shape
         Z = [[None] * nu for _ in range(ny)]

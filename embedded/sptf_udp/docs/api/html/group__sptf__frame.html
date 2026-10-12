@@ -1,0 +1,479 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "https://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" lang="tr">
+<head>
+<meta http-equiv="Content-Type" content="text/xhtml;charset=UTF-8"/>
+<meta http-equiv="X-UA-Compatible" content="IE=11"/>
+<meta name="generator" content="Doxygen 1.13.2"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>SPTF-UDP: Çerçeve kodlayıcılar</title>
+<link href="tabs.css" rel="stylesheet" type="text/css"/>
+<script type="text/javascript" src="jquery.js"></script>
+<script type="text/javascript" src="dynsections.js"></script>
+<script type="text/javascript" src="clipboard.js"></script>
+<link href="navtree.css" rel="stylesheet" type="text/css"/>
+<script type="text/javascript" src="navtreedata.js"></script>
+<script type="text/javascript" src="navtree.js"></script>
+<script type="text/javascript" src="resize.js"></script>
+<script type="text/javascript" src="cookie.js"></script>
+<link href="search/search.css" rel="stylesheet" type="text/css"/>
+<script type="text/javascript" src="search/searchdata.js"></script>
+<script type="text/javascript" src="search/search.js"></script>
+<script type="text/javascript">
+/* @license magnet:?xt=urn:btih:d3d9a9a6595521f9666a5e94cc830dab83b65699&amp;dn=expat.txt MIT */
+  $(function() { init_search(); });
+/* @license-end */
+</script>
+<link href="doxygen.css" rel="stylesheet" type="text/css" />
+</head>
+<body>
+<div id="top"><!-- do not remove this div, it is closed by doxygen! -->
+<div id="titlearea">
+<table cellspacing="0" cellpadding="0">
+ <tbody>
+ <tr id="projectrow">
+  <td id="projectalign">
+   <div id="projectname">SPTF-UDP<span id="projectnumber">&#160;1.0.0</span>
+   </div>
+   <div id="projectbrief">Signal Processing Toolbox için gömülü UDP gönderici kütüphanesi</div>
+  </td>
+    <td>        <div id="MSearchBox" class="MSearchBoxInactive">
+        <span class="left">
+          <span id="MSearchSelect"                onmouseover="return searchBox.OnSearchSelectShow()"                onmouseout="return searchBox.OnSearchSelectHide()">&#160;</span>
+          <input type="text" id="MSearchField" value="" placeholder="Ara" accesskey="S"
+               onfocus="searchBox.OnSearchFieldFocus(true)" 
+               onblur="searchBox.OnSearchFieldFocus(false)" 
+               onkeyup="searchBox.OnSearchFieldChange(event)"/>
+          </span><span class="right">
+            <a id="MSearchClose" href="javascript:searchBox.CloseResultsWindow()"><img id="MSearchCloseImg" border="0" src="search/close.svg" alt=""/></a>
+          </span>
+        </div>
+</td>
+ </tr>
+ </tbody>
+</table>
+</div>
+<!-- end header part -->
+<!-- Oluşturan Doxygen 1.13.2 -->
+<script type="text/javascript">
+/* @license magnet:?xt=urn:btih:d3d9a9a6595521f9666a5e94cc830dab83b65699&amp;dn=expat.txt MIT */
+var searchBox = new SearchBox("searchBox", "search/",'.html');
+/* @license-end */
+</script>
+<script type="text/javascript">
+/* @license magnet:?xt=urn:btih:d3d9a9a6595521f9666a5e94cc830dab83b65699&amp;dn=expat.txt MIT */
+$(function() { codefold.init(0); });
+/* @license-end */
+</script>
+</div><!-- top -->
+<div id="side-nav" class="ui-resizable side-nav-resizable">
+  <div id="nav-tree">
+    <div id="nav-tree-contents">
+      <div id="nav-sync" class="sync"></div>
+    </div>
+  </div>
+  <div id="splitbar" style="-moz-user-select:none;" 
+       class="ui-resizable-handle">
+  </div>
+</div>
+<script type="text/javascript">
+/* @license magnet:?xt=urn:btih:d3d9a9a6595521f9666a5e94cc830dab83b65699&amp;dn=expat.txt MIT */
+$(function(){initNavTree('group__sptf__frame.html',''); initResizable(true); });
+/* @license-end */
+</script>
+<div id="doc-content">
+<!-- window showing the filter options -->
+<div id="MSearchSelectWindow"
+     onmouseover="return searchBox.OnSearchSelectShow()"
+     onmouseout="return searchBox.OnSearchSelectHide()"
+     onkeydown="return searchBox.OnSearchSelectKey(event)">
+</div>
+
+<!-- iframe showing the search results (closed by default) -->
+<div id="MSearchResultsWindow">
+<div id="MSearchResults">
+<div class="SRPage">
+<div id="SRIndex">
+<div id="SRResults"></div>
+<div class="SRStatus" id="Loading">Yüklüyor...</div>
+<div class="SRStatus" id="Searching">Arıyor...</div>
+<div class="SRStatus" id="NoMatches">Eşleşme Yok</div>
+</div>
+</div>
+</div>
+</div>
+
+<div class="header">
+  <div class="summary">
+<a href="#nested-classes">Veri Yapıları</a> &#124;
+<a href="#func-members">Fonksiyonlar</a>  </div>
+  <div class="headertitle"><div class="title">Çerçeve kodlayıcılar</div></div>
+</div><!--header-->
+<div class="contents">
+
+<p>Taşımadan bağımsız, durumsuz SPTF v1 çerçeve üreticileri.  
+<a href="#details">Ayrıntılar...</a></p>
+<table class="memberdecls">
+<tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="nested-classes" name="nested-classes"></a>
+Veri Yapıları</h2></td></tr>
+<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">struct &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structsptf__frame__info__t.html">sptf_frame_info_t</a></td></tr>
+<tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">Çerçeve başlığında akışa ait, her çerçevede değişen alanlar.  <a href="structsptf__frame__info__t.html#details">Ayrıntılar...</a><br /></td></tr>
+<tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
+</table><table class="memberdecls">
+<tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="func-members" name="func-members"></a>
+Fonksiyonlar</h2></td></tr>
+<tr class="memitem:ga52360e7ea602dba4eaeebcc9ef7d853f" id="r_ga52360e7ea602dba4eaeebcc9ef7d853f"><td class="memItemLeft" align="right" valign="top">uint32_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ga52360e7ea602dba4eaeebcc9ef7d853f">sptf_sample_size</a> (<a class="el" href="group__sptf__types.html#gaeeb5742ef83aa4b6d13072bfbd9d48c3">sptf_sample_type_t</a> type)</td></tr>
+<tr class="memdesc:ga52360e7ea602dba4eaeebcc9ef7d853f"><td class="mdescLeft">&#160;</td><td class="mdescRight">Örnek tipinin bayt boyutu (karmaşıkta I+Q toplamı).  <br /></td></tr>
+<tr class="separator:ga52360e7ea602dba4eaeebcc9ef7d853f"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:gae06d5ec8f3475e059e8428e5f1d91ef6" id="r_gae06d5ec8f3475e059e8428e5f1d91ef6"><td class="memItemLeft" align="right" valign="top"><a class="el" href="group__sptf__types.html#ga07cbec476e18a5e7bda27c7b2f40b3ae">sptf_status_t</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#gae06d5ec8f3475e059e8428e5f1d91ef6">sptf_config_check</a> (const <a class="el" href="structsptf__stream__config__t.html">sptf_stream_config_t</a> *cfg)</td></tr>
+<tr class="memdesc:gae06d5ec8f3475e059e8428e5f1d91ef6"><td class="mdescLeft">&#160;</td><td class="mdescRight">Akış yapılandırmasını protokol kurallarına göre doğrular.  <br /></td></tr>
+<tr class="separator:gae06d5ec8f3475e059e8428e5f1d91ef6"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ga6341faea613baee0b6ec70036569a51f" id="r_ga6341faea613baee0b6ec70036569a51f"><td class="memItemLeft" align="right" valign="top">uint32_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ga6341faea613baee0b6ec70036569a51f">sptf_descriptor_size</a> (uint16_t channel_count, bool crc)</td></tr>
+<tr class="memdesc:ga6341faea613baee0b6ec70036569a51f"><td class="mdescLeft">&#160;</td><td class="mdescRight">DESCRIPTOR çerçevesinin bayt boyutu.  <br /></td></tr>
+<tr class="separator:ga6341faea613baee0b6ec70036569a51f"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ga1434c66aa6eb0cded58609da6b0f1ce9" id="r_ga1434c66aa6eb0cded58609da6b0f1ce9"><td class="memItemLeft" align="right" valign="top"><a class="el" href="group__sptf__types.html#ga07cbec476e18a5e7bda27c7b2f40b3ae">sptf_status_t</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ga1434c66aa6eb0cded58609da6b0f1ce9">sptf_encode_descriptor</a> (uint8_t *buf, size_t cap, const <a class="el" href="structsptf__frame__info__t.html">sptf_frame_info_t</a> *info, const <a class="el" href="structsptf__stream__config__t.html">sptf_stream_config_t</a> *cfg, size_t *out_len)</td></tr>
+<tr class="memdesc:ga1434c66aa6eb0cded58609da6b0f1ce9"><td class="mdescLeft">&#160;</td><td class="mdescRight">DESCRIPTOR çerçevesi yazar.  <br /></td></tr>
+<tr class="separator:ga1434c66aa6eb0cded58609da6b0f1ce9"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ga165385f77f69860cbe5182060b918c5e" id="r_ga165385f77f69860cbe5182060b918c5e"><td class="memItemLeft" align="right" valign="top"><a class="el" href="group__sptf__types.html#ga07cbec476e18a5e7bda27c7b2f40b3ae">sptf_status_t</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ga165385f77f69860cbe5182060b918c5e">sptf_encode_data</a> (uint8_t *buf, size_t cap, const <a class="el" href="structsptf__frame__info__t.html">sptf_frame_info_t</a> *info, const <a class="el" href="structsptf__stream__config__t.html">sptf_stream_config_t</a> *cfg, uint64_t first_sample, const void *samples, uint32_t count, size_t *out_len)</td></tr>
+<tr class="memdesc:ga165385f77f69860cbe5182060b918c5e"><td class="mdescLeft">&#160;</td><td class="mdescRight">DATA çerçevesi yazar.  <br /></td></tr>
+<tr class="separator:ga165385f77f69860cbe5182060b918c5e"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ga5b682e8dc29f8c0304ac848009c796a4" id="r_ga5b682e8dc29f8c0304ac848009c796a4"><td class="memItemLeft" align="right" valign="top"><a class="el" href="group__sptf__types.html#ga07cbec476e18a5e7bda27c7b2f40b3ae">sptf_status_t</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ga5b682e8dc29f8c0304ac848009c796a4">sptf_encode_marker</a> (uint8_t *buf, size_t cap, const <a class="el" href="structsptf__frame__info__t.html">sptf_frame_info_t</a> *info, uint64_t sample_index, uint32_t code, const char *text, size_t *out_len)</td></tr>
+<tr class="memdesc:ga5b682e8dc29f8c0304ac848009c796a4"><td class="mdescLeft">&#160;</td><td class="mdescRight">MARKER çerçevesi yazar.  <br /></td></tr>
+<tr class="separator:ga5b682e8dc29f8c0304ac848009c796a4"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ga6e74b9e41181b3bd0b732e762cd2862c" id="r_ga6e74b9e41181b3bd0b732e762cd2862c"><td class="memItemLeft" align="right" valign="top">uint32_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ga6e74b9e41181b3bd0b732e762cd2862c">sptf_crc32_update</a> (uint32_t crc, const uint8_t *data, size_t len)</td></tr>
+<tr class="memdesc:ga6e74b9e41181b3bd0b732e762cd2862c"><td class="mdescLeft">&#160;</td><td class="mdescRight">CRC-32/ISO-HDLC'yi artımlı günceller.  <br /></td></tr>
+<tr class="separator:ga6e74b9e41181b3bd0b732e762cd2862c"><td class="memSeparator" colspan="2">&#160;</td></tr>
+</table>
+<a name="details" id="details"></a><h2 class="groupheader">Ayrıntılı tanımlama</h2>
+<p>Taşımadan bağımsız, durumsuz SPTF v1 çerçeve üreticileri. </p>
+<p>Bu fonksiyonlar ağ kullanmadan bir tampona tam çerçeve yazar. Kendi taşımanızı (UART köprüsü, SD kart kaydı …) kullanıyorsanız doğrudan bunları çağırın; UDP için <a class="el" href="group__sptf__link.html">UDP göndericisi</a> katmanı her şeyi otomatik yapar. </p>
+<h2 class="groupheader">Fonksiyon Dokümantasyonu</h2>
+<a id="ga52360e7ea602dba4eaeebcc9ef7d853f" name="ga52360e7ea602dba4eaeebcc9ef7d853f"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ga52360e7ea602dba4eaeebcc9ef7d853f">&#9670;&#160;</a></span>sptf_sample_size()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">uint32_t sptf_sample_size </td>
+          <td>(</td>
+          <td class="paramtype"><a class="el" href="group__sptf__types.html#gaeeb5742ef83aa4b6d13072bfbd9d48c3">sptf_sample_type_t</a></td>          <td class="paramname"><span class="paramname"><em>type</em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Örnek tipinin bayt boyutu (karmaşıkta I+Q toplamı). </p>
+<dl class="params"><dt>Parametreler</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in]</td><td class="paramname">type</td><td>Örnek tipi. </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Döndürdüğü değer</dt><dd>Bayt sayısı; tip geçersizse 0. </dd></dl>
+
+</div>
+</div>
+<a id="gae06d5ec8f3475e059e8428e5f1d91ef6" name="gae06d5ec8f3475e059e8428e5f1d91ef6"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#gae06d5ec8f3475e059e8428e5f1d91ef6">&#9670;&#160;</a></span>sptf_config_check()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname"><a class="el" href="group__sptf__types.html#ga07cbec476e18a5e7bda27c7b2f40b3ae">sptf_status_t</a> sptf_config_check </td>
+          <td>(</td>
+          <td class="paramtype">const <a class="el" href="structsptf__stream__config__t.html">sptf_stream_config_t</a> *</td>          <td class="paramname"><span class="paramname"><em>cfg</em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Akış yapılandırmasını protokol kurallarına göre doğrular. </p>
+<dl class="params"><dt>Parametreler</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in]</td><td class="paramname">cfg</td><td>Doğrulanacak yapılandırma. </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="retval"><dt>Döndürdüğü değerler</dt><dd>
+  <table class="retval">
+    <tr><td class="paramname">SPTF_OK</td><td>Geçerli. </td></tr>
+    <tr><td class="paramname">SPTF_ERR_ARG</td><td><code class="param">cfg</code> NULL. </td></tr>
+    <tr><td class="paramname">SPTF_ERR_CONFIG</td><td>Hız, kanal sayısı, tip, yerleşim, ad uzunluğu ya da CRC seçimi geçersiz. </td></tr>
+  </table>
+  </dd>
+</dl>
+
+</div>
+</div>
+<a id="ga6341faea613baee0b6ec70036569a51f" name="ga6341faea613baee0b6ec70036569a51f"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ga6341faea613baee0b6ec70036569a51f">&#9670;&#160;</a></span>sptf_descriptor_size()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">uint32_t sptf_descriptor_size </td>
+          <td>(</td>
+          <td class="paramtype">uint16_t</td>          <td class="paramname"><span class="paramname"><em>channel_count</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">bool</td>          <td class="paramname"><span class="paramname"><em>crc</em></span>&#160;)</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>DESCRIPTOR çerçevesinin bayt boyutu. </p>
+<dl class="params"><dt>Parametreler</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in]</td><td class="paramname">channel_count</td><td>Kanal sayısı. </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">crc</td><td>CRC eklenecek mi. </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Döndürdüğü değer</dt><dd><code>32 + 48 + 64 · channel_count (+ 4)</code>. </dd></dl>
+
+</div>
+</div>
+<a id="ga1434c66aa6eb0cded58609da6b0f1ce9" name="ga1434c66aa6eb0cded58609da6b0f1ce9"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ga1434c66aa6eb0cded58609da6b0f1ce9">&#9670;&#160;</a></span>sptf_encode_descriptor()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname"><a class="el" href="group__sptf__types.html#ga07cbec476e18a5e7bda27c7b2f40b3ae">sptf_status_t</a> sptf_encode_descriptor </td>
+          <td>(</td>
+          <td class="paramtype">uint8_t *</td>          <td class="paramname"><span class="paramname"><em>buf</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">size_t</td>          <td class="paramname"><span class="paramname"><em>cap</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const <a class="el" href="structsptf__frame__info__t.html">sptf_frame_info_t</a> *</td>          <td class="paramname"><span class="paramname"><em>info</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const <a class="el" href="structsptf__stream__config__t.html">sptf_stream_config_t</a> *</td>          <td class="paramname"><span class="paramname"><em>cfg</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">size_t *</td>          <td class="paramname"><span class="paramname"><em>out_len</em></span>&#160;)</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>DESCRIPTOR çerçevesi yazar. </p>
+<dl class="params"><dt>Parametreler</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[out]</td><td class="paramname">buf</td><td>Hedef tampon. </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">cap</td><td>Tampon kapasitesi (bayt). </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">info</td><td>Başlık alanları; <code>crc</code> CRC'yi belirler (<code>stream_id</code> <code class="param">cfg'den</code> alınır). </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">cfg</td><td>Akış yapılandırması (önceden <a class="el" href="#gae06d5ec8f3475e059e8428e5f1d91ef6" title="Akış yapılandırmasını protokol kurallarına göre doğrular.">sptf_config_check</a> ile doğrulanmalı). </td></tr>
+    <tr><td class="paramdir">[out]</td><td class="paramname">out_len</td><td>Yazılan bayt sayısı. </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="retval"><dt>Döndürdüğü değerler</dt><dd>
+  <table class="retval">
+    <tr><td class="paramname">SPTF_OK,SPTF_ERR_ARG,SPTF_ERR_CONFIG,SPTF_ERR_SIZE</td><td></td></tr>
+  </table>
+  </dd>
+</dl>
+
+</div>
+</div>
+<a id="ga165385f77f69860cbe5182060b918c5e" name="ga165385f77f69860cbe5182060b918c5e"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ga165385f77f69860cbe5182060b918c5e">&#9670;&#160;</a></span>sptf_encode_data()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname"><a class="el" href="group__sptf__types.html#ga07cbec476e18a5e7bda27c7b2f40b3ae">sptf_status_t</a> sptf_encode_data </td>
+          <td>(</td>
+          <td class="paramtype">uint8_t *</td>          <td class="paramname"><span class="paramname"><em>buf</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">size_t</td>          <td class="paramname"><span class="paramname"><em>cap</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const <a class="el" href="structsptf__frame__info__t.html">sptf_frame_info_t</a> *</td>          <td class="paramname"><span class="paramname"><em>info</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const <a class="el" href="structsptf__stream__config__t.html">sptf_stream_config_t</a> *</td>          <td class="paramname"><span class="paramname"><em>cfg</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">uint64_t</td>          <td class="paramname"><span class="paramname"><em>first_sample</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const void *</td>          <td class="paramname"><span class="paramname"><em>samples</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">uint32_t</td>          <td class="paramname"><span class="paramname"><em>count</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">size_t *</td>          <td class="paramname"><span class="paramname"><em>out_len</em></span>&#160;)</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>DATA çerçevesi yazar. </p>
+<p><code class="param">samples</code>, <code class="param">count</code> örnek anının tüm kanallarını akışın yerleşiminde ve hedefin bellek düzeninde içerir: interleaved için <code>count × channel_count</code> ardışık eleman, planar için kanal başına <code>count</code> elemanlık bloklar.</p>
+<dl class="params"><dt>Parametreler</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[out]</td><td class="paramname">buf</td><td>Hedef tampon. </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">cap</td><td>Tampon kapasitesi (bayt). </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">info</td><td>Başlık alanları. </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">cfg</td><td>Akış yapılandırması. </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">first_sample</td><td>İlk örneğin akış içi indeksi (kanal başına, &lt; 2^62). </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">samples</td><td>Örnekler. </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">count</td><td>Kanal başına örnek sayısı (≥ 1). </td></tr>
+    <tr><td class="paramdir">[out]</td><td class="paramname">out_len</td><td>Yazılan bayt sayısı. </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="retval"><dt>Döndürdüğü değerler</dt><dd>
+  <table class="retval">
+    <tr><td class="paramname">SPTF_OK,SPTF_ERR_ARG,SPTF_ERR_CONFIG,SPTF_ERR_SIZE</td><td></td></tr>
+  </table>
+  </dd>
+</dl>
+
+</div>
+</div>
+<a id="ga5b682e8dc29f8c0304ac848009c796a4" name="ga5b682e8dc29f8c0304ac848009c796a4"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ga5b682e8dc29f8c0304ac848009c796a4">&#9670;&#160;</a></span>sptf_encode_marker()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname"><a class="el" href="group__sptf__types.html#ga07cbec476e18a5e7bda27c7b2f40b3ae">sptf_status_t</a> sptf_encode_marker </td>
+          <td>(</td>
+          <td class="paramtype">uint8_t *</td>          <td class="paramname"><span class="paramname"><em>buf</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">size_t</td>          <td class="paramname"><span class="paramname"><em>cap</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const <a class="el" href="structsptf__frame__info__t.html">sptf_frame_info_t</a> *</td>          <td class="paramname"><span class="paramname"><em>info</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">uint64_t</td>          <td class="paramname"><span class="paramname"><em>sample_index</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">uint32_t</td>          <td class="paramname"><span class="paramname"><em>code</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const char *</td>          <td class="paramname"><span class="paramname"><em>text</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">size_t *</td>          <td class="paramname"><span class="paramname"><em>out_len</em></span>&#160;)</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>MARKER çerçevesi yazar. </p>
+<dl class="params"><dt>Parametreler</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[out]</td><td class="paramname">buf</td><td>Hedef tampon. </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">cap</td><td>Tampon kapasitesi (bayt). </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">info</td><td>Başlık alanları. </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">sample_index</td><td>İşaretin denk geldiği örnek indeksi. </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">code</td><td>Kullanıcı tanımlı olay kodu. </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">text</td><td>UTF-8 metin (NULL → boş), <code>\0</code> ile biten. </td></tr>
+    <tr><td class="paramdir">[out]</td><td class="paramname">out_len</td><td>Yazılan bayt sayısı. </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="retval"><dt>Döndürdüğü değerler</dt><dd>
+  <table class="retval">
+    <tr><td class="paramname">SPTF_OK,SPTF_ERR_ARG,SPTF_ERR_SIZE</td><td></td></tr>
+  </table>
+  </dd>
+</dl>
+
+</div>
+</div>
+<a id="ga6e74b9e41181b3bd0b732e762cd2862c" name="ga6e74b9e41181b3bd0b732e762cd2862c"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ga6e74b9e41181b3bd0b732e762cd2862c">&#9670;&#160;</a></span>sptf_crc32_update()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">uint32_t sptf_crc32_update </td>
+          <td>(</td>
+          <td class="paramtype">uint32_t</td>          <td class="paramname"><span class="paramname"><em>crc</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const uint8_t *</td>          <td class="paramname"><span class="paramname"><em>data</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">size_t</td>          <td class="paramname"><span class="paramname"><em>len</em></span>&#160;)</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>CRC-32/ISO-HDLC'yi artımlı günceller. </p>
+<p>Başlangıç değeri 0'dır: <code>crc = sptf_crc32_update(0u, a, na); crc = sptf_crc32_update(crc, b, nb);</code> Sonuç zlib <code>crc32()</code> ile aynıdır. </p><dl class="params"><dt>Parametreler</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in]</td><td class="paramname">crc</td><td>Önceki sonuç (ilk çağrıda 0). </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">data</td><td>Veri. </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">len</td><td>Bayt sayısı. </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Döndürdüğü değer</dt><dd>Güncellenmiş CRC. </dd></dl>
+
+</div>
+</div>
+</div><!-- contents -->
+</div><!-- doc-content -->
+<!-- start footer part -->
+<div id="nav-path" class="navpath"><!-- id is needed for treeview function! -->
+  <ul>
+    <li class="footer">Oluşturan <a href="https://www.doxygen.org/index.html"><img class="footer" src="doxygen.svg" width="104" height="31" alt="doxygen"/></a> 1.13.2 </li>
+  </ul>
+</div>
+</body>
+</html>

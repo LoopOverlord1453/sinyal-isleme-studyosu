@@ -153,24 +153,34 @@ def levenberg_marquardt(fun, x0, jac=None, *, accept=None, max_iter: int = 200, 
         J = jac(x) if jac is not None else fd_jacobian(fun, x, r, central=central)
         d = np.sqrt(np.sum(J * J, axis=0))
         dmax = d.max() if len(d) and d.max() > 0 else 1.0
-        d = np.maximum(d, 1e-12 * dmax)
+        # ölçütü (neredeyse) etkilemeyen parametreler (ör. sıfır girişte B) adımdan çıkarılır: küçük normla
+        # ölçekleme sayısal gürültüyü büyütüp anlamsız büyük değerler üretirdi
+        live = d > 1e-10 * dmax
+        if not live.any():
+            why = "ölçüt parametrelere duyarsız"
+            break
+        d = np.where(live, d, 1.0)
         Js = J / d
-        fac = {None: _factor(Js, r)}
+        fac = {}
+
+        def solve(mask, lam):
+            key = tuple(np.flatnonzero(~mask))
+            if key not in fac:
+                fac[key] = _factor(Js[:, mask], r)
+            s_, Vt_, Ur_ = fac[key]
+            st = np.zeros(n)
+            st[mask] = -(Vt_.T @ (s_ / (s_ * s_ + lam) * Ur_)) / d[mask]
+            return st
+
         improved = False
         while lam < 1e12:
-            s, Vt, Ur = fac[None]
-            step = -(Vt.T @ (s / (s * s + lam) * Ur)) / d
+            step = solve(live, lam)
             cand = x + step
             if project is not None:
                 pc = project(cand)
                 clipped = np.abs(pc - cand) > 0
-                if clipped.any() and not clipped.all():
-                    key = tuple(np.flatnonzero(clipped))
-                    if key not in fac:
-                        fac[key] = _factor(Js[:, ~clipped], r)
-                    s2, Vt2, Ur2 = fac[key]
-                    step = np.zeros(n)
-                    step[~clipped] = -(Vt2.T @ (s2 / (s2 * s2 + lam) * Ur2)) / d[~clipped]
+                if clipped.any() and (live & ~clipped).any():
+                    step = solve(live & ~clipped, lam)
                     pc = project(x + step)
                 cand = pc
                 step = cand - x
@@ -181,8 +191,9 @@ def levenberg_marquardt(fun, x0, jac=None, *, accept=None, max_iter: int = 200, 
             if not np.all(np.isfinite(rc)):
                 lam *= 10.0
                 continue
-            cc = float(rc @ rc)
-            if cc <= cost:
+            with np.errstate(over="ignore", invalid="ignore"):
+                cc = float(rc @ rc)
+            if np.isfinite(cc) and cc <= cost:
                 rel_dec = (cost - cc) / max(cost, 1e-300)
                 rel_step = np.linalg.norm(step * d) / max(np.linalg.norm(x * d), 1e-300)
                 x, r, cost = cand, rc, cc

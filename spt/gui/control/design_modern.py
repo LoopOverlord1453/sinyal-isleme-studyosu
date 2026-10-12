@@ -247,7 +247,8 @@ def kalman_spec(res: dict):
     kf = res["kf"]
     form = res.get("form", "current")
     return cc.KalmanSpec(P.A, P.B, P.C, P.D, np.asarray(kf.L, float), res["Ts"],
-                         M=np.asarray(kf.Mx, float) if form == "current" else None, form=form)
+                         M=np.asarray(kf.Mx, float) if form == "current" else None, form=form,
+                         My=np.asarray(kf.My, float) if form == "current" and kf.My is not None else None)
 
 
 # ============================================================================ görünüm

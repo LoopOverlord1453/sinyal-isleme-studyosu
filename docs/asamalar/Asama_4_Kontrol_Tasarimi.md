@@ -1,7 +1,6 @@
 # Aşama 4 — Kontrol Tasarımı, Sistem Tanımlama ve İHA Otopilotu
 
-> Durum: **geliştiriliyor**. Bu belge mimariyi, ortak kuralları (sözleşme) ve doğrulama ilkesini tanımlar; her alt
-> modül tamamlandıkça "Sonuçlar" bölümleri doldurulur.
+> Durum: **tamamlandı** (ilk sürüm). Mimari, ortak kurallar ve doğrulama ilkesi aşağıda; sonuçlar en sonda.
 
 ## Amaç
 Kullanıcı sisteminin giriş / çıkış verisini (canlı akış, kayıt, Çalışma Alanı anlık görüntüsü, CSV / MAT) verir;
@@ -153,3 +152,36 @@ pencereye alma, ölçülmüş renk paleti — aynı görünümde **hiçbir renk 
   ızgaralar) birebir kopyalanamaz: aynı **tanım ve hedef** uygulanır, sonuç ölçütlerle karşılaştırılır.
 - Simulink'in tamamı değil, kontrol tasarımı için gereken blok kümesi; değişken adımlı çözücü olarak Dormand–Prince
   (ode45) ve sabit adımlı ode1 / ode4.
+
+## Sonuçlar (MATLAB R2025b ile karşılaştırma)
+| Modül | Dosyalar | Test | MATLAB ile en büyük fark |
+|---|---|---|---|
+| LTI çekirdeği ve analiz | `spt/control/{lti,convert,connect,discretize,timeresp,freqresp,analysis,parse}.py` | 360+ | çoğunda 1e-13–1e-16; margin / stepinfo(sys) bizde kesin, MATLAB ızgaralı (ör. 2/(s−1) için Wcp = √3) |
+| Tasarım | `classical.py`, `modern.py` | 25 | lqr / dlqr / lqrd / lqi / kalman / lqg ~1e-8 altı; tf(pid) birebir; pidtune hedef PM / ωc tam |
+| MPC | `spt/control/mpc/` | 98 (C dahil) | QP ≤2e-14, sim u / y ≤3e-13 (MATLAB'in kendi .m kodundan tanımlar) |
+| Sistem tanımlama | `spt/control/sysid/` | 69 | ARX / compare / spa 1e-10; armax / oe / bj ≤2e-6; tfest / procest 1e-4; n4sid %5 (MATLAB ayrıntısı yayımlanmamış) |
+| Blok diyagram motoru | `spt/control/diagram/` | 95 | Simulink sabit adım ≤1.1e-14, ode45 ≤1.3e-10, linearize 1e-8 |
+| İHA modelleri + otopilot | `spt/control/uav/` | 92 | ode45, sembolik Jacobian, trim ≤1e-11; 5 otopilot şablonu kararlı |
+| Kontrolcü C kodu | `spt/codegen/control_c.py`, `mpc_c.py` | 52 + 38 | PID (Simulink anti-windup dahil) / Kalman / LQG 1e-13–1e-16; tüm Cortex-M × gcc / clang -Werror |
+| Arayüz | `spt/gui/views/control_view.py`, `spt/gui/control/*` | 13 + 14 + 14 + 20 | grafik verileri kütüphaneyle birebir |
+
+Bağımsız denetimde (MPC + C kodu) bulunan 12 bulgunun 10'u düzeltildi (MaxIterations sınırı MATLAB kuralına
+getirildi, NaN ölçüm Türkçe hata, float sabit aralığı, Ts bütçesi …), biri kısmen (float'ta kötü koşullu Hessian
+yalnız uyarı — double önerilir), biri bilinen sınır olarak yazıldı. Arayüz ajanlarının bildirdiği iki kütüphane hatası
+düzeltildi: ayrık çevrimde ωTs küçükken `margin`'in geçişi kaçırması (yoğun tarama + Brent yedeği; 48 durumda 0 kaçırma)
+ve son değeri 0 olan cevapta `stepinfo`'nun sıfır döndürmesi (MATLAB anlamları: aşım ∞, yerleşme NaN).
+
+Son kısa denetim turu (5 alan, 29 bulgu; hepsi yeniden üretilip düzeltildi, regresyon testi eklendi):
+LTI (DelayMargin kuralı, sahte geçiş eleme, eşit tepe / ayrık SettlingMin, ifadede karmaşık argüman reddi);
+blok diyagram (Mux / Demux sanal yönlendirme, sabit adımda akışlı çalıştırma + anında iptal, yinelenen sinyal adı);
+sistem tanımlama (FOH ssest, sabit girişte spa, kısa veri, yetersiz uyarım uyarısı); C kodu (SISO SS iyi koşullu
+ikinci derece bölümlerden, float32 katsayı kararlılık denetimi, zpk doğrudan gerçekleme, Kalman `My`);
+tasarım (kararsız bitkide pidtune P / I işareti, `PhaseMargin` tüm geçişlerin en küçüğü, ayrık PI pencere taşması,
+`kalmd` H ≠ 0 reddi, `lqg` current + Nn ≠ 0 MATLAB `lqg` ile 1e-14, `place` kontrol edilemeyen kip / bağımlı B).
+
+Bilinen sınırlar: iç (internal) gecikme yok (sürekli kapalı çevrimde Padé önerilir); MPC'de gecikmeli bitki, karışık
+kısıt, uyarlamalı / doğrusal olmayan MPC yok; pidtune / ssest başlangıcı / nlarx eğitimi MATLAB'le birebir değil
+(aynı tanım ve hedef); çözümü olmayan gecikmeli kararsız bitkide (ör. e^{−0.3s}/(s−0.5), P tipi) otomatik ωc
+araması tüm adayları taradığı için ~1 dk sürebilir (arka planda çalışır); bağlantı (`connect` / `lft` / `loopsens`)
+çevrim dışı sürekli gecikmeyi taşımaz; varsayılan dörtrotor parametreleri yayımlanmış bir F450 örneğidir — ölçülmüş değerlerinizi
+kullanın.

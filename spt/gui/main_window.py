@@ -76,6 +76,7 @@ log = logging.getLogger("spt.gui")
 
 ROOT = Path(__file__).resolve().parents[2]
 PROTOCOL_DOC = ROOT / "docs" / "SPTF_Protokol_v1.md"
+EMBEDDED_DOC = ROOT / "docs" / "SPTF_UDP_Kullanim_Kilavuzu.md"
 SAMPLES_DIR = ROOT / "samples_signal_data"
 LAYOUT_VERSION = 2   # 2: İşlem Zinciri paneli eklendi (eski kayıtlı yerleşim yerine varsayılan kurulur)
 REFRESH_MS = 33      # canlı grafik ~30 FPS
@@ -117,7 +118,7 @@ MENU_LAYOUT = [
         None, "flt.design", "flt.apply", None, "flt.chain", "flt.export",
     ]),
     ("A&raçlar", ["tools.generator", "tools.simulator", "tools.packet_inspector", None, "edit.preferences"]),
-    ("&Yardım", ["help.docs", "help.protocol", "help.shortcuts", None, "help.about"]),
+    ("&Yardım", ["help.docs", "help.protocol", "help.embedded", "help.shortcuts", None, "help.about"]),
 ]
 
 # Sıra kayıtlı ayarlardaki görünüm indeksidir (view/index): yeni görünümler SONA eklenir
@@ -446,6 +447,7 @@ class MainWindow(QMainWindow):
             "view.reset_layout": lambda *_: self._reset_layout(),
             "view.fullscreen": self._set_fullscreen,
             "help.protocol": lambda *_: self._open_protocol_doc(),
+            "help.embedded": lambda *_: self._open_protocol_doc(EMBEDDED_DOC),
             "help.shortcuts": lambda *_: self._show_shortcuts(),
             "help.about": lambda *_: self._show_about(),
             "conn.listen": self._toggle_listen,
@@ -491,6 +493,7 @@ class MainWindow(QMainWindow):
         s.replay_progress.connect(self.sources_panel.replay.update_progress)
         s.replay_progress.connect(self._on_replay_progress)
         s.recording_changed.connect(self._on_recording)
+        s.marker_received.connect(self.live_view.add_event_marker)
         self.sources_panel.channel_toggled.connect(self._on_channel_toggled)
         self.sources_panel.replay.command.connect(self._on_replay_command)
         self.live_view.listen_requested.connect(self.registry["conn.listen"].trigger)
@@ -1124,11 +1127,12 @@ class MainWindow(QMainWindow):
         else:
             self.showNormal()
 
-    def _open_protocol_doc(self) -> None:
-        if PROTOCOL_DOC.exists():
-            QDesktopServices.openUrl(QUrl.fromLocalFile(str(PROTOCOL_DOC)))
+    def _open_protocol_doc(self, path: Path | None = None) -> None:
+        path = path or PROTOCOL_DOC
+        if path.exists():
+            QDesktopServices.openUrl(QUrl.fromLocalFile(str(path)))
         else:
-            log.warning("Protokol dokümanı bulunamadı: %s", PROTOCOL_DOC)
+            log.warning("Doküman bulunamadı: %s", path)
 
     def _show_shortcuts(self) -> None:
         rows = [(a.text().replace("&", ""), a.shortcut().toString())

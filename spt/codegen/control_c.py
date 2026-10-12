@@ -38,7 +38,9 @@ import json
 import math
 import re
 import warnings
+import weakref
 from dataclasses import dataclass, replace
+from pathlib import Path
 from typing import Any
 
 import numpy as np
@@ -188,7 +190,13 @@ def _mat(M: Any, name: str, rows: int | None = None, cols: int | None = None) ->
 
 @dataclass(frozen=True, eq=False)
 class LtiSpec:
-    """Genel ayrık LTI kontrolcü: durum uzayı (A, B, C, D) ya da SISO tf (num, den; azalan z kuvvetleri)."""
+    """Genel ayrık LTI kontrolcü: durum uzayı (A, B, C, D), SISO tf (num, den; azalan z kuvvetleri) ya da SISO zpk
+    (zeros, poles, zpk_gain).
+
+    Gerçekleme: SISO'da ikinci derece bölümler ("sos") ya da bu bölümlerin kademesinden kurulan durum uzayı ("ss";
+    eşlik / companion biçimi KULLANILMAZ — yüksek derecede float'ta ıraksar). SISO ss nesnesi "ss" ile kendi
+    (dengelenmiş) gerçeklemesini korur; "auto"da kutuplar özdeğerden, sıfırlar Rosenbrock kaleminden alınıp bölümlere
+    ayrılır (doğrulanamazsa kendi gerçeklemesi kullanılır). MIMO hep durum uzayıdır."""
     Ts: float
     A: np.ndarray | None = None
     B: np.ndarray | None = None
@@ -197,6 +205,9 @@ class LtiSpec:
     num: np.ndarray | None = None
     den: np.ndarray | None = None
     realization: str = "auto"            # "auto" (SISO → sos, MIMO → ss) | "sos" | "ss"
+    zeros: np.ndarray | None = None
+    poles: np.ndarray | None = None
+    zpk_gain: float | None = None
 
     kind = "lti"
 
@@ -204,6 +215,17 @@ class LtiSpec:
     def from_tf(num, den, Ts: float, realization: str = "auto") -> LtiSpec:
         return LtiSpec(Ts=float(Ts), num=np.atleast_1d(np.asarray(num, float)),
                        den=np.atleast_1d(np.asarray(den, float)), realization=realization)
+
+    @staticmethod
+    def from_zpk(z, p, k: float, Ts: float, realization: str = "auto") -> LtiSpec:
+        """SISO sıfır-kutup-kazanç: bölümler doğrudan bu köklerden kurulur (polinoma geçilmez)."""
+        return LtiSpec(Ts=float(Ts), zeros=np.atleast_1d(np.asarray(z, complex)).ravel(),
+                       poles=np.atleast_1d(np.asarray(p, complex)).ravel(), zpk_gain=float(np.real(k)),
+                       realization=realization)
+
+    @property
+    def is_zpk(self) -> bool:
+        return self.poles is not None
 
     @staticmethod
     def from_ss(A, B, C, D, Ts: float, realization: str = "auto") -> LtiSpec:
@@ -226,14 +248,25 @@ class LtiSpec:
 
     @property
     def shape(self) -> tuple[int, int]:
-        return (1, 1) if self.is_tf else np.atleast_2d(self.D).shape
+        return (1, 1) if (self.is_tf or self.is_zpk) else np.atleast_2d(self.D).shape
 
     def validate(self) -> None:
         if not (_finite(self.Ts) and self.Ts > 0):
             raise ControlError("Kontrolcü ayrık olmalı: örnekleme zamanı Ts > 0 (sürekli modeli önce ayrıklaştırın)")
         if self.realization not in ("auto", "sos", "ss"):
             raise ControlError("Gerçekleme 'auto', 'sos' ya da 'ss' olmalı")
-        if self.is_tf:
+        if self.is_zpk:
+            z, p = np.asarray(self.zeros, complex), np.asarray(self.poles, complex)
+            if not (np.all(np.isfinite(z)) and np.all(np.isfinite(p)) and _finite(self.zpk_gain)):
+                raise ControlError("Sıfır, kutup ve kazanç sonlu olmalı")
+            if z.size > p.size:
+                raise ControlError("Kontrolcü nedensel değil (sıfır sayısı kutup sayısından fazla): ayrık kontrolcü "
+                                   "olarak gerçeklenemez")
+            for name, r in (("Sıfırlar", z), ("Kutuplar", p)):
+                if r.size and np.max(np.abs(np.sort_complex(r) - np.sort_complex(np.conj(r)))) > \
+                        1e-9 * max(1.0, float(np.max(np.abs(r)))):
+                    raise ControlError(f"{name} karmaşık eşlenik çiftler hâlinde olmalı (gerçel katsayılı kontrolcü)")
+        elif self.is_tf:
             num, den = np.trim_zeros(self.num, "f"), np.trim_zeros(self.den, "f")
             if den.size == 0 or not (np.all(np.isfinite(num)) and np.all(np.isfinite(den))):
                 raise ControlError("Aktarım fonksiyonu sonlu katsayılı olmalı ve paydası sıfır olamaz")
@@ -255,7 +288,8 @@ class LtiSpec:
         return 0 if self.A is None or np.size(self.A) == 0 else np.atleast_2d(self.A).shape[0]
 
     def use_sos(self) -> bool:
-        return self.shape == (1, 1) and self.realization in ("auto", "sos")
+        """Üretilecek gerçekleme ikinci derece bölümler mi (SISO ss nesnesi doğrulanamazsa kendi gerçeklemesi)."""
+        return _lti_realization(self)["mode"] == "sos"
 
 
 @dataclass(frozen=True, eq=False)
@@ -539,13 +573,10 @@ def controller_spec(obj: Any, Ts: float | None = None, **pid_options) -> Spec:
             if len(z) != 1 or len(z[0]) != 1:
                 raise ControlError("Çok girişli / çok çıkışlı ZPK: önce durum uzayına çevirin (ss)")
             z, p = z[0][0], p[0][0]
-        kk = float(np.asarray(k, float).ravel()[0])
-        num = np.real_if_close(np.poly(np.asarray(z, complex))) * kk
-        den = np.real_if_close(np.poly(np.asarray(p, complex)))
-        d = _delay_total(obj)
-        if d:
-            den = np.concatenate([den, np.zeros(d)])
-        spec = LtiSpec.from_tf(np.real(num), np.real(den), ts)
+        kk = float(np.real(np.asarray(k).ravel()[0]))
+        d = _delay_total(obj)                 # z^-d: d kutup başlangıçta
+        spec = LtiSpec.from_zpk(np.asarray(z, complex).ravel(),
+                                np.r_[np.asarray(p, complex).ravel(), np.zeros(d)], kk, ts)
     else:
         raise ControlError("Bu nesneden C kodu üretilemez: PID, durum uzayı, aktarım fonksiyonu ya da kazanç "
                            "bekleniyor")
@@ -554,42 +585,186 @@ def controller_spec(obj: Any, Ts: float | None = None, **pid_options) -> Spec:
 
 
 # ============================================================================ SOS (SISO) ve dengeleme
-def _sos_from_tf(num: np.ndarray, den: np.ndarray) -> tuple[np.ndarray, float]:
-    """(sos [nsec × 5: b0 b1 b2 a1 a2], doğrudan kazanç). nsec = 0 → yalnız kazanç (statik)."""
+BAND = np.r_[np.logspace(-4.0, 0.0, 33), np.linspace(1.0, np.pi - 1e-3, 25)[1:]]   # doğrulama bandı (rad/örnek)
+STABLE_MARGIN = 1e-7  # |p| < 1 − bu: belirgin kararlı (daha yakını tf katsayılarıyla integratörden ayırt edilemez)
+SOS_TOL = 1e-7        # bölümler ↔ kaynak (tf / zpk / ss) frekans cevabı, noktasal göreli fark sınırı
+TF_TOL = 1e-5         # tf: fark katsayıların kendi koşulluluğuyla açıklanıyorsa (≤ 20·κ) bu sınıra kadar uyarıyla kabul
+FLOAT_WARN = 1e-2     # float32'ye yuvarlanmış katsayılarla frekans cevabı göreli sapması: üstü uyarı
+FLOAT_GROW = 1e-6     # kararlı / sınırda kontrolcünün kutup yarıçapı float32'de 1 + bu değeri aşarsa: hata (ıraksar)
+
+
+def _rel_err(h: np.ndarray, ref: np.ndarray) -> float:
+    """Noktasal göreli fark max |h − ref| / (|ref| + taban), taban = 1e-8·max|ref| (derin çentikler için)."""
+    h, ref = np.asarray(h), np.asarray(ref)
+    ok = np.isfinite(ref)
+    if not np.any(ok):
+        return 0.0
+    h, ref = h[ok], ref[ok]
+    floor = 1e-8 * float(np.max(np.abs(ref))) + 1e-300
+    with np.errstate(invalid="ignore"):
+        e = np.abs(h - ref) / (np.abs(ref) + floor)
+    return float(np.max(np.where(np.isfinite(h), e, np.inf)))
+
+
+def _horner_exact(cs, a, b):
+    re = im = 0
+    for c in cs:
+        re, im = re * a - im * b + c, re * b + im * a
+    return re, im
+
+
+def _exact_ratio(num: np.ndarray, den: np.ndarray, w: np.ndarray) -> np.ndarray:
+    """num(w)/den(w): katsayılar ve noktalar (double) TAM rasyonel aritmetikle. Kökleri z = 1 çevresinde kümelenmiş
+    polinomda double Horner'ın sadeleşme hatası (göreli ~eps·Σ|c|/|p(w)|) karşılaştırmayı anlamsızlaştırır."""
+    from fractions import Fraction
+
+    fn = [Fraction(float(c)) for c in num]
+    fd = [Fraction(float(c)) for c in den]
+    out = np.empty(len(w), complex)
+    for i, x in enumerate(w):
+        a, b = Fraction(float(x.real)), Fraction(float(x.imag))
+        nr, ni = _horner_exact(fn, a, b)
+        dr, di = _horner_exact(fd, a, b)
+        d2 = dr * dr + di * di
+        out[i] = complex(float((nr * dr + ni * di) / d2), float((ni * dr - nr * di) / d2)) if d2 else complex(np.inf)
+    return out
+
+
+def _sos_resp(sos: np.ndarray, w: np.ndarray) -> np.ndarray:
+    h = np.ones(len(w), complex)
+    with np.errstate(divide="ignore", invalid="ignore"):        # birim çemberdeki kutup: inf
+        for b0, b1, b2, a1, a2 in sos:
+            h = h * (b0 * w * w + b1 * w + b2) / (w * w + a1 * w + a2)
+    return h
+
+
+def _zpk_resp(z: np.ndarray, p: np.ndarray, k: float, w: np.ndarray) -> np.ndarray:
+    with np.errstate(divide="ignore", invalid="ignore"):
+        return k * np.prod(w[:, None] - z[None, :], axis=1) / np.prod(w[:, None] - p[None, :], axis=1)
+
+
+def _ss_resp(A, B, C, D, w: np.ndarray) -> np.ndarray:
+    """Durum uzayı frekans cevabı (ny, nu, nw); birim çember üzerindeki kutupta inf."""
+    n = A.shape[0]
+    out = np.empty((D.shape[0], D.shape[1], len(w)), complex)
+    for i, x in enumerate(w):
+        try:
+            out[:, :, i] = D + (C @ np.linalg.solve(x * np.eye(n) - A, B) if n else 0.0)
+        except np.linalg.LinAlgError:
+            out[:, :, i] = np.inf
+    return out
+
+
+def _ss_zeros(A, B, C, D) -> np.ndarray:
+    """SISO değişmez sıfırlar: Rosenbrock kalemi [A B; C D] − λ·[I 0; 0 0]'ın sonlu genelleştirilmiş özdeğerleri."""
+    from scipy.linalg import eig
+
+    n = A.shape[0]
+    M = np.block([[A, B], [C, D]])
+    N = np.zeros_like(M)
+    N[:n, :n] = np.eye(n)
+    al, be = eig(M, N, right=False, homogeneous_eigvals=True)
+    scale = max(1.0, float(np.linalg.norm(M, 1)))
+    fin = np.abs(al) < 1e8 * scale * np.abs(be)
+    return al[fin] / be[fin]
+
+
+def _siso_source(spec: LtiSpec):
+    """(sıfırlar, kutuplar, kazanç, kaynak cevabı H(w), kaynak) — tf: kökler (cevap tam rasyonel), zpk: olduğu gibi,
+    ss: kutuplar özdeğer, sıfırlar Rosenbrock, kazanç birim çember cevabına en küçük kareler. Polinoma geçilmez."""
+    if spec.is_zpk:
+        z, p, k = np.asarray(spec.zeros, complex), np.asarray(spec.poles, complex), float(spec.zpk_gain)
+        return z, p, k, (lambda w: _zpk_resp(z, p, k, w)), "zpk"
+    if spec.is_tf:
+        num = np.trim_zeros(np.asarray(spec.num, float), "f")
+        den = np.trim_zeros(np.asarray(spec.den, float), "f")
+        if num.size == 0:
+            return np.zeros(0), np.zeros(0), 0.0, None, "tf"
+        return np.roots(num), np.roots(den), float(num[0] / den[0]), (lambda w: _exact_ratio(num, den, w)), "tf"
+    A, B, C, D = (np.atleast_2d(np.asarray(m, float)) for m in (spec.A, spec.B, spec.C, spec.D))
+    if spec.nx == 0:
+        return np.zeros(0), np.zeros(0), float(D[0, 0]), None, "ss"
+
+    def href(w):
+        return _ss_resp(A, B, C, D, w)[0, 0]
+
+    p, z = np.linalg.eigvals(A), _ss_zeros(A, B, C, D)
+    w = np.exp(1j * BAND)
+    r = href(w)
+    g = _zpk_resp(z, p, 1.0, w)
+    ok = np.isfinite(r) & np.isfinite(g)
+    gg = float(np.sum(np.abs(g[ok]) ** 2))
+    k = float(np.real(np.sum(r[ok] * np.conj(g[ok])) / gg)) if gg > 0 else 0.0
+    return z, p, k, href, "ss"
+
+
+def _sos_from_zpk(z: np.ndarray, p: np.ndarray, k: float, href) -> tuple[np.ndarray, float]:
+    """(sos [nsec × 5: b0 b1 b2 a1 a2], kaynağa göre noktasal göreli fark). Kazanç ilk bölümde; z⁻ʳ gecikmeleri
+    bölümlerin payına dağıtılır."""
     from scipy import signal
 
-    num = np.trim_zeros(np.asarray(num, float), "f")
-    den = np.trim_zeros(np.asarray(den, float), "f")
-    if num.size == 0:
-        return np.zeros((0, 5)), 0.0
-    num, den = num / den[0], den / den[0]
-    nd, nn = den.size - 1, num.size - 1
-    if nd == 0:
-        return np.zeros((0, 5)), float(num[0])
-    if nd > 12:
-        warnings.warn(f"{nd}. derece aktarım fonksiyonunun kökleri kötü koşullu olabilir; durum uzayı "
-                      "gerçeklemesi daha güvenilirdir", ControlWarning, stacklevel=3)
-    rel = nd - nn
-    z = np.concatenate([np.roots(num), np.zeros(rel)])     # z^rel·H(z): eşit sayıda sıfır / kutup
-    p = np.roots(den)
-    sos = signal.zpk2sos(z, p, float(num[0]), pairing="nearest")
+    z, p = np.asarray(z, complex), np.asarray(p, complex)
+    rel = p.size - z.size
+    if rel < 0:
+        raise ControlError("Kontrolcü nedensel değil (sıfır sayısı kutup sayısından fazla)")
+    if p.size > 12:
+        warnings.warn(f"{p.size}. derece SISO kontrolcü: ikinci derece bölümler frekans cevabıyla doğrulanır; "
+                      "yüksek derecede tasarımı düşük dereceli parçalara ayırmak önerilir", ControlWarning,
+                      stacklevel=3)
+    sos = signal.zpk2sos(np.r_[z, np.zeros(rel)], p, k, pairing="nearest")     # z^rel·H: eşit sayıda sıfır / kutup
     for _ in range(rel):                                    # H = z^-rel · (z^rel·H): rel gecikme bölümlere dağıtılır
         idx = next((i for i in range(sos.shape[0]) if sos[i, 2] == 0.0), None)
         if idx is None:
             raise ControlError("İkinci derece bölümlere ayırma başarısız (gecikme yerleştirilemedi)")
         sos[idx, :3] = [0.0, sos[idx, 0], sos[idx, 1]]
     out = np.column_stack([sos[:, 0:3] / sos[:, [3]], sos[:, 4:6] / sos[:, [3]]])
-    # doğrulama: birim çember üzerinde frekans cevabı tf ile aynı mı (kötü koşullu köklere karşı)
-    w = np.exp(1j * np.linspace(0.01, np.pi - 0.01, 37))
-    h_tf = np.polyval(num, w) / np.polyval(den, w)
-    h = np.ones_like(w)
-    for b0, b1, b2, a1, a2 in out:
-        h *= (b0 * w * w + b1 * w + b2) / (w * w + a1 * w + a2)
-    err = np.max(np.abs(h - h_tf)) / max(np.max(np.abs(h_tf)), 1e-300)
-    if not err < 1e-7:
-        raise ControlError(f"İkinci derece bölümler aktarım fonksiyonunu yeterli doğrulukla temsil etmiyor "
-                           f"(göreli fark {err:.1e}); durum uzayı gerçeklemesini seçin")
-    return out, 0.0
+    w = np.exp(1j * BAND)
+    return out, _rel_err(_sos_resp(out, w), href(w))
+
+
+def _sos_to_ss(sos: np.ndarray):
+    """Bölümlerin kademesi (her biri devrik doğrudan biçim II) → blok alt üçgen durum uzayı. Özdeğerler bölümlerin
+    2×2 bloklarınındır: eşlik biçiminin aksine katsayı yuvarlamasına duyarlılığı bölümlerle aynıdır."""
+    A, B, C, D = np.zeros((0, 0)), np.zeros((0, 1)), np.zeros((1, 0)), np.array([[1.0]])
+    for b0, b1, b2, a1, a2 in sos:
+        if a2 == 0.0 and b2 == 0.0:                           # birinci derece bölüm: tek durum
+            Ai, Bi, Ci = np.array([[-a1]]), np.array([[b1 - a1 * b0]]), np.array([[1.0]])
+        else:
+            Ai = np.array([[-a1, 1.0], [-a2, 0.0]])
+            Bi, Ci = np.array([[b1 - a1 * b0], [b2 - a2 * b0]]), np.array([[1.0, 0.0]])
+        n0, ni = A.shape[0], Ai.shape[0]
+        A = np.block([[A, np.zeros((n0, ni))], [Bi @ C, Ai]])
+        B = np.vstack([B, Bi @ D])
+        C = np.hstack([b0 * C, Ci])
+        D = b0 * D
+    return A, B, C, D
+
+
+def _tf_conditioning_explains(num: np.ndarray, den: np.ndarray, sos: np.ndarray) -> bool:
+    """Bölümlerin tf'den noktasal sapması, katsayıların eps düzeyi yuvarlamasının yol açabileceği sapma içinde mi:
+    |H_sos − H| / |H| ≤ 20·κ + SOS_TOL, κ(w) = eps·(Σ|bₖ|/|N(w)| + Σ|aₖ|/|D(w)|) (|w| = 1; birinci derece sınır).
+    Öyleyse kökler (geri kararlı) katsayıların sistemini katsayıların kendi belirsizliği içinde temsil eder."""
+    w = np.exp(1j * BAND)
+    ref = _exact_ratio(num, den, w)
+    nv, dv = _exact_ratio(num, np.ones(1), w), _exact_ratio(den, np.ones(1), w)
+    ok = np.isfinite(ref) & (np.abs(nv) > 0) & (np.abs(dv) > 0)
+    kap = np.finfo(float).eps * (np.sum(np.abs(num)) / np.abs(nv[ok]) + np.sum(np.abs(den)) / np.abs(dv[ok]))
+    floor = 1e-8 * float(np.max(np.abs(ref[ok]))) + 1e-300
+    e = np.abs(_sos_resp(sos, w)[ok] - ref[ok]) / (np.abs(ref[ok]) + floor)
+    return bool(np.all(e <= 20.0 * kap + SOS_TOL))
+
+
+def _sos_fail(src: str, err: float) -> str:
+    if src == "tf":
+        return (f"Aktarım fonksiyonu katsayıları kötü koşullu: köklerden kurulan ikinci derece bölümler katsayıların "
+                f"tanımladığı sistemden noktasal göreli {err:.1e} sapıyor (izin {TF_TOL:g}; 1e-4 … π rad bandı). Bu "
+                "katsayılar kontrolcüyü double'da bile doğru temsil etmez (kökler katsayılara çok duyarlı). Yüksek "
+                "dereceli ya da kutupları z = 1'e yakın kontrolcüyü katsayılara (tf) çevirmeden sıfır-kutup-kazanç "
+                "(zpk) ya da durum uzayı (ss) nesnesi olarak verin veya derecesini düşürün")
+    if src == "zpk":
+        return f"Sıfır / kutuplardan ikinci derece bölümler kurulamadı (noktasal göreli fark {err:.1e})"
+    return (f"Durum uzayı modelinden ikinci derece bölümler yeterli doğrulukla kurulamadı (noktasal göreli fark "
+            f"{err:.1e}): 'ss' gerçeklemesini seçin (modelin kendi, dengelenmiş gerçeklemesi korunur)")
 
 
 def _balanced(A, B, C):
@@ -602,40 +777,115 @@ def _balanced(A, B, C):
     return (A * scale[None, :]) / scale[:, None], B / scale[:, None], C * scale[None, :]
 
 
+_RZ_CACHE: weakref.WeakKeyDictionary = weakref.WeakKeyDictionary()
+
+
 def _lti_realization(spec: LtiSpec) -> dict:
-    if spec.use_sos():
-        if spec.is_tf:
-            num, den = spec.num, spec.den
-        else:
-            from scipy import signal
-            if spec.nx == 0:
-                num, den = np.atleast_1d(float(np.atleast_2d(spec.D)[0, 0])), np.array([1.0])
-            else:
-                num, den = signal.ss2tf(np.atleast_2d(spec.A), np.atleast_2d(spec.B), np.atleast_2d(spec.C),
-                                        np.atleast_2d(spec.D))
-                num = num[0]
-        sos, _ = _sos_from_tf(num, den)
-        if sos.shape[0] == 0:
-            nn, dd = np.trim_zeros(np.asarray(num, float), "f"), np.trim_zeros(np.asarray(den, float), "f")
-            k = float(nn[0] / dd[0]) if nn.size else 0.0
+    """{"mode": "sos", "sos"} ya da {"mode": "ss", A, B, C, D} (dengelenmiş). SISO tf / zpk hep bölümlerden kurulur
+    ("ss" isteğinde bölümlerin kademesi); eşlik (companion) biçimi hiç kullanılmaz."""
+    cached = _RZ_CACHE.get(spec)
+    if cached is None:
+        cached = _RZ_CACHE[spec] = _lti_realization_uncached(spec)
+    return cached
+
+
+def _lti_realization_uncached(spec: LtiSpec) -> dict:
+    own_ss = not (spec.is_tf or spec.is_zpk)
+    if spec.shape == (1, 1) and not (own_ss and spec.realization == "ss"):
+        z, p, k, href, src = _siso_source(spec)
+        if p.size == 0 or k == 0.0:                         # statik kazanç (ya da özdeş sıfır)
             return {"mode": "ss", "A": np.zeros((0, 0)), "B": np.zeros((0, 1)), "C": np.zeros((1, 0)),
                     "D": np.array([[k]])}
-        return {"mode": "sos", "sos": sos}
-    if spec.is_tf:
-        from scipy import signal
-        num = np.trim_zeros(np.asarray(spec.num, float), "f")
-        den = np.trim_zeros(np.asarray(spec.den, float), "f")
-        if den.size == 1:
-            A, B, C, D = np.zeros((0, 0)), np.zeros((0, 1)), np.zeros((1, 0)), np.array([[num[0] / den[0]
-                                                                                          if num.size else 0.0]])
-        else:
-            A, B, C, D = signal.tf2ss(num, den)
-    else:
-        A, B, C, D = (np.atleast_2d(np.asarray(m, float)) for m in (spec.A, spec.B, spec.C, spec.D))
-        if spec.nx == 0:
-            A, B, C = np.zeros((0, 0)), np.zeros((0, D.shape[1])), np.zeros((D.shape[0], 0))
+        fallback = own_ss and spec.realization == "auto"    # ss nesnesi: doğrulanamazsa kendi gerçeklemesi
+        try:
+            sos, err = _sos_from_zpk(z, p, k, href)
+        except ControlError:
+            if not fallback:
+                raise
+            sos, err = None, math.inf
+        note = None
+        if src == "tf" and SOS_TOL < err <= TF_TOL:
+            num = np.trim_zeros(np.asarray(spec.num, float), "f")
+            den = np.trim_zeros(np.asarray(spec.den, float), "f")
+            if _tf_conditioning_explains(num, den, sos):
+                note = (f"aktarım fonksiyonu katsayıları kötü koşullu: bölümler katsayıların tanımladığı sistemden "
+                        f"noktasal göreli {err:.1e} sapıyor — bu, katsayıların kendi yuvarlama belirsizliği içinde "
+                        "(doğrudan biçim de aynı belirsizliği taşır). Daha doğru sonuç için kontrolcüyü zpk ya da ss "
+                        "olarak verin")
+        if err <= SOS_TOL or note:
+            if spec.realization == "ss":
+                A, B, C, D = _sos_to_ss(sos)
+                A, B, C = _balanced(A, B, C)
+                return {"mode": "ss", "A": A, "B": B, "C": C, "D": D, "note": note}
+            return {"mode": "sos", "sos": sos, "note": note}
+        if not fallback:
+            raise ControlError(_sos_fail(src, err))
+    A, B, C, D = (np.atleast_2d(np.asarray(m, float)) for m in (spec.A, spec.B, spec.C, spec.D))
+    if spec.nx == 0:
+        A, B, C = np.zeros((0, 0)), np.zeros((0, D.shape[1])), np.zeros((D.shape[0], 0))
     A, B, C = _balanced(A, B, C)
     return {"mode": "ss", "A": A, "B": B, "C": C, "D": np.atleast_2d(D)}
+
+
+def _accuracy_notes(spec: Spec, opts: ControlCodegenOptions) -> list[str]:
+    """Gerçekleme / float doğruluğu uyarıları (float'ta kararsızlaşma ControlError)."""
+    notes = []
+    if isinstance(spec, LtiSpec) and _lti_realization(spec).get("note"):
+        notes.append(_lti_realization(spec)["note"])
+    if opts.real == "float":
+        hard, soft = float_check(spec)
+        if hard:
+            raise ControlError(hard)
+        if soft:
+            notes.append(soft)
+    return notes
+
+
+def float_check(spec: Spec) -> tuple[str | None, str | None]:
+    """float (tek hassasiyet) için katsayı yuvarlaması denetimi (LTI): (hata, uyarı) Türkçe iletileri ya da None.
+
+    Katsayılar float32'ye yuvarlanır; hata: kararlı / sınırda (|p| ≤ 1) kontrolcünün kutup yarıçapı 1 + FLOAT_GROW'u
+    aşıyor (float kod ıraksar); uyarı: frekans cevabı 1e-4 … π rad bandında FLOAT_WARN'dan fazla sapıyor."""
+    if not isinstance(spec, LtiSpec):
+        return None, None
+    rz = _lti_realization(spec)
+
+    def f32(M):
+        return np.asarray(M, float).astype(np.float32).astype(float)
+
+    def band(r64: float) -> np.ndarray:      # belirgin kararlıysa DC de (DC kazancı float'ta korunuyor mu)
+        return np.exp(1j * (np.r_[0.0, BAND] if r64 < 1.0 - STABLE_MARGIN else BAND))
+
+    if rz["mode"] == "sos":
+        sos, s32 = rz["sos"], f32(rz["sos"])
+
+        def rad(S):
+            return max(float(np.max(np.abs(np.roots([1.0, a1, a2])), initial=0.0)) for a1, a2 in S[:, 3:5])
+
+        r64, r32 = rad(sos), rad(s32)
+        w = band(r64)
+        err = _rel_err(_sos_resp(s32, w), _sos_resp(sos, w))
+    else:
+        A, B, C, D = rz["A"], rz["B"], rz["C"], rz["D"]
+        if A.shape[0] == 0:
+            return None, None
+        r64 = float(np.max(np.abs(np.linalg.eigvals(A))))
+        r32 = float(np.max(np.abs(np.linalg.eigvals(f32(A)))))
+        w = band(r64)
+        H, H32 = _ss_resp(A, B, C, D, w), _ss_resp(f32(A), f32(B), f32(C), f32(D), w)
+        err = max(_rel_err(H32[i, j], H[i, j]) for i in range(D.shape[0]) for j in range(D.shape[1]))
+    hard = soft = None
+    if (r64 < 1.0 - STABLE_MARGIN and r32 >= 1.0) or (r64 <= 1.0 + 1e-7 and r32 > 1.0 + FLOAT_GROW):
+        what = "sınırda kararlı (integratöre dönüşür, DC kazancı sonsuz)" if r32 <= 1.0 + FLOAT_GROW else \
+            "kararsız (birim çemberin dışı, çıkış ıraksar)"
+        hard = (f"float (tek hassasiyet) katsayılarla kontrolcü {what} olur: en büyük kutup yarıçapı "
+                f"{r64:.9f} → {r32:.9f}. Sayı türü olarak double seçin ya da Ts'yi büyütün / kontrolcünün derecesini "
+                "düşürün")
+    if err > FLOAT_WARN:
+        pct = f"%{100 * err:.3g}" if math.isfinite(err) else "sonsuz oranda"
+        soft = (f"float katsayı yuvarlaması frekans cevabını {pct} değiştiriyor (1e-4 … π rad bandı ve kararlı "
+                "kontrolcüde DC, noktasal); double önerilir")
+    return hard, soft
 
 
 # ============================================================================ Python başvurusu (C ile aynı sıra)
@@ -836,10 +1086,10 @@ def check_prefix(prefix: str) -> None:
                            "alt çizgi C'de saklı adlar üretir: _x, a__b)")
     if len(prefix) > PREFIX_MAX:
         raise ControlError(f"Önek en çok {PREFIX_MAX} karakter olmalı (dış adlar 31 karakteri aşmasın)")
-    if _RESERVED_MACRO.match(prefix.upper()):
+    if _RESERVED_MACRO.match((prefix + "_").upper()):     # üretilen makrolar <ÖNEK>_… biçimindedir (LC_, FP_ …)
         raise ControlError(f"'{prefix}' öneki standart C başlıklarına ayrılmış makro adları üretir (E…, INT…, SIG…, "
-                           "PRI…, LC_…, FLT…): başka bir önek seçin")
-    if _RESERVED_FUNC.match(prefix.lower()):
+                           "PRI…, LC_…, FP_…, TIME_…, ATOMIC_…, FLT…): başka bir önek seçin")
+    if _RESERVED_FUNC.match((prefix + "_").lower()):
         raise ControlError(f"'{prefix}' öneki C kütüphanesine ayrılmış fonksiyon adları üretir (is…, to…, str…, "
                            "mem…): başka bir önek seçin")
 
@@ -1721,7 +1971,10 @@ def describe(spec: Spec) -> str:
         return txt
     if isinstance(spec, LtiSpec):
         ny, nu = spec.shape
-        rz = _lti_realization(spec)
+        try:
+            rz = _lti_realization(spec)
+        except ControlError as exc:
+            return f"Ayrık kontrolcü {ny}×{nu}, Ts = {spec.Ts:g} s — gerçeklenemedi: {exc}"
         if rz["mode"] == "sos":
             return f"Ayrık SISO kontrolcü, {len(rz['sos'])} ikinci derece bölüm; Ts = {spec.Ts:g} s"
         nx = rz["A"].shape[0]
@@ -1812,6 +2065,8 @@ def generate(spec: Any, opts: ControlCodegenOptions, footprint_rows: list[Footpr
     """<önek>_<tür>.h / .c, <önek>_<tür>_ornek.c ve KULLANIM_<önek>.md (önek uygulanmış)."""
     spec = controller_spec(spec)
     check_options(opts)
+    for msg in _accuracy_notes(spec, opts):
+        warnings.warn(msg, ControlWarning, stacklevel=2)
     title = _title(spec, opts)
     files = _sources(spec, opts.real, title) + [GeneratedFile(f"spt_{spec.kind}_ornek.c", _example(spec, opts))]
     files = [GeneratedFile(_prefixed(f.name, opts.prefix),
@@ -2024,7 +2279,16 @@ def build_check(spec: Any, prof: McuProfile, compiler: str, real: str, opt: str)
 
 
 _FP_CACHE: dict[str, dict] = {}
-_FP_VERSION = 1
+_FP_VERSION = 2          # 2: .ARM.exidx kod boyutundan ayrı (clang EHABI çözme tablosu)
+
+
+def _exidx_bytes(obj_path) -> int:
+    """Nesnedeki .ARM.exidx* (EHABI çözme tablosu; clang varsayılan üretir, GCC C'de üretmez) bayt toplamı."""
+    try:
+        _, _, secs = tc._elf(Path(obj_path).read_bytes())
+    except (OSError, ValueError):
+        return 0
+    return sum(s.size for s in secs if s.name.startswith(".ARM.exidx") and s.flags & 0x2)
 
 
 def _harness(spec: Spec, baseline: bool) -> str:
@@ -2100,8 +2364,9 @@ def _measure(spec: Spec, opts: ControlCodegenOptions, prof: McuProfile, compiler
         raise RuntimeError(f"{compiler} {prof.key} derleme hatası:\n{build.log}")
     syms = tc.elf_symbols(build.objects["spt_sizeof_probe.c"])
     sz = build.sizes(f"spt_{k}.c")
-    row = {"flash_code": sz.flash, "ram_state": syms[f"spt_sizeof_{k}"].size, "flash_with_libm": None,
-           "stack": None, "stack_own": None, "stack_path": [], "stack_exact": None}
+    exidx = _exidx_bytes(build.objects[f"spt_{k}.c"])
+    row = {"flash_code": sz.flash - exidx, "exidx": exidx, "ram_state": syms[f"spt_sizeof_{k}"].size,
+           "flash_with_libm": None, "stack": None, "stack_own": None, "stack_path": [], "stack_exact": None}
     if gcc is not None and prof.gcc_flags is not None:
         bfiles = {f"spt_{k}.h": files[f"spt_{k}.h"], "spt_fp_base.c": _harness(spec, True)}
         base = tc.link_cross(bfiles, ["spt_fp_base.c"], prof, compiler, opts.opt, defines=[real_def])
@@ -2162,6 +2427,10 @@ def footprint(spec: Any, opts: ControlCodegenOptions, compilers: tuple[str, ...]
                           + (f" (kütüphane: {' → '.join(libs)})" if libs else ""))
             if d.get("stack_exact") is False:
                 stack_note += " — çözülemeyen yığın ayarı var, alt sınır"
+        if d.get("exidx"):
+            stack_note = (f"; kod sütununa dahil DEĞİL (GCC ile aynı ölçüt): +{d['exidx']} B .ARM.exidx "
+                          "(derleyicinin EHABI çözme tablosu; C kodu kullanmaz, bağlanmış imajda tutulduğu kadarı "
+                          "'kütüphane dahil' sütunundadır)") + stack_note
 
         def sc(v, kf: float):
             return None if v is None else int(round(v * kf))
@@ -2333,9 +2602,15 @@ def _semantics_md(spec: Spec) -> str:
   dereceli tek polinom biçimine göre katsayı yuvarlamasına çok daha az duyarlıdır. Bölümler, kutbu birim çembere en
   yakın olan sona gelecek biçimde sıralanır ve eşleştirilir (en yakın sıfır); kazanç ilk bölümdedir. Nedensel
   gecikmeler (pay derecesi < payda derecesi) bölümlerin payına z⁻¹ olarak dağıtılır. Üretimde bölümlerin çarpımının
-  birim çember üzerinde aktarım fonksiyonuyla aynı olduğu (göreli < 1e-7) doğrulanır.
-- MIMO kontrolcü durum uzayıdır; A, 2'nin kuvvetleriyle köşegen benzerlikle dengelenir (yuvarlamasız: giriş / çıkış
-  davranışı bit düzeyinde değişmez, ara büyüklükler dengelenir)."""
+  kaynakla (tf katsayılarının tam rasyonel değeri, zpk ya da ss modeli) 1e-4 … π rad bandında noktasal göreli
+  < 1e-7 aynı olduğu doğrulanır; tf katsayıları kötü koşulluysa (kökler katsayılara çok duyarlı) üretim reddedilir:
+  kontrolcüyü zpk ya da ss olarak verin. zpk'de bölümler doğrudan sıfır / kutuplardan, SISO ss'de kutuplar
+  özdeğerlerden, sıfırlar Rosenbrock kaleminden kurulur (polinoma geçilmez).
+- SISO'da "durum uzayı" seçilirse bölümlerin kademesi (blok alt üçgen) kullanılır — eşlik (companion) biçimi
+  yüksek derecede float'ta ıraksadığı için kullanılmaz. MIMO kontrolcü durum uzayıdır; A, 2'nin kuvvetleriyle
+  köşegen benzerlikle dengelenir (yuvarlamasız: giriş / çıkış davranışı değişmez, ara büyüklükler dengelenir).
+- `float` seçildiğinde katsayılar float32'ye yuvarlanıp denetlenir: kararlı kontrolcü kararsızlaşıyorsa üretim
+  reddedilir, frekans cevabı %1'den fazla sapıyorsa uyarı verilir (double önerilir)."""
     if isinstance(spec, ObserverSpec) and spec.is_state:
         return """\
 - Tüm durumlar ölçülür (gözlemci yok): `u = −K·x` — MATLAB `dlqr` / `lqr` / `place` kazancıyla; `Nbar` ile
@@ -2381,6 +2656,8 @@ def usage_markdown(spec: Any, opts: ControlCodegenOptions, footprint_rows: list[
     if opts.real == "double" and prof.double_is_soft():
         real_note = (f"\n> **Uyarı:** `double` seçildi ama {prof.name} çekirdeğinde çift hassasiyet donanımı yok; tüm "
                      "hesap yazılım kayan noktayla yapılır (10–100× yavaş).\n")
+    for msg in _accuracy_notes(spec, opts):
+        real_note += f"\n> **Uyarı (sayısal doğruluk):** {msg}.\n"
     fpu = {"none": "FPU yok: tüm kayan nokta yazılımda (float bile onlarca çevrim)",
            "sp": "tek hassasiyet FPU: `float` önerilir; `double` yazılım kayan noktadır",
            "dp": "çift hassasiyet FPU: `double` de donanımda (yine de `float` daha hızlı ve küçük)"}[prof.fpu]

@@ -24,7 +24,7 @@ from scipy import linalg, signal
 from spt.control.errors import ControlError
 from spt.control.sysid._util import fd_jacobian, levenberg_marquardt
 from spt.control.sysid.data import IDData, check_complete
-from spt.control.sysid.models import IDSS, Report, make_fit
+from spt.control.sysid.models import IDSS, Report, attach_warnings, make_fit, noise_variance
 
 __all__ = ["n4sid", "ssest", "d2c_ss"]
 
@@ -328,14 +328,31 @@ def n4sid(data: IDData, nx: int, *, weighting: str = "auto", horizon=None, feedt
     w = weighting.lower()
     if w == "auto":
         w = "cva"
+    ny_, nu_ = data.ny, data.nu
+
+    def enough(r, sy, su):
+        # eğik izdüşüm regresyonu [W_p; U_f] belirli olmalı: sütun sayısı satır sayısından büyük
+        rows = sy * ny_ + su * nu_ + r * nu_
+        return all(len(y) - max(sy, su) - r + 1 > rows + 1 for y, _ in exps)
+
     if horizon is None:
         r, sy, su = _auto_horizon(exps, nx)
+        if data.nu == 0:
+            su = 0
+        while not enough(r, sy, su) and max(sy, su) > 1:  # kısa veride geçmiş ufku küçültülür
+            sy, su = max(sy - 1, 1), (max(su - 1, 1) if data.nu else 0)
+        while not enough(r, sy, su) and r > nx + 1:
+            r -= 1
     else:
         r, sy, su = (int(h) for h in horizon)
         if r <= nx:
             raise ControlError("Gelecek ufku r durum sayısından büyük olmalı")
-    if data.nu == 0:
-        su = 0
+        if data.nu == 0:
+            su = 0
+    if not enough(r, sy, su):
+        need = max(sy, su) + r + sy * ny_ + su * nu_ + r * nu_ + 1
+        raise ControlError(f"Veri, {nx}. dereceden alt uzay kestirimi için çok kısa (deney başına en az ~{need} örnek "
+                           "gerekli); dereceyi düşürün ya da daha uzun veri kullanın")
     A, B, C, D, K, x0, S = _n4sid_core(exps, nx, r, sy, su, w, feedthrough, disturbance)
     if initial_state == "zero":
         x0 = [np.zeros(nx) for _ in exps]
@@ -352,6 +369,7 @@ def n4sid(data: IDData, nx: int, *, weighting: str = "auto", horizon=None, feedt
                           data.name, Ntot, data.Ts, {"weighting": w, "horizon": (r, sy, su)},
                           f"N4SID ({w.upper()}, ufuk {r},{sy},{su}) ile tahmin edildi")
     model.singular_values = S
+    attach_warnings(model, data)
     if Ts is not None and Ts == 0:
         return d2c_ss(model)
     return model
@@ -411,9 +429,36 @@ def ssest(data: IDData, nx: int, *, Ts: float | None = 0.0, feedthrough: bool = 
         model = _ssest_siso(data, nx, init, feedthrough, initial_state, max_iter)
     else:
         model = _ssest_mimo(data, exps, nx, init, feedthrough, disturbance, initial_state, max_iter)
+    attach_warnings(model, data)
     if Ts is not None and Ts == 0:
+        if any(h == "foh" for h in data.intersample):
+            # FOH girişli veride ZOH tersi yanlış olur: sürekli parametreler FOH ayrıklaştırmasıyla (değerlendirmeyle
+            # aynı) öngörü hatası ölçütünde arıtılır; başlangıç ayrık optimumun FOH tersi
+            init_ct = _foh_inverse(model, data.Ts, feedthrough)
+            out = _ssest_mimo(data, exps, nx, init_ct, feedthrough, disturbance, initial_state, max_iter,
+                              ct_holds=data.intersample)
+            attach_warnings(out, data)
+            return out
         return d2c_ss(model)
     return model
+
+
+def _foh_inverse(md: IDSS, Ts: float, feedthrough: bool) -> IDSS:
+    """Ayrık modeli FOH ayrıklaştırmasının tersiyle sürekliye çevirir: A = log(A_d)/Ts, B = W(A)⁻¹B_d,
+    W = (e^{ATs} − I)·S2/Ts + S1 (S1 = ∫₀^Ts e^{Aσ}dσ, S2 = ∫₀^Ts e^{Aσ}(Ts−σ)dσ); K ZOH kuralıyla."""
+    mc = d2c_ss(md)
+    A = mc.A
+    n = A.shape[0]
+    M = np.zeros((3 * n, 3 * n))
+    M[:n, :n] = A * Ts
+    M[:n, n:2 * n] = np.eye(n) * Ts
+    M[n:2 * n, 2 * n:] = np.eye(n)
+    E = linalg.expm(M)
+    Phi, S1, S2 = E[:n, :n], E[:n, n:2 * n], E[:n, 2 * n:] * Ts
+    W = (Phi - np.eye(n)) @ S2 / Ts + S1
+    B = np.linalg.solve(W, md.B)
+    D = md.D - md.C @ S2 @ B / Ts if feedthrough else np.zeros_like(md.D)
+    return IDSS(A, B, md.C.copy(), D, mc.K, 0.0, noise_variance=md.noise_variance)
 
 
 def _c2d_idss(m, Ts, data):
@@ -469,7 +514,9 @@ def _ssest_siso(data, nx, init: IDSS, feedthrough, initial_state, max_iter):
     return out
 
 
-def _ssest_mimo(data, exps, nx, init: IDSS, feedthrough, disturbance, initial_state, max_iter):
+def _ssest_mimo(data, exps, nx, init: IDSS, feedthrough, disturbance, initial_state, max_iter, ct_holds=None):
+    """Serbest parametreli PEM. `ct_holds` verilirse parametreler sürekli (A, B, C, D, K) ve öngörücü verinin
+    örnekler arası davranışıyla (ZOH/FOH) tam ayrıklaştırılmış modelden kurulur."""
     ny, nu = data.ny, data.nu
     A0, B0, C0, D0, K0 = (np.array(M, float) for M in (init.A, init.B, init.C, init.D, init.K))
     if not disturbance:
@@ -487,11 +534,26 @@ def _ssest_mimo(data, exps, nx, init: IDSS, feedthrough, disturbance, initial_st
         D = mats[i] if feedthrough else np.zeros((ny, nu))
         i += 1 if feedthrough else 0
         K = mats[i] if disturbance else np.zeros((nx, ny))
+        if ct_holds is not None:
+            sd = IDSS(A, B, C, D, K, 0.0).dss(data.Ts, ct_holds)
+            return sd.A, sd.B, sd.C, sd.D, sd.K
         return A, B, C, D, K
+
+    def unpack_raw(th):
+        mats, k = [], 0
+        for s_ in shapes:
+            n_ = s_[0] * s_[1]
+            mats.append(th[k:k + n_].reshape(s_, order="F"))
+            k += n_
+        D = mats[3] if feedthrough else np.zeros((ny, nu))
+        K = mats[3 + (1 if feedthrough else 0)] if disturbance else np.zeros((nx, ny))
+        return mats[0], mats[1], mats[2], D, K
 
     th0 = np.concatenate([M.ravel(order="F") for M in ([A0, B0, C0] + ([D0] if feedthrough else [])
                                                        + ([K0] if disturbance else []))])
     nth = len(th0)
+    if ct_holds is not None:
+        A0, B0, C0, D0, K0 = unpack(th0)
     ic = initial_state
     if ic == "auto":
         Ez = _pred_errors(A0, B0, C0, D0, K0, exps, [np.zeros(nx)] * len(exps))
@@ -540,13 +602,19 @@ def _ssest_mimo(data, exps, nx, init: IDSS, feedthrough, disturbance, initial_st
     A, B, C, D, K = unpack(z[:nth])
     x0s = [z[nth + k * nx: nth + (k + 1) * nx] for k in range(len(exps))] if nx0 else [np.zeros(nx)] * len(exps)
     Es = _pred_errors(A, B, C, D, K, exps, x0s)
+    out_Ts = data.Ts
+    if ct_holds is not None:  # rapor ayrık öngörücüden; model sürekli parametrelerle
+        A, B, C, D, K = unpack_raw(z[:nth])
+        out_Ts = 0.0
     npar = nx * (ny + nu) + (ny * nu if feedthrough else 0) + (nx * ny if disturbance else 0)
     fit = make_fit([y for y, _ in exps], Es, npar + nx0)
     Ntot = sum(len(e) for e in Es)
     Em = np.vstack(Es)
-    lam = Em.T @ Em / (Ntot - (npar + nx0) / ny)
-    out = IDSS(A, B, C, D, K, data.Ts, x0=x0s[0], noise_variance=lam, input_names=data.input_names,
+    lam, short_msg = noise_variance(Em.T @ Em, Ntot, npar + nx0)
+    out = IDSS(A, B, C, D, K, out_Ts, x0=x0s[0], noise_variance=lam, input_names=data.input_names,
                output_names=data.output_names)
     out.report = Report("SSEST", fit, ic, res.iterations if res else 0, res.why if res else "", npar, nx0, x0s,
                         data.name, Ntot, data.Ts, {"nx": nx}, "SSEST ile tahmin edildi (öngörü hatası yöntemi)")
+    if short_msg:
+        out.report.warnings.append(short_msg)
     return out

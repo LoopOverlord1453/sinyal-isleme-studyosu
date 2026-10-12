@@ -383,3 +383,10 @@ def test_continuous_absorb_and_pade_errors():
     with pytest.raises(ControlError):
         c2d(tf([1], [1, 1]), 0.1, "bilinear")
     assert isinstance(c2d(zpk([], [-1], 1), 0.1), ZPK) and isinstance(c2d(tf([1], [1, 1]), 0.1), TransferFunction)
+
+
+def test_matched_requires_siso():
+    """MATLAB: "The matched method of the c2d command requires a SISO model"."""
+    G = tf([[[1], [1, 0]], [[2], [1]]], [[[1, 1], [1, 2, 4]], [[1, 3], [1, 1, 1]]])
+    with pytest.raises(ControlError):
+        c2d(G, 0.1, "matched")

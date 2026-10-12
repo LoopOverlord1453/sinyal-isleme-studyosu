@@ -66,13 +66,22 @@ class CompiledModel:
     inports: dict[int, int]
     outports: dict[int, int]
     ctx: SimContext
+    plan: list[list[Any]] = field(default_factory=list)
+    routing: list[bool] = field(default_factory=list)
 
-    def signal_key(self, i: int, port: int) -> str:
+    def gather(self, Y: list[list[np.ndarray]], i: int) -> list[np.ndarray]:
+        """i. bloğun giriş değerleri (yönlendirme blokları üzerinden eleman düzeyinde izlenmiş kaynaklardan)."""
+        return gather(self.plan[i], Y)
+
+    def signal_key(self, i: int, port: int, unique: bool = False) -> str:
         e = self.signal_entries.get((i, port))
         if e and e.get("name"):
             return e["name"]
         if self.blocks[i].n_outputs() == 1:
-            return self.names[i]
+            nm = self.names[i]
+            # unique: bu ad başka bir sinyalin adıysa (yalnız otomatik log_all kaydında) "Blok:1" kullanılır
+            if not unique or not any(v.get("name") == nm for k, v in self.signal_entries.items() if k != (i, port)):
+                return nm
         return f"{self.names[i]}:{port + 1}"
 
     def find_signal(self, ref: Any) -> tuple[int, int]:
@@ -349,7 +358,51 @@ def compile_model(model: Model) -> CompiledModel:
             raise ControlError(f"'{names[i]}' bloğunun sürekli durumu var ama örnekleme zamanı sürekli değil.")
         if b.nxd and not b.ts.is_discrete:
             raise ControlError(f"'{names[i]}' bloğunun ayrık durumu var ama örnekleme zamanı ayrık değil.")
-    # ---------------- sıralama ve cebirsel döngü
+    # ---------------- sanal yönlendirme: girişleri eleman düzeyinde gerçek kaynağa izle
+    routes = [b.route() for b in blocks]
+    routing = [r is not None for r in routes]
+    memo: dict[tuple[int, int], list[tuple[int, int, int]]] = {}
+    active: set[tuple[int, int]] = set()
+
+    def origin(s: int, p: int) -> list[tuple[int, int, int]]:
+        key = (s, p)
+        if key in memo:
+            return memo[key]
+        if not routing[s]:
+            res = [(s, p, e) for e in range(blocks[s].out_widths[p])]
+        else:
+            if key in active:
+                raise ControlError(f"Cebirsel döngü: '{names[s]}' yalnız yönlendirme bloklarından (Mux / Demux / "
+                                   "Seçici) oluşan bir çevrimde; çevrime durum içeren bir blok ekleyin.")
+            active.add(key)
+            res = []
+            for q, e in routes[s][p]:
+                ss, sp = srcs[s][q]
+                res.append(origin(ss, sp)[e])
+            active.discard(key)
+        memo[key] = res
+        return res
+
+    plan: list[list[Any]] = []
+    for i in range(n):
+        entries: list[Any] = []
+        for s, p in srcs[i]:
+            if routing[i] or not routing[s]:
+                entries.append((s, p))
+                continue
+            els = origin(s, p)
+            segs: list[list[int]] = []
+            for bs, bp, e in els:
+                if segs and segs[-1][0] == bs and segs[-1][1] == bp and segs[-1][3] == e:
+                    segs[-1][3] = e + 1
+                else:
+                    segs.append([bs, bp, e, e + 1])
+            if len(segs) == 1 and segs[0][2] == 0 and segs[0][3] == blocks[segs[0][0]].out_widths[segs[0][1]]:
+                entries.append((segs[0][0], segs[0][1]))
+            else:
+                entries.append([tuple(sg) for sg in segs])
+        plan.append(entries)
+    # ---------------- sıralama ve cebirsel döngü (yalnız gerçek bloklar arasında)
     succ: list[list[int]] = [[] for _ in range(n)]
     indeg = [0] * n
     for i, b in enumerate(blocks):
@@ -357,11 +410,16 @@ def compile_model(model: Model) -> CompiledModel:
         if len(ft) != len(srcs[i]):
             raise ControlError(f"'{names[i]}' bloğu {len(srcs[i])} giriş için {len(ft)} doğrudan geçiş bayrağı "
                                "verdi.")
-        for (s, _), f in zip(srcs[i], ft):
-            if f:
+        if routing[i]:
+            continue
+        for ent, f in zip(plan[i], ft):
+            if not f:
+                continue
+            for s in ({ent[0]} if isinstance(ent, tuple) else {sg[0] for sg in ent}):
                 succ[s].append(i)
                 indeg[i] += 1
-    heap = [i for i in range(n) if indeg[i] == 0]
+    real = [i for i in range(n) if not routing[i]]
+    heap = [i for i in real if indeg[i] == 0]
     heapq.heapify(heap)
     order: list[int] = []
     while heap:
@@ -371,8 +429,20 @@ def compile_model(model: Model) -> CompiledModel:
             indeg[j] -= 1
             if indeg[j] == 0:
                 heapq.heappush(heap, j)
-    if len(order) < n:
-        raise ControlError(_loop_message(names, succ, [i for i in range(n) if indeg[i] > 0]))
+    if len(order) < len(real):
+        raise ControlError(_loop_message(names, succ, [i for i in real if indeg[i] > 0]))
+    # yönlendirme blokları en sonda, kendi aralarında kaynak sırasıyla (çıkışları yalnız kayıt / gözlem içindir)
+    rset = [i for i in range(n) if routing[i]]
+    placed: set[int] = set()
+    while len(placed) < len(rset):
+        progressed = False
+        for i in rset:
+            if i not in placed and all((not routing[s]) or s in placed for s, _ in srcs[i]):
+                order.append(i)
+                placed.add(i)
+                progressed = True
+        if not progressed:  # pragma: no cover - origin() döngüyü zaten yakalar
+            raise ControlError("Yönlendirme bloklarında döngü.")
     # ---------------- hızlar ve durumlar
     rates: list[SampleTime] = sorted({b.ts for b in blocks if b.ts.is_discrete}, key=lambda s: (s.period, s.offset))
     rate_of = []
@@ -402,7 +472,21 @@ def compile_model(model: Model) -> CompiledModel:
                                    f"numarayı ({num}) kullanıyor.")
             d[num] = i
     return CompiledModel(m.name, blocks, names, index, srcs, order, rate_of, rates, xsl, k, sig_entries, inports,
-                         outports, ctx)
+                         outports, ctx, plan, routing)
+
+
+def gather(plan_i: list[Any], Y: list[list[np.ndarray]]) -> list[np.ndarray]:
+    """Giriş planından değerler: (blok, port) doğrudan; [(blok, port, baş, son) …] parçaları birleştirilir."""
+    out = []
+    for ent in plan_i:
+        if isinstance(ent, tuple):
+            out.append(Y[ent[0]][ent[1]])
+        elif len(ent) == 1:
+            s, p, a, b = ent[0]
+            out.append(Y[s][p][a:b])
+        else:
+            out.append(np.concatenate([Y[s][p][a:b] for s, p, a, b in ent]))
+    return out
 
 
 def _loop_message(names: list[str], succ: list[list[int]], remaining: list[int]) -> str:
@@ -609,11 +693,16 @@ class Simulator:
         self._zc = [i for i in cm.order if cm.rate_of[i] == R_CONT
                     and type(self.blocks[i]).zero_crossings is not Block.zero_crossings]
         self._evt = [i for i, b in enumerate(self.blocks) if type(b).next_event is not Block.next_event]
+        self._plan = cm.plan
+        self._simple = [all(isinstance(e, tuple) for e in pl) for pl in cm.plan]
         self._checked = False
 
     def _u(self, i: int) -> list[np.ndarray]:
+        plan = self._plan[i]
         Y = self.Y
-        return [Y[s][p] for s, p in self.cm.src[i]]
+        if self._simple[i]:
+            return [Y[s][p] for s, p in plan]
+        return gather(plan, Y)
 
     # ------------------------------------------------------------------ ana adım
     def _major(self, t: float, hits: list[bool]) -> None:
@@ -716,14 +805,26 @@ class Simulator:
         keys: dict[str, tuple[int, int]] = {}
         for (i, p), e in cm.signal_entries.items():
             if e.get("log"):
-                keys[cm.signal_key(i, p)] = (i, p)
+                key = cm.signal_key(i, p)
+                if key in keys and keys[key] != (i, p):
+                    a = keys[key]
+                    raise ControlError(f"Kaydedilen iki sinyal aynı adı taşıyor: '{key}' ('{cm.names[a[0]]}' "
+                                       f"bloğunun {a[1] + 1}. çıkışı ve '{cm.names[i]}' bloğunun {p + 1}. çıkışı); "
+                                       "sinyallerden birini yeniden adlandırın.")
+                keys[key] = (i, p)
         if log_all:
             for i, b in enumerate(self.blocks):
                 for p in range(b.n_outputs()):
-                    keys.setdefault(cm.signal_key(i, p), (i, p))
+                    if (i, p) not in keys.values():
+                        keys.setdefault(cm.signal_key(i, p, unique=True), (i, p))
         for ref in extra:
             i, p = cm.find_signal(ref)
             key = ref if isinstance(ref, str) else cm.signal_key(i, p)
+            if key in keys and keys[key] != (i, p):
+                a, b = keys[key], (i, p)
+                raise ControlError(f"Kaydedilen iki sinyal aynı adı taşıyor: '{key}' ('{cm.names[a[0]]}' bloğunun "
+                                   f"{a[1] + 1}. çıkışı ve '{cm.names[b[0]]}' bloğunun {b[1] + 1}. çıkışı); "
+                                   "sinyallerden birini yeniden adlandırın.")
             keys[key] = (i, p)
         self._log_keys = keys
         self._log_t: list[float] = []
@@ -838,20 +939,23 @@ class Simulator:
             if not _multiple(t0 + r.period, h):
                 raise ControlError("Başlangıç zamanı adımın tam katı olmalı (ayrık hızlarla hizalı).")
         nsteps = int(math.floor((tf - t0) / h + 1e-9))
-        times = [t0 + k * h for k in range(nsteps + 1)]
-        if tf - times[-1] > 1e-9 * h:
-            times.append(tf)
-        else:
-            times[-1] = tf
-        if len(times) > max_steps:
-            raise ControlError(f"Adım sayısı ({len(times)}) üst sınırı ({max_steps}) aşıyor; adımı büyütün.")
+        partial = tf - (t0 + nsteps * h) > 1e-9 * h       # son adım kısa (bitiş ızgarada değil)
+        last = nsteps + 1 if partial else nsteps            # son ana adımın indeksi
+        if last > max_steps:
+            raise ControlError(f"Adım sayısı ({last}) üst sınırı ({max_steps}) aşıyor; adımı büyütün ya da bitiş "
+                               "zamanını kısaltın.")
+
+        def time_of(k: int) -> float:                       # birikimli toplama yok: t = t0 + k·h
+            return tf if k == last else t0 + k * h
+
         log_set = None
         if ot is not None:
             log_set = set()
-            arr = np.array(times)
             for tt in ot:
-                k = int(np.argmin(np.abs(arr - tt)))
-                if abs(arr[k] - tt) > 1e-9 * max(h, abs(tt)):
+                k = min(int(round((tt - t0) / h)), last)
+                if abs(tt - tf) <= 1e-9 * max(h, abs(tt)):
+                    k = last
+                if abs(time_of(k) - tt) > 1e-9 * max(h, abs(tt)):
                     raise ControlError(f"Çıktı zamanı {tt:g} s sabit adım ızgarasında değil (h = {h:g} s); ode45 "
                                        "kullanın ya da adımı uyumlu seçin.")
                 log_set.add(k)
@@ -859,8 +963,8 @@ class Simulator:
         cm.ctx.zc = False
         cm.ctx.freeze_events = False
         cancelled = False
-        last = len(times) - 1
-        for k, t in enumerate(times):
+        for k in range(last + 1):
+            t = time_of(k)
             hits = self._hits(t)
             self._major(t, hits)
             if (log_set is None and (k % decimation == 0 or k == last)) or (log_set is not None and k in log_set):
@@ -872,7 +976,7 @@ class Simulator:
             if cm.nx:
                 k1 = self._derivs(t, self.X)
             self._update(t, hits)
-            hk = times[k + 1] - t
+            hk = time_of(k + 1) - t
             if cm.nx:
                 X = self.X
                 if rk4:
@@ -885,11 +989,11 @@ class Simulator:
                 if not np.all(np.isfinite(Xn)):
                     raise ControlError(_blowup(t + hk))
                 self.X = Xn
-            if k % 64 == 0 and self._tick(t, t0, tf):
+            if k % 64 == 0 and self._tick(t, t0, tf):     # iptal / ilerleme döngü içinde (k = 0 dahil)
                 cancelled = True
                 break
         self._t_end = self._log_t[-1] if self._log_t else t0
-        return {"steps": len(times) - 1, "step": h, "rejected": 0, "zc_events": 0}, cancelled
+        return {"steps": k, "step": h, "rejected": 0, "zc_events": 0}, cancelled
 
     # ------------------------------------------------------------------ değişken adım
     def _run_variable(self, t0, tf, rtol, atol, max_step, h0, zc_on, ot, max_steps):

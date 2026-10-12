@@ -491,12 +491,53 @@ def _match_err(ev: np.ndarray, p: np.ndarray) -> float:
     return float(np.max(Dm[r, c] / np.maximum(1.0, np.abs(p[c])))) if p.size else 0.0
 
 
+def _ctrb_basis(A: np.ndarray, B: np.ndarray) -> np.ndarray:
+    """Kontrol edilebilir altuzayın dik tabanı (n×nc): Krylov merdiveni span{B, AB, …}; sıra eşiği PBH testiyle
+    aynı (1e-10·max(1, ‖[A B]‖₂))."""
+    n = A.shape[0]
+    tol = 1e-10 * max(1.0, float(np.linalg.norm(np.hstack([A, B]), 2)))
+
+    def orth(M, Q):
+        for _ in range(2):          # yeniden diklik (Gram–Schmidt iki geçiş)
+            if Q.shape[1]:
+                M = M - Q @ (Q.T @ M)
+        if M.size == 0:
+            return np.zeros((n, 0))
+        U, s, _ = np.linalg.svd(M, full_matrices=False)
+        return U[:, s > tol]
+    Q = orth(B, np.zeros((n, 0)))
+    new = Q
+    while new.shape[1] and Q.shape[1] < n:
+        new = orth(A @ new, Q)
+        Q = np.hstack([Q, new])
+    return Q
+
+
+def _place_yt(A: np.ndarray, B: np.ndarray, p: np.ndarray) -> np.ndarray:
+    """Kontrol edilebilir (A, B) için place_poles (YT). B'nin sütunları bağımlıysa B = U₁S₁V₁' ile bağımsız
+    B₁ = U₁S₁ için çözülür ve K = V₁K₁ (B·K = B₁·K₁; MATLAB gibi en küçük normlu dağıtım)."""
+    U, s, Vt = np.linalg.svd(B, full_matrices=False)
+    rb = int(np.sum(s > 1e-10 * max(1.0, float(s[0]) if s.size else 1.0)))
+    if rb < B.shape[1]:
+        return Vt[:rb].T @ _place_yt(A, U[:, :rb] * s[:rb], p)
+    try:
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            res = place_poles(A, B, p, method="YT", rtol=1e-6, maxiter=200)
+    except (ValueError, np.linalg.LinAlgError) as exc:
+        raise ControlError(f"Kutuplar yerleştirilemedi: {exc}") from None
+    return np.asarray(res.gain_matrix, dtype=float)
+
+
 def place(A, B, p):
     """Durum geri beslemesiyle kutup yerleştirme (MATLAB `place`): eig(A − BK) = p.
 
     Dayanıklı (özvektör koşulunu iyileştiren) yöntem: scipy `place_poles` (Yang–Tits; MATLAB KNV ile aynı amaç).
     Tek girişte K tektir (MATLAB ile aynı); çok girişte kazanç tek değildir, kapalı çevrim özdeğerleri aynıdır.
-    Bir kutbun katlılığı rank(B)'yi aşamaz; kontrol edilemeyen kip varsa ControlError."""
+    Bir kutbun katlılığı rank(B)'yi aşamaz. Kontrol edilemeyen kip (MATLAB gibi): özdeğeri p'de varsa kontrol
+    edilebilir altsistemde kalan kutuplar yerleştirilir (Kalman ayrışımı T'AT = [[Ac, A12], [0, Au]],
+    K = [Kc 0]·T'; ör. place(diag(−1, −2), [0; 1], [−1 −3]) → K = [0 1]); p'de yoksa ControlError. B'nin
+    sütunları bağımlıysa bağımsız sütun uzayında çözülür (K = V₁K₁, en küçük normlu)."""
     if _is_model(A):
         raise ControlError("place(A, B, p) biçiminde çağırın (sistem için A ve B matrislerini verin).")
     A = _mat(A, "A matrisi")
@@ -504,6 +545,7 @@ def place(A, B, p):
     if A.shape != (n, n):
         raise ControlError("A matrisi kare olmalı.")
     B = _bmat(B, n)
+    m = B.shape[1]
     p = _poles(p, n)
     rb = np.linalg.matrix_rank(B)
     if rb == 0:
@@ -513,19 +555,24 @@ def place(A, B, p):
         if mult > rb:
             raise ControlError(f"Kutup {_fmt_c(z)} {mult} kez istendi; bir kutbun katlılığı giriş matrisinin rankını "
                                f"({rb}) aşamaz.")
-    lam = _pbh_fail(A, B, False, only_unstable=False)
-    if lam is not None:
-        raise ControlError(f"Sistem kontrol edilemez (özdeğer {_fmt_c(lam)} girişlerden etkilenmiyor); kutuplar "
-                           "yerleştirilemez.")
-    if B.shape[1] > rb:
-        raise ControlError("B matrisinin sütunları doğrusal bağımlı; bağımsız giriş sütunlarıyla çağırın.")
-    try:
-        with warnings.catch_warnings():
-            warnings.simplefilter("ignore")
-            res = place_poles(A, B, p, method="YT", rtol=1e-6, maxiter=200)
-    except (ValueError, np.linalg.LinAlgError) as exc:
-        raise ControlError(f"Kutuplar yerleştirilemedi: {exc}") from None
-    K = np.asarray(res.gain_matrix, dtype=float)
+    Qc = _ctrb_basis(A, B)
+    nc = Qc.shape[1]
+    if nc == n:
+        K = _place_yt(A, B, p)
+    else:
+        # Kalman ayrışımı: kontrol edilemeyen özdeğerler (Au'nun) p'de bulunmalı; kalanlar (Ac, Bc)'ye
+        T = np.hstack([Qc, sla.null_space(Qc.T)])
+        At = T.T @ A @ T
+        rest = list(p)
+        for lam in np.linalg.eigvals(At[nc:, nc:]):
+            d = [abs(q - lam) for q in rest]
+            j = int(np.argmin(d)) if d else -1
+            if j < 0 or d[j] > 1e-6 * max(1.0, abs(lam)):
+                raise ControlError(f"Sistem kontrol edilemez (özdeğer {_fmt_c(lam)} girişlerden etkilenmiyor ve "
+                                   "istenen kutuplar arasında yok); kutuplar yerleştirilemez.")
+            rest.pop(j)
+        Kc = _place_yt(At[:nc, :nc], (T.T @ B)[:nc], np.asarray(rest, dtype=complex)) if nc else np.zeros((m, 0))
+        K = np.hstack([Kc, np.zeros((m, n - nc))]) @ T.T
     err = _match_err(np.linalg.eigvals(A - B @ K), p)
     if err > 0.1:
         raise ControlError(f"Kutuplar yerleştirilemedi (göreli hata {err:.2g}); sistem kontrol edilemezliğe çok yakın "
@@ -699,7 +746,8 @@ def kalmd(sys, Qn, Rn, Ts):
     """Sürekli bitki için ayrık Kalman kestiricisi (MATLAB `kalmd`).
 
     Bitki ẋ = Ax + Bu + Gw, y = Cx + Du + v (sys girişleri [u; w]). ZOH ayrıklaştırması; süreç gürültüsü
-    Qd = ∫₀^Ts e^{Aτ}GQnG'e^{A'τ}dτ (Van Loan), ölçüm gürültüsü Rd = Rn/Ts. Dönüş `(kest, L, P, M, Z)`."""
+    Qd = ∫₀^Ts e^{Aτ}GQnG'e^{A'τ}dτ (Van Loan), ölçüm gürültüsü Rd = Rn/Ts. Dönüş `(kest, L, P, M, Z)`.
+    Gürültüden çıkışa doğrudan geçiş (D'nin w sütunları ≠ 0) MATLAB gibi ControlError."""
     A, B, C, D, Ts0 = ss_data(sys, "Bitki")
     if Ts0 > 0:
         raise ControlError("kalmd sürekli zamanlı bitki ister (ayrık bitki için kalman kullanın).")
@@ -709,6 +757,11 @@ def kalmd(sys, Qn, Rn, Ts):
     Qm = _mat(Qn, "Süreç gürültüsü kovaryansı Qn")
     nw = Qm.shape[0]
     known, wi, _ = _noise_split(B, D, nw, None, None)
+    if np.any(D[:, wi] != 0):
+        # MATLAB: "kalmd cannot be used for models with direct feedthrough from w to y"
+        raise ControlError("kalmd, gürültü girişlerinden (w) çıkışa doğrudan geçişi olan modellerde (D'nin gürültü "
+                           "sütunları sıfırdan farklı) kullanılamaz; gürültüyü yalnız durumlara giren (D'de sıfır "
+                           "sütunlu) bir modelle verin.")
     n = A.shape[0]
     Bu, G = B[:, known], B[:, wi]
     Qm = _sym(_mat(Qm, "Süreç gürültüsü kovaryansı Qn", (nw, nw)), "Süreç gürültüsü kovaryansı Qn")
@@ -768,7 +821,10 @@ def lqg(sys, QXU, QWV, QI=None, dof: str = "2dof", estimator: str = "delayed"):
     E{[w; v][w; v]'} = QWV. QI verilmezse düzenleyici (girişi y, çıkışı u; kapalı çevrim pozitif geri besleme:
     feedback(sys, K, +1)). QI verilirse integral etkili izleyici (u = −Kx·x̂ − Ki·xi, xi = ∫(r − y); ayrıkta
     xi[k+1] = xi[k] + Ts(r − y)): '2dof' girişler [r; y], '1dof' girişi e = r − y. Durumlar [x̂; xi].
-    Ayrık zamanda MATLAB gibi varsayılan kestirim x̂[n|n−1] (`estimator='delayed'`); 'current' x̂[n|n]."""
+    Ayrık zamanda MATLAB gibi varsayılan kestirim x̂[n|n−1] (`estimator='delayed'`); 'current' x̂[n|n] ve MATLAB
+    `lqg` gibi süreç gürültüsü kestirimi ŵ[n|n] = Nn(CPC' + Rn)⁻¹(y − Cx̂ − Du) ile u = −Kx·x̂[n|n] − Kw·ŵ[n|n]
+    (− Ki·xi), Kw = (R + B'XB)⁻¹B'X: Nn ≠ 0'da en iyi (kesinlik eşdeğerliği) denetleyici budur; Nn = 0'da
+    lqgreg(kalman(…), K) ile aynıdır (Nn ≠ 0'da MATLAB'in `lqgreg(kalman(…), K)` yolu Kw terimini içermez)."""
     A, B, C, D, Ts = ss_data(sys, "Bitki")
     n, m = B.shape
     ny = C.shape[0]
@@ -781,31 +837,39 @@ def lqg(sys, QXU, QWV, QI=None, dof: str = "2dof", estimator: str = "delayed"):
     QWV = _sym(_mat(QWV, "QWV kovaryans matrisi", (n + ny, n + ny)), "QWV kovaryans matrisi")
     Qx, Nxu, Ru = QXU[:n, :n], QXU[:n, n:], QXU[n:, n:]
     Qn, Nn, Rn = QWV[:n, :n], QWV[:n, n:], QWV[n:, n:]
-    L, _, Mx, _, _, _ = _kalman_core(A, B, np.eye(n), C, D, np.zeros((ny, n)), Qn, Rn, Nn, discrete)
-    if not (discrete and estimator == "current"):
-        Mx = None
+    L, P, Mx, _, _, Rb = _kalman_core(A, B, np.eye(n), C, D, np.zeros((ny, n)), Qn, Rn, Nn, discrete)
+    current = discrete and estimator == "current"
     if QI is None:
-        K, _, _ = _lq_core(A, B, Qx, Ru, Nxu, discrete, "LQG (LQR kısmı)")
+        K, X, _ = _lq_core(A, B, Qx, Ru, Nxu, discrete, "LQG (LQR kısmı)")
         Kx, Ki = K, np.zeros((m, 0))
-        Aa = None
+        Bx = B
     else:
         QI = _sym(_mat(QI, "QI ağırlık matrisi", (ny, ny)), "QI ağırlık matrisi")
         Qa = np.zeros((n + ny, n + ny))
         Qa[:n, :n] = Qx
         Qa[n:, n:] = QI
         Na = np.vstack([Nxu, np.zeros((ny, m))])
-        Aa, Ba = _lqi_aug(A, B, C, D, Ts)
-        Ka, _, _ = _lq_core(Aa, Ba, Qa, Ru, Na, discrete, "LQG (LQI kısmı)")
+        Aa, Bx = _lqi_aug(A, B, C, D, Ts)
+        Ka, X, _ = _lq_core(Aa, Bx, Qa, Ru, Na, discrete, "LQG (LQI kısmı)")
         Kx, Ki = Ka[:, :n], Ka[:, n:]
-    # u = Cx·x̂ + Ci·xi + Dy·y  (güncel kestirimde x̂[n|n] = x̂ + Mx(y − Cx̂ − Du), cebirsel döngü çözülür)
-    if Mx is not None:
+    # u = Cx·x̂ + Ci·xi + Dy·y. Güncel kestirimde (MATLAB lqg 'current': kalman(…, 'lqg') + lqgreg / lqgtrack ile
+    # [Kw K]) u = −Kx·x̂[n|n] − Kw·ŵ[n|n] − Ki·xi: x̂[n|n] = x̂ + Mx·e, ŵ[n|n] = E{w[n] | y[0..n]} = Mw·e,
+    # e = y − Cx̂ − Du, Mw = Nn(CPC' + Rn)⁻¹ (w[n] yalnız v[n] ile ilişkili); Kw = (R + B'XB)⁻¹B'X (LQI'de
+    # artırılmış sistemin ilk nx sütunu) — w[n] x[n+1]'i etkilediğinden bilinen kestirimi kesinlik eşdeğerliğiyle
+    # en iyi biçimde karşılanır. Nn = 0'da Mw = 0 (lqgreg(kalman(…), K) ile aynı). Cebirsel döngü
+    # (I − Me·D)u = −(Kx − Me·C)x̂ − Me·y − Ki·xi, Me = Kx·Mx + Kw·Mw, çözülür.
+    if current:
+        Mw = Nn @ np.linalg.inv(C @ P @ C.T + Rb)
+        Kw = np.linalg.solve(Ru + Bx.T @ X @ Bx, Bx.T @ X)[:, :n]
+        Me = Kx @ Mx + Kw @ Mw
         try:
-            W = np.linalg.inv(np.eye(m) + Kx @ Mx @ (-D))
+            W = np.linalg.inv(np.eye(m) - Me @ D)
         except np.linalg.LinAlgError:
-            raise ControlError("Güncel kestirimli LQG'de cebirsel döngü çözülemiyor (I − K·Mx·D tekil).") from None
-        Cx = -W @ Kx @ (np.eye(n) - Mx @ C)
+            raise ControlError("Güncel kestirimli LQG'de cebirsel döngü çözülemiyor (I − (K·Mx + Kw·Mw)·D "
+                               "tekil).") from None
+        Cx = -W @ (Kx - Me @ C)
         Ci = -W @ Ki
-        Dy = -W @ Kx @ Mx
+        Dy = -W @ Me
     else:
         Cx, Ci, Dy = -Kx, -Ki, np.zeros((m, ny))
     BL = B - L @ D

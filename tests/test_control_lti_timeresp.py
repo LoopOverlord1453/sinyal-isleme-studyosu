@@ -346,3 +346,34 @@ def test_step_shapes_and_errors():
         initial(tf([1], [1, 1]), [1.0])
     y, _ = step(tf([1], [1, 1]))
     assert y[-1, 0, 0] == pytest.approx(1.0, abs=1e-3)
+
+
+def test_stepinfo_zero_final_value_matches_matlab_semantics():
+    """Son değer = başlangıç değeri (ör. S = feedback(1, L)): önceden tüm ölçütler 0 dönüyordu. MATLAB R2025b
+    (ölçülen): RiseTime 0, SettlingTime NaN, Overshoot = Undershoot = ∞, TransientTime / SettlingMin / SettlingMax /
+    Peak / PeakTime olağan tanımla."""
+    from spt.control.connect import feedback
+    S = feedback(1, tf([4], [1, 2, 0]))
+    info = stepinfo(S)
+    assert info["RiseTime"] == 0 and math.isnan(info["SettlingTime"])
+    assert math.isinf(info["Overshoot"]) and math.isinf(info["Undershoot"])
+    assert info["Peak"] == pytest.approx(1.0) and info["PeakTime"] == 0
+    assert info["TransientTime"] == pytest.approx(4.037934116881348, rel=1e-3)   # MATLAB (ızgaralı)
+    assert info["SettlingMin"] == pytest.approx(-0.1629291986994923, rel=2e-3)
+    G = stepinfo(tf([1, 0], [1, 3, 2]))                                           # tepe kesin: 1/4, t = ln 2
+    assert G["Peak"] == pytest.approx(0.25, rel=1e-6) and G["PeakTime"] == pytest.approx(math.log(2), rel=1e-3)
+    t = np.arange(0, 5.0001, 0.01)
+    d = stepinfo(-np.exp(-2 * t), t, 0)                                           # dizi yolu: MATLAB ile birebir
+    assert d["TransientTime"] == pytest.approx(1.956035463216449, rel=1e-12)
+    assert d["SettlingMax"] == pytest.approx(-4.539992976248485e-05, rel=1e-9) and d["SettlingMin"] == -1.0
+    assert stepinfo(tf([0], [1, 1]))["Peak"] == 0                                 # sıfır sistem
+
+
+def test_stepinfo_peak_ties_and_zero_final():
+    """MATLAB: (s²−3s+2)/(s²+3s+2) tepesi t = 0'da da erişilir → PeakTime 0; ayrık son değer 0 → SettlingMin 0."""
+    S = stepinfo(tf([1, -3, 2], [1, 3, 2]))
+    assert S["PeakTime"] == 0.0 and S["Peak"] == pytest.approx(1.0)
+    assert S["Undershoot"] == pytest.approx(50.0, rel=1e-12)          # kesin (MATLAB ızgarada 49.9992)
+    S = stepinfo(tf([1, -1], [1, -0.5], 0.1))
+    assert S["SettlingMin"] == 0.0 and S["SettlingMax"] == 1.0 and S["PeakTime"] == 0.0
+    assert S["TransientTime"] == pytest.approx(0.6)

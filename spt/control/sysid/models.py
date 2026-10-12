@@ -66,6 +66,7 @@ class Report:
     Ts: float = 0.0
     options: dict = field(default_factory=dict)
     status: str = ""
+    warnings: list = field(default_factory=list)
 
     @property
     def Fit(self) -> Fit | None:  # MATLAB adıyla erişim
@@ -83,9 +84,9 @@ def make_fit(y_list, e_list, npar: int, loss: str = "det") -> Fit:
     d = int(npar)
     logV = np.log(V) if V > 0 else -np.inf
     c = N * (ny * np.log(2 * np.pi) + 1)
-    fpe = V * (1 + d / N) / (1 - d / N) if N > d else np.inf
+    fpe = V * (1 + d / N) / (1 - d / N) if N > d else np.nan  # MATLAB: N ≤ d ise hesaplanamaz
     aic = N * logV + 2 * d + c
-    aicc = aic + 2 * d * (d + 1) / (N - d - 1) if N - d - 1 > 0 else np.inf
+    aicc = aic + 2 * d * (d + 1) / (N - d - 1) if N - d - 1 > 0 else np.nan
     if len(y_list) == 1:
         fitp = fit_percent(y_list, [y_list[0] - e_list[0]])
         mse = float(np.sum(E * E) / N)
@@ -94,6 +95,33 @@ def make_fit(y_list, e_list, npar: int, loss: str = "det") -> Fit:
         mse = np.array([float(np.sum(np.asarray(e) ** 2) / len(e)) for e in e_list])
     lossv = float(np.trace(S)) if (loss == "trace" and ny > 1) else V
     return Fit(fitp, lossv, mse, fpe, aic, aicc, logV + 2 * d / N, N * logV + c + d * np.log(N))
+
+
+SHORT_DATA_MSG = ("Gürültü varyansı ve FPE hesaplanamadı: örnek sayısı, parametre ve başlangıç durumu sayısını aşmıyor "
+                  "(MATLAB da hesaplamaz); daha uzun veri ya da daha düşük derece kullanın")
+
+
+def noise_variance(EtE, N: int, d: int):
+    """λ = EᵀE/(N − d); N − d ≤ 0 ise NaN (MATLAB gibi) ve uyarı iletisi döner: (λ, ileti | None)."""
+    EtE = np.atleast_2d(np.asarray(EtE, float))
+    if N - d <= 0:
+        return np.full_like(EtE, np.nan), SHORT_DATA_MSG
+    return EtE / (N - d), None
+
+
+def attach_warnings(model, data, extra=()) -> None:
+    """Uyarım ve kısa veri uyarılarını rapora ekler ve ControlWarning olarak yayar."""
+    import warnings as _w
+
+    from spt.control.errors import ControlWarning
+    from spt.control.sysid.data import excitation_warnings
+
+    msgs = list(excitation_warnings(data)) + [m for m in extra if m]
+    rep = getattr(model, "report", None)
+    if rep is not None:
+        rep.warnings = list(dict.fromkeys(list(rep.warnings) + msgs))
+    for m in msgs:
+        _w.warn(m, ControlWarning, stacklevel=3)
 
 
 def fit_percent(y_list, yhat_list) -> np.ndarray:
@@ -182,7 +210,8 @@ def c2d_exact(A, B, C, D, Ts: float, delays=None, hold=None) -> DSS:
         bj = B[:, [j]]
         if hold[j] == "foh":
             if frac[j] > 0:
-                raise ControlError("FOH örnekler arası davranışta kesirli gecikme desteklenmiyor")
+                raise ControlError("FOH örnekler arası davranışta kesirli (örnek katı olmayan) gecikme desteklenmiyor; "
+                                   "yeniden örneklemeyi kapatın ya da gecikmeyi örnek aralığının katı yapın")
             M = np.zeros((n + 2, n + 2))
             M[:n, :n] = A * Ts
             M[:n, n:n + 1] = bj * Ts

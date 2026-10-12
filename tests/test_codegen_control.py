@@ -10,6 +10,7 @@ from __future__ import annotations
 import os
 import tempfile
 from concurrent.futures import ThreadPoolExecutor
+from dataclasses import replace
 from types import SimpleNamespace
 
 import numpy as np
@@ -18,7 +19,7 @@ import pytest
 from spt.codegen import control_c as cc
 from spt.codegen import toolchain as tc
 from spt.codegen.mcu import MCU_PROFILES
-from spt.control.errors import ControlError
+from spt.control.errors import ControlError, ControlWarning
 from tools.matlab_oracle import OracleUnavailable, fixture
 
 
@@ -264,6 +265,29 @@ out.kfh = struct('A', A3, 'B', B3, 'C', C3, 'D', D3, 'L', Lc, 'M', Mc, 'My', Myc
 """
 
 
+# Yüksek dereceli SISO (Ts = 1e-4, kutuplar z = 1 yakınında): h1 6. derece (Tustin), h2 11. derece (integratör ×
+# Butterworth-10, 200 Hz). h2'nin tf katsayıları kendisini temsil etmez: MATLAB'in kendi lsim(tf)'i zpk'den ~%25 sapar.
+# (Değerler bağımsız denetimin R2025b çıktısının bu betikle aynı ilk Nh örneğidir; lsim nedensel.)
+ORACLE_HIGH = r"""
+q = @(x) round(1024*x)/1024;
+Th = 1e-4; Nh = 6000; kh = (0:Nh-1)'; th = kh*Th;
+eh = q(0.5*sin(2*pi*5*th) + 0.3*sign(sin(2*pi*2*th + 0.1)) + 0.05*sin(2*pi*400*th));
+out.Th = Th; out.eh = eh;
+s = tf('s');
+Cc1 = 80*(s+5)*(s+20)*(s^2 + 2*0.05*2000*s + 2000^2) / ...
+      (s*(s+1000)*(s^2 + 2*0.7*1500*s + 1500^2)*(s^2 + 2*0.5*2000*s + 2000^2));
+Cd1 = c2d(Cc1, Th, 'tustin');
+[n1, d1] = tfdata(Cd1, 'v');
+out.h1 = struct('num', real(n1), 'den', real(d1), 'y_tf', real(lsim(Cd1, eh, th)), ...
+                'y_zpk', real(lsim(zpk(Cd1), eh, th)));
+wc = 2*pi*200; nb = 10; pb = wc*exp(1j*pi*(2*(1:nb/2)+nb-1)/(2*nb)); pb = [pb(:); conj(pb(:))];
+Cd2 = c2d(zpk([-10], [0], 30) * zpk([], pb, wc^nb), Th, 'tustin');
+[n2, d2] = tfdata(Cd2, 'v');
+out.h2 = struct('num', real(n2), 'den', real(d2), 'y_tf', real(lsim(tf(Cd2), eh, th)), ...
+                'y_zpk', real(lsim(Cd2, eh, th)));
+"""
+
+
 def oracle() -> dict:
     return fixture("codegen_control", ORACLE)
 
@@ -274,6 +298,10 @@ def oracle_track() -> dict:
 
 def oracle_extra() -> dict:
     return fixture("codegen_control_extra", ORACLE_EXTRA)
+
+
+def oracle_high() -> dict:
+    return fixture("codegen_control_high", ORACLE_HIGH)
 
 
 @pytest.fixture(scope="module")
@@ -402,8 +430,8 @@ def test_simulink_clamping_with_tracking():
 def test_lti_tf_sos(ref):
     """tf1: 5. derece, z = 1'de integratör kutbu + birim çembere yakın karmaşık çift (Tustin). SOS kökten kurulur:
     katsayıyla tanımlı sisteme göre kök koşulu ~1e-9 fark verir (60 basamaklı başvuruyla ölçüldü: MATLAB lsim
-    1.4e-11, SOS 1.4e-9) — sözleşmedeki 1e-8 sınırında. Buna karşılık float'ta SOS, durum uzayından ~1000× doğrudur
-    (MCU'da belirleyici olan budur)."""
+    1.4e-11, SOS 1.4e-9) — sözleşmedeki 1e-8 sınırında. SISO "ss" de aynı bölümlerin kademesidir (eşlik biçimi
+    değil: o, float'ta ~1000× kötüydü), bu yüzden aynı tolerans."""
     e = _v(ref["e"]).reshape(-1, 1)
     for key, rel in (("tf1", 1e-8), ("tf2", 1e-12)):
         t = ref[key]
@@ -412,11 +440,15 @@ def test_lti_tf_sos(ref):
         assert cc._lti_realization(spec)["mode"] == "sos"
         _both(spec, e, want, rel=rel)
         ss_spec = cc.LtiSpec.from_tf(_v(t["num"]), _v(t["den"]), ref["Ts"], realization="ss")
-        _close(cc.simulate(ss_spec, e), want, 1e-10)
-        if key == "tf1":
+        _close(cc.simulate(ss_spec, e), want, rel)
+        if key == "tf2":     # SISO ss nesnesi (otomatik): kutuplar özdeğer, sıfırlar Rosenbrock → bölümler
+            obj = cc.LtiSpec.from_ss(*cc._sos_to_ss(cc._lti_realization(spec)["sos"]), ref["Ts"])
+            assert cc._lti_realization(obj)["mode"] == "sos"
+            _both(obj, e, want, rel=1e-12)
+        if key == "tf1":     # SISO "ss" = bölümlerin kademesi (eşlik biçimi değil): float'ta SOS kadar doğru
             err_sos = np.max(np.abs(cc.run_generated(spec, e, real="float").out - want))
             err_ss = np.max(np.abs(cc.run_generated(ss_spec, e, real="float").out - want))
-            assert err_sos < 5e-4 and err_ss > 100 * err_sos, (err_sos, err_ss)
+            assert err_sos < 5e-4 and err_ss < 5e-4, (err_sos, err_ss)
 
 
 @needs_host
@@ -425,6 +457,96 @@ def test_lti_mimo_ss(ref):
     spec = cc.LtiSpec.from_ss(_m(s["A"], 3, 3), _m(s["B"], 3, 2), _m(s["C"], 2, 3), _m(s["D"], 2, 2), ref["Ts"])
     x = np.column_stack([_v(ref["r"]), _v(ref["y"])])
     _both(spec, x, _m(s["out"], len(x), 2))
+
+
+@pytest.fixture(scope="module")
+def ref_high() -> dict:
+    try:
+        return oracle_high()
+    except OracleUnavailable as exc:
+        pytest.skip(f"MATLAB referansı yok: {exc}")
+
+
+def _h2_zpk(Th: float):
+    """h2'nin sıfır / kutup / kazancı: MATLAB c2d(zpk, 'tustin') = bilinear_zpk (denetimde 2.4e-14 ile doğrulandı)."""
+    from scipy import signal
+
+    wc, nb = 2 * np.pi * 200, 10
+    pb = wc * np.exp(1j * np.pi * (2 * np.arange(1, nb // 2 + 1) + nb - 1) / (2 * nb))
+    return signal.bilinear_zpk(np.array([-10.0]), np.r_[0.0, pb, np.conj(pb)], 30 * wc ** nb, 1 / Th)
+
+
+@needs_host
+def test_high_order_siso_realizations(ref_high):
+    """SISO 'durum uzayı' eskiden eşlik biçimiydi (float'ta 6. derecede 11.7× hata, 11. derecede ıraksama); şimdi
+    bölümlerin kademesi. tf katsayıları sistemi belirlemiyorsa (h2: MATLAB'in kendi lsim(tf)'i bile %25 sapıyor)
+    üretim reddedilir; aynı kontrolcü zpk ya da SISO ss nesnesi olarak bölümlerden doğru üretilir (polinom yok)."""
+    eh, Th = _v(ref_high["eh"]).reshape(-1, 1), ref_high["Th"]
+    h1, h2 = ref_high["h1"], ref_high["h2"]
+
+    def rel(y, want):
+        return float(np.max(np.abs(np.ravel(y) - np.ravel(want))) / np.max(np.abs(want)))
+
+    want1 = _v(h1["y_zpk"])
+    for rz in ("sos", "ss"):
+        spec = cc.LtiSpec.from_tf(_v(h1["num"]), _v(h1["den"]), Th, realization=rz)
+        real = cc._lti_realization(spec)
+        assert real["mode"] == rz
+        if rz == "ss":       # blok alt üçgen: float32 yuvarlamasıyla da kararlı / sınırda (eşlik biçiminde değil)
+            assert np.max(np.abs(np.linalg.eigvals(real["A"].astype(np.float32).astype(float)))) <= 1 + 1e-7
+        assert rel(cc.run_generated(spec, eh).out, want1) < 1e-9
+        assert rel(cc.run_generated(spec, eh, real="float").out, want1) < 2e-3
+        assert cc.float_check(spec)[0] is None
+    want2 = _v(h2["y_zpk"])
+    assert rel(_v(h2["y_tf"]), want2) > 0.05      # tf katsayıları kontrolcüyü temsil etmiyor (MATLAB'de de: 0.6 s'de
+    #                                               %6, 2 s'de %25 — kutup yarıçapı 1.000395, kararsız)
+    for rz in ("auto", "sos", "ss"):
+        with pytest.raises(ControlError, match="kötü koşullu"):
+            cc.generate(cc.LtiSpec.from_tf(_v(h2["num"]), _v(h2["den"]), Th, realization=rz),
+                        cc.ControlCodegenOptions(real="double"))
+    zd, pd, kd = _h2_zpk(Th)
+    zspec = cc.controller_spec(SimpleNamespace(z=zd, p=pd, k=kd, Ts=Th))
+    assert zspec.is_zpk and cc._lti_realization(zspec)["mode"] == "sos"
+    for rz in ("auto", "ss"):
+        s = replace(zspec, realization=rz)
+        assert rel(cc.run_generated(s, eh).out, want2) < 1e-12
+        assert rel(cc.run_generated(s, eh, real="float").out, want2) < 1e-4
+        assert cc.float_check(s)[0] is None
+    # SISO ss nesnesi (11 durum): 10 katlı z = −1 sıfırı özdeğer olarak ~eps^(1/10) saçılır → bölümler 1e-7'de
+    # doğrulanamaz → modelin kendi (blok üçgen) gerçeklemesi korunur; polinoma geçilmez
+    A, B, C, D = cc._sos_to_ss(cc._lti_realization(zspec)["sos"])
+    ss_spec = cc.LtiSpec.from_ss(A, B, C, D, Th)
+    assert cc._lti_realization(ss_spec)["mode"] == "ss"
+    assert rel(cc.run_generated(ss_spec, eh).out, want2) < 1e-11
+    assert rel(cc.run_generated(ss_spec, eh, real="float").out, want2) < 1e-4
+
+
+def test_tf_conditioning_and_float_policy():
+    """tf'den bölümler: sapma katsayıların kendi koşulluluğuyla açıklanıyorsa (≤ 1e-5) görünür uyarıyla kabul, değilse
+    red. float32 yuvarlaması kararlı kutbu birim çembere taşıyorsa float üretimi reddedilir (double serbest)."""
+    from scipy import signal
+
+    Th = 1e-4
+    z = np.r_[-5, -20, np.roots([1, 2 * 0.05 * 2000, 2000 ** 2])]
+    p = np.r_[0, -1000, np.roots([1, 2 * 0.7 * 1500, 1500 ** 2]), np.roots([1, 2 * 0.5 * 2000, 2000 ** 2])]
+    zd, pd, kd = signal.bilinear_zpk(z, p, 80.0, 1 / Th)
+    spec = cc.LtiSpec.from_tf(np.real(np.poly(zd)) * kd, np.real(np.poly(pd)), Th)
+    with pytest.warns(ControlWarning, match="kötü koşullu"):
+        files = cc.generate(spec, cc.ControlCodegenOptions(real="double", prefix="h6"))
+    assert "kötü koşullu" in files[-1].text
+    e = np.random.default_rng(2).standard_normal(3000)
+    ref = signal.sosfilt(signal.zpk2sos(zd, pd, kd), e)
+    assert np.max(np.abs(cc.simulate(spec, e[:, None])[:, 0] - ref)) < 1e-6 * np.max(np.abs(ref))
+    wc, nb = 2 * np.pi * 200, 8                                 # 9. derece: katsayılar ~5e-3 sapma → red
+    pb = wc * np.exp(1j * np.pi * (2 * np.arange(1, nb + 1) + nb - 1) / (2 * nb))
+    zd, pd, kd = signal.bilinear_zpk(np.array([-10.0]), np.r_[0.0, pb], 30 * wc ** nb, 1 / Th)
+    with pytest.raises(ControlError, match="kötü koşullu"):
+        cc.generate(cc.LtiSpec.from_tf(np.real(np.poly(zd)) * kd, np.real(np.poly(pd)), Th),
+                    cc.ControlCodegenOptions(real="double"))
+    s = cc.LtiSpec.from_zpk([], [0.99999, 0.999995], 1e-6, 1e-3)   # float32'de kutup tam z = 1'e kayar
+    with pytest.raises(ControlError, match="double seçin"):
+        cc.generate(s, cc.ControlCodegenOptions(real="float"))
+    assert cc.generate(s, cc.ControlCodegenOptions(real="double"))
 
 
 def test_sos_relative_degree_and_gain():
@@ -677,6 +799,13 @@ def test_footprint_and_cost():
         if tc.cross_flags(MCU_PROFILES["cortex-m4f"], comp) is not None:
             assert by[comp].measured and 100 < by[comp].flash_code < 3000
             assert by[comp].ram_state == cc.state_size(spec, "float") == 56
+            # kod sütunu iki derleyicide de .text+.rodata+.data; clang'ın .ARM.exidx'i ayrı belirtilir
+            files = {f.name: f.text for f in cc._sources(spec, "float")}
+            b = tc.compile_cross(files, ["spt_pid.c"], MCU_PROFILES["cortex-m4f"], comp, "-Os",
+                                 defines=["SPT_USE_DOUBLE=0"], warnings=())
+            ex = cc._exidx_bytes(b.objects["spt_pid.c"])
+            assert by[comp].flash_code == b.sizes("spt_pid.c").flash - ex
+            assert (".ARM.exidx" in by[comp].method) == (ex > 0)
     assert not by["iar"].measured
     costs = cc.cost(spec, opts)
     assert len(costs) == 2 and all(c.cycles > 20 and c.ops["mul"] > 5 and c.ops["div"] == 0 for c in costs)
@@ -695,7 +824,8 @@ def test_cost_other_kinds(name):
 
 # ============================================================================ önek, dosyalar, nesneden tanıma
 def test_prefix_rules_and_files():
-    for bad in ("_x", "a__b", "x_", "1abc", "int8", "Elev", "sig", "isx", "strx", "toolongprefix123", ""):
+    for bad in ("_x", "a__b", "x_", "1abc", "int8", "Elev", "sig", "isx", "strx", "toolongprefix123", "",
+                "lc", "fp", "time", "atomic", "math"):          # LC_…, FP_…, TIME_…: <ÖNEK>_ ile sınanır
         with pytest.raises(ControlError):
             cc.check_prefix(bad)
     for good in ("roll", "Pitch2", "alt_hold", "ctl"):

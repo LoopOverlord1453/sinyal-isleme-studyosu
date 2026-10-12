@@ -9,8 +9,9 @@
   algoritması yerine açık tanım): hedef geçiş frekansı wc'de |L(jwc)| = 1 ve ∠L(jwc) = −180° + PM **tam** tutturulur
   (kapalı biçimli çözüm). Ek serbestlikler: PID / PIDF'de Ti = α·Td (α: 'balanced' 4, 'reference-tracking' 8,
   'disturbance-rejection' 2); PDF / PIDF'de türev filtresi kutbu β·wc'de (β = 10; ayrık ileri Euler'de
-  Tf ≥ Ts). wc verilmezse `_default_wc` kuralı (belgede). Kapalı çevrim kararlılığı kutuplarla (sürekli zamanda
-  gecikme varsa Nyquist sarım sayısıyla) denetlenir.
+  Tf ≥ Ts). wc verilmezse `_default_wc` kuralı (belgede): kapalı çevrim kararlı ve tüm kazanç geçişlerinde faz
+  payı ≥ PM. Kapalı çevrim kararlılığı kutuplarla (sürekli zamanda gecikme varsa Nyquist sarım sayısıyla)
+  denetlenir.
 - Öncül / ardıl (`leadlag`): istenen faz payı + geçiş frekansı ve / veya kalıcı durum hatası; tam çözüm (Phillips).
   `lead`, `lag` el ile; çentik filtresi (`notch`: derinlik ve genişlik); kök yer eğrisinde nokta için kazanç
   (`rlocfind`), istenen sönüm / doğal frekans için kazanç (`gain_for_damping`).
@@ -660,6 +661,11 @@ def _cl_stable(G: _Siso, nC: np.ndarray, dC: np.ndarray) -> bool:
         if G.discrete:
             return bool(np.all(np.abs(r) < 1.0 - 1e-10))
         return bool(np.all(r.real < -1e-10 * np.maximum(1.0, np.abs(r))))
+    # ucuz gerekli koşul: χ(σ) = dC·dG + nC·nG·e^{−στ} gerçel σ ≥ 0'da; σ → ∞'da işareti dC·dG'nin baş katsayısınınki
+    # (τ > 0). χ(0)·baş ≤ 0 ise [0, ∞)'da gerçel kök var (ara değer): kararsız — pahalı Nyquist taramasına gerek yok
+    dd = _pmul(dC, G.den)
+    if (np.polyval(dd, 0.0) + np.polyval(_pmul(nC, G.num), 0.0)) * dd[0] <= 0:
+        return False
     return _nyquist_stable(G, nC, dC)
 
 
@@ -853,22 +859,57 @@ def _phase_eff(phi_deg: float) -> float:
 
 
 _WINDOW = {"PI": (-85.0, -5.0), "PD": (5.0, 85.0), "PDF": (5.0, 85.0), "PID": (-85.0, 85.0), "PIDF": (-85.0, 85.0)}
+_PM_TOL = 1e-4      # derece: tüm geçişlerde faz payı ≥ hedef − tolerans (margin ayrıkta ωTs küçükken ~1e-5° hassas)
 
 
-def _admissible(G, typ, w, PM, alpha, IF, DF):
-    """wc = w'de pencere içinde ve kapalı çevrimi kararlı tasarım (yoksa None)."""
+def _evaluate(G: _Siso, gains, IF: str, DF: str) -> tuple[bool, float]:
+    """(kapalı çevrim kararlı mı, L = C·G'nin TÜM kazanç geçişlerindeki en küçük faz payı — `loop_margins`)."""
+    nC, dC = _ctrl_polys(*gains, G.Ts, IF, DF)
+    if not _cl_stable(G, nC, dC):
+        return False, -math.inf
+    return True, float(loop_margins(G, _Siso((nC, dC, G.Ts), "Denetleyici"))["PhaseMargin"])
+
+
+def _admissible(G, typ, w, PM, alpha, IF, DF, relaxed: bool = False) -> list:
+    """wc = w'deki kapalı çevrimi kararlı tasarımlar: [(gains, en küçük faz payı), ...].
+
+    relaxed = False: yalnız gereken denetleyici fazı tercih penceresindeyse (`_WINDOW`); True: yalnız pencere
+    DIŞINDAYSA (pencere içi ilk taramada denenmiştir; türün olurluluğunu `_design_at` belirler)."""
     g = complex(G.freq(np.array([w]))[0])
     if not np.isfinite(g) or g == 0:
-        return None
+        return []
     phi = float(_wrap_deg(-180.0 + PM - math.degrees(cmath.phase(g))))
     lo, hi = _WINDOW[typ]
-    if not lo <= _phase_eff(phi) <= hi:
-        return None
+    if (lo <= _phase_eff(phi) <= hi) == relaxed:
+        return []
+    out = []
     for gains in _design_at(G, typ, w, PM, alpha, IF, DF):
-        nC, dC = _ctrl_polys(*gains, G.Ts, IF, DF)
-        if _cl_stable(G, nC, dC):
-            return gains
+        stable, pm_min = _evaluate(G, gains, IF, DF)
+        if stable:
+            out.append((gains, pm_min))
+    return out
+
+
+def _hidden_unstable(G: _Siso):
+    """Pay ve paydanın ortak (sadeleşen) kararsız ya da sınırda kökü — gizli kip — varsa o kök, yoksa None.
+
+    Ortak kök 1 + C·G'nin karakteristik polinomu dC·dG + nC·nG'nin her denetleyici için kökü olarak kalır: hiçbir
+    denetleyici kapalı çevrimi (iç) kararlı yapamaz."""
+    if G.num.size <= 1 or G.den.size <= 1:
+        return None
+    zs, ps = np.roots(G.num), np.roots(G.den)
+    for p in ps:
+        bad = abs(p) >= 1.0 - 1e-10 if G.discrete else p.real >= -1e-10 * max(1.0, abs(p))
+        if bad and np.min(np.abs(zs - p)) <= 1e-8 * max(1.0, abs(p)):
+            return complex(p)
     return None
+
+
+def _hidden_msg(p: complex, discrete: bool) -> str:
+    v = f"{p.real:.4g}" if abs(p.imag) <= 1e-12 * max(1.0, abs(p)) else f"{p.real:.4g} ± {abs(p.imag):.4g}j"
+    return (f"Bitkinin kararsız / sınırda kutbu {'z' if discrete else 's'} = {v} bir sıfırla sadeleşiyor (gizli "
+            "kararsız kip): bu kip geri beslemeden etkilenmez, hiçbir denetleyici kapalı çevrimi kararlı yapamaz. "
+            "Sadeleşme modelleme artığıysa modeli sadeleştirin (minreal).")
 
 
 def _wref(G: _Siso) -> float:
@@ -894,13 +935,31 @@ def _wref(G: _Siso) -> float:
 
 
 def _default_wc(G: _Siso, typ: str, PM: float, alpha: float, IF: str, DF: str):
-    """wc verilmediğinde: ω_ref = `_wref(G)` başlangıç; ω_ref'ten başlayarak logaritmik ızgarada (adım 10^(1/40))
-    önce aşağı, sonra yukarı dönüşümlü taranır; pencere içinde (PI: kontrolcü fazı −85…−5°, PD / PDF: 5…85°,
-    PID / PIDF: −85…85°) ve kapalı çevrimi kararlı ilk tasarım seçilir. P ve I türünde iki hedef birden
-    yalnız ∠(G·şekil) = −180° + PM olan frekansta tutar: bu koşulun en düşük (kararlı) kökü."""
+    """wc verilmediğinde. Kabul koşulu: kapalı çevrim kararlı VE L = C·G'nin tüm kazanç geçişlerinde faz payı ≥ PM
+    (`loop_margins`; hedef wc'de tam, başka geçiş varsa onlarda da en az PM — MATLAB `margin`ın en küçük payı).
+
+    - PI, PD, PDF, PID, PIDF: ω_ref = `_wref(G)`'ten başlayarak logaritmik ızgarada (adım 10^(1/40)) önce aşağı,
+      sonra yukarı dönüşümlü taranır. Önce gereken denetleyici fazı tercih penceresindeki (PI: −85…−5°, PD / PDF:
+      5…85°, PID / PIDF: −85…85°) frekanslar, bulunamazsa pencere dışındakiler (ör. ayrık kararsız bitkide PI'ın
+      ≈ −1° gerektirmesi) denenir; ilk kabul edilen tasarım seçilir.
+    - P, I: iki hedef birden yalnız ∠(G·şekil) = −180° + PM (ya da +180° farkla, ters işaretli kazançla) olan
+      frekanslarda tutar; kökler artan frekansla, önce bitkinin statik kazancının işaretiyle, sonra ters işaretle
+      (ör. 1/(s − 1): DC kazancı negatif, kararlı çözüm pozitif kazançlı) denenir.
+    Hiçbir aday kabul edilmez ama kararlı aday varsa en küçük payı en büyük olan döner (`ok = False`; pidtune
+    uyarır). Dönüş (w, gains, ok)."""
     wr = _wref(G)
     wmax = 0.95 * math.pi / G.Ts if G.discrete else 1e6 * G.pz_scale()
     wmin = 1e-6 * G.pz_scale()
+    best = None        # (en küçük pay, w, gains): kararlı ama tüm geçişlerde hedefi sağlamayan en iyi aday
+
+    def consider(w, gains, pm_min):
+        nonlocal best
+        if pm_min >= PM - _PM_TOL:
+            return True
+        if best is None or pm_min > best[0]:
+            best = (pm_min, w, gains)
+        return False
+
     if typ in ("P", "I"):
         def fv(w):
             w = np.asarray(w, dtype=float)
@@ -913,28 +972,36 @@ def _default_wc(G: _Siso, typ: str, PM: float, alpha: float, IF: str, DF: str):
             return float(fv(np.array([w]))[0])
         grid = np.geomspace(wmin, wmax, 6000)
         vals = fv(grid)
-        sgn = math.copysign(1.0, _plant_type_gain(G, 0)[1])
-        for i in np.flatnonzero(np.sign(vals[:-1]) * np.sign(vals[1:]) < 0):
-            r = brentq(f, grid[i], grid[i + 1], xtol=1e-15 * grid[i], rtol=1e-15)
-            for gains in _design_at(G, typ, r, PM, alpha, IF, DF):
-                if abs(_check_targets(G, gains, r, PM, IF, DF)) > 1e-6 or (gains[0] + gains[1]) * sgn <= 0:
-                    continue
-                nC, dC = _ctrl_polys(*gains, G.Ts, IF, DF)
-                if _cl_stable(G, nC, dC):
-                    return r, gains
-        raise ControlError(f"{typ} denetleyici bu bitkide hedef faz payını ({PM:g}°) kararlı bir çevrimle "
-                           "sağlayamıyor; başka bir denetleyici türü seçin ya da geçiş frekansı verin.")
-    step = 10 ** (1 / 40)
-    for k in range(0, 481):
-        for sgn in ((0,) if k == 0 else (-1, 1)):
-            w = wr * step ** (sgn * k)
-            if not wmin <= w <= wmax:
-                continue
-            gains = _admissible(G, typ, w, PM, alpha, IF, DF)
-            if gains is not None:
-                return w, gains
-    raise ControlError(f"{typ} denetleyiciyle hedef faz payını ({PM:g}°) sağlayan kararlı bir tasarım bulunamadı; "
-                       "başka bir tür (ör. PIDF) ya da daha küçük faz payı deneyin.")
+        roots = [brentq(f, grid[i], grid[i + 1], xtol=1e-15 * grid[i], rtol=1e-15)
+                 for i in np.flatnonzero(np.sign(vals[:-1]) * np.sign(vals[1:]) < 0)]
+        s0 = math.copysign(1.0, _plant_type_gain(G, 0)[1])
+        for sgn in (s0, -s0):
+            for r in roots:
+                for gains in _design_at(G, typ, r, PM, alpha, IF, DF):
+                    if abs(_check_targets(G, gains, r, PM, IF, DF)) > 1e-6 or (gains[0] + gains[1]) * sgn <= 0:
+                        continue
+                    stable, pm_min = _evaluate(G, gains, IF, DF)
+                    if stable and consider(r, gains, pm_min):
+                        return r, gains, True
+    else:
+        step = 10 ** (1 / 40)
+        for relaxed in (False, True):
+            for k in range(0, 481):
+                for sgn in ((0,) if k == 0 else (-1, 1)):
+                    w = wr * step ** (sgn * k)
+                    if not wmin <= w <= wmax:
+                        continue
+                    for gains, pm_min in _admissible(G, typ, w, PM, alpha, IF, DF, relaxed):
+                        if consider(w, gains, pm_min):
+                            return w, gains, True
+    if best is not None:
+        return best[1], best[2], False
+    hid = _hidden_unstable(G)
+    if hid is not None:
+        raise ControlError(_hidden_msg(hid, G.discrete))
+    raise ControlError(f"{typ} denetleyiciyle kapalı çevrimi kararlı yapan ve geçiş frekansında {PM:g}° faz payını "
+                       "sağlayan bir tasarım hiçbir geçiş frekansında bulunamadı; başka bir tür (ör. PIDF), daha küçük "
+                       "faz payı ya da geçiş frekansı verin.")
 
 
 def pidtune(G, type: Any = "PI", wc: float | None = None, *, PhaseMargin: float = 60.0,
@@ -944,16 +1011,21 @@ def pidtune(G, type: Any = "PI", wc: float | None = None, *, PhaseMargin: float 
 
     Tanım: L = C·G için hedef geçiş frekansı wc'de |L(jwc)| = 1 ve ∠L(jwc) = −180° + PhaseMargin **tam**
     sağlanır (ayrık bitkide z = e^{jwcTs}; gecikmeler dahil). Serbestlikler:
-    - P, I: tek parametre; wc verilirse yalnız |L| = 1 (faz payı sonuçtur), verilmezse iki hedefi birden sağlayan
-      frekans aranır. PI, PD: iki parametre, iki denklem (tek çözüm).
+    - P, I: tek parametre; wc verilirse yalnız |L| = 1 (faz payı sonuçtur; kazancın işareti bitkinin statik
+      kazancınınki, o işaretle kapalı çevrim kararsız ve ters işaretle kararlıysa ters işaret), verilmezse iki
+      hedefi birden sağlayan frekans aranır. PI, PD: iki parametre, iki denklem (tek çözüm).
     - PDF / PIDF: türev filtresi Tf = 1/(10·wc) (ayrık ileri Euler'de en az Ts).
     - PID / PIDF: Ti = α·Td, α = 4 ('balanced'), 8 ('reference-tracking'), 2 ('disturbance-rejection').
-    wc verilmezse `_default_wc` kuralı. Kapalı çevrim kararlılığı kutuplarla (sürekli + gecikmede Nyquist)
-    denetlenir; wc verilip çevrim kararsızsa ControlWarning ve info['Stable'] = False.
+    wc verilmezse `_default_wc` kuralı: kapalı çevrim kararlı ve L'nin TÜM kazanç geçişlerinde faz payı ≥ hedef.
+    Kapalı çevrim kararlılığı kutuplarla (sürekli + gecikmede Nyquist) denetlenir; çevrim kararsızsa ya da başka
+    bir geçişte pay hedefin altında kalıyorsa ControlWarning (info['Stable'] = False / info['PhaseMargin'] < hedef).
+    Bitkide sadeleşen kararsız kip (gizli kip) varsa hiçbir denetleyici kararlı yapamaz: ileti bunu söyler.
 
     `type`: 'P', 'I', 'PI', 'PD', 'PDF', 'PID', 'PIDF' ya da şablon PID nesnesi (biçim / formüller ondan alınır).
-    Dönüş `(C, info)`: C paralel (`form='standard'` ile standart) PID; info = {'Stable', 'CrossoverFrequency',
-    'PhaseMargin'} (sonuç denetleyiciyle yeniden ölçülmüş değerler)."""
+    Dönüş `(C, info)`: C paralel (`form='standard'` ile standart) PID; info (sonuç denetleyiciyle yeniden ölçülür):
+    'Stable', 'CrossoverFrequency' (tasarım geçiş frekansı wc), 'PhaseMargin' (tüm kazanç geçişlerindeki EN KÜÇÜK
+    faz payı — MATLAB `margin` gibi; tek geçişte wc'deki pay), 'LoopGainAtCrossover' (|L(wc)|), 'Crossovers' ve
+    'PhaseMargins' (`loop_margins`: tüm geçişler ve payları)."""
     if isinstance(type, _PIDBase):
         tmpl = type
         IFormula, DFormula = tmpl.IFormula, tmpl.DFormula
@@ -983,7 +1055,7 @@ def pidtune(G, type: Any = "PI", wc: float | None = None, *, PhaseMargin: float 
         raise ControlError("Yamuk (Trapezoidal) türev formülü filtresiz (Tf = 0) PID / PD ile kullanılamaz.")
     alpha = _FOCUS_ALPHA[DesignFocus]
     if wc is None:
-        w, gains = _default_wc(Gs, typ, PM, alpha, IF, DF)
+        w, gains, _ = _default_wc(Gs, typ, PM, alpha, IF, DF)
     else:
         w = _real(wc, "Geçiş frekansı")
         if not w > 0:
@@ -996,31 +1068,46 @@ def pidtune(G, type: Any = "PI", wc: float | None = None, *, PhaseMargin: float 
             g = complex(Gs.at(x)[0]) * (complex(_int_eval(x[0], Gs.Ts, IF)) if typ == "I" else 1.0)
             if not np.isfinite(g) or g == 0:
                 raise ControlError("Bitkinin bu frekanstaki kazancı sıfır ya da sonsuz.")
-            # |L| = 1; işaret: bitkinin (integratörler / türevleyiciler ayrılmış) statik kazancının işareti
-            k = math.copysign(1.0 / abs(g), _plant_type_gain(Gs, 0)[1])
-            gains = (k, 0.0, 0.0, 0.0) if typ == "P" else (0.0, k, 0.0, 0.0)
+            # |L| = 1 iki işaretle de sağlanır: önce bitkinin (integratörler / türevleyiciler ayrılmış) statik
+            # kazancının işareti; kapalı çevrimi kararsızsa ve ters işaret kararlıysa ters işaret (ör. 1/(s − 1))
+            s0 = math.copysign(1.0, _plant_type_gain(Gs, 0)[1])
+            opts = [(sg / abs(g), 0.0, 0.0, 0.0) if typ == "P" else (0.0, sg / abs(g), 0.0, 0.0) for sg in (s0, -s0)]
+            gains = next((gg for gg in opts if _cl_stable(Gs, *_ctrl_polys(*gg, Gs.Ts, IF, DF))), opts[0])
         else:
             cands = _design_at(Gs, typ, w, PM, alpha, IF, DF)
             if not cands:
                 raise ControlError(f"{typ} denetleyici {w:.4g} rad/s'de {PM:g}° faz payını sağlayamaz (gereken faz "
                                    "katkısı bu türün yapabileceği aralıkta değil ya da kazançlar zıt işaretli çıkıyor);"
                                    " başka bir geçiş frekansı ya da tür seçin.")
-            gains = cands[0]
-            for gg in cands:
-                nC, dC = _ctrl_polys(*gg, Gs.Ts, IF, DF)
-                if _cl_stable(Gs, nC, dC):
-                    gains = gg
-                    break
+            # kararlı ve tüm geçişlerde hedefi sağlayan aday; yoksa kararlı olanlardan en küçük payı en büyük olan
+            scored = [(st, pm_min, gg) for gg in cands for st, pm_min in [_evaluate(Gs, gg, IF, DF)]]
+            gains = max(scored, key=lambda t: (t[0], min(t[1], PM - _PM_TOL)))[2]
     Kp, Ki, Kd, Tf = gains
     C = PID(Kp, Ki, Kd, Tf, Gs.Ts, IF, DF)
     nC, dC = C._num[0][0], C._den[0][0]
     stable = _cl_stable(Gs, nC, dC)
     x = Gs.point(np.array([w]))
     L = complex((C.evalfr(x) * Gs.at(x))[0])
-    info = {"Stable": bool(stable), "CrossoverFrequency": float(w),
-            "PhaseMargin": float(_wrap_deg(math.degrees(cmath.phase(L)) + 180.0)), "LoopGainAtCrossover": abs(L)}
+    pm_w = float(_wrap_deg(math.degrees(cmath.phase(L)) + 180.0))
+    lm = loop_margins(Gs, _Siso((nC, dC, Gs.Ts), "Denetleyici"))
+    # PhaseMargin: tüm kazanç geçişlerindeki en küçük faz payı (MATLAB `margin`); hedef wc'de tam tutturulan
+    # pay tek geçişte bununla aynıdır. margin'in w'nin kendisi için bulduğu geçiş (ayrıkta ωTs küçükken ~1e-8 bağıl
+    # hatayla) aynı geçiştir: orada w'de kesin hesaplanan pay kullanılır, yoksa sahte "başka geçiş" uyarısı çıkar
+    pms = [pm_w if abs(wx - w) <= 1e-6 * w else float(p) for wx, p in zip(lm["Crossovers"], lm["PhaseMargins"])]
+    pm_min = min([pm_w] + pms)
+    info = {"Stable": bool(stable), "CrossoverFrequency": float(w), "PhaseMargin": float(pm_min),
+            "LoopGainAtCrossover": abs(L), "Crossovers": [float(v) for v in lm["Crossovers"]],
+            "PhaseMargins": pms}
     if not stable:
-        warnings.warn("Ayarlanan denetleyiciyle kapalı çevrim kararsız; geçiş frekansını ya da türü değiştirin.",
+        hid = _hidden_unstable(Gs)
+        warnings.warn(_hidden_msg(hid, Gs.discrete) if hid is not None else
+                      "Ayarlanan denetleyiciyle kapalı çevrim kararsız; geçiş frekansını ya da türü değiştirin.",
+                      ControlWarning, stacklevel=2)
+    elif pm_min < PM - _PM_TOL and not (wc is not None and typ in ("P", "I")):
+        k = int(np.argmin(pms)) if pms else -1
+        where = f" ({lm['Crossovers'][k]:.4g} rad/s'de)" if k >= 0 else ""
+        warnings.warn(f"Hedef faz payı ({PM:g}°) {w:.4g} rad/s'de tam sağlandı, ama çevrimin başka kazanç geçişi de "
+                      f"var ve en küçük faz payı {pm_min:.4g}°{where}; başka bir tür ya da geçiş frekansı deneyin.",
                       ControlWarning, stacklevel=2)
     if form == "standard":
         C = pidstd(C)

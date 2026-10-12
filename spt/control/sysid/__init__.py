@@ -8,7 +8,8 @@ bj, polyest, ar) · ctime (tfest, procest) · subspace (n4sid, ssest) · nonpara
 delayest, arxstruc, selstruc, struc) · evaluate (compare, predict, sim, pe, resid) · nonlinear (nlarx, nlhw).
 """
 from spt.control.sysid.ctime import procest, tfest
-from spt.control.sysid.data import (IDData, TrendInfo, check_complete, detrend, fill_missing, iddata,
+from spt.control.sysid.data import (IDData, TrendInfo, check_complete, detrend, excitation_warnings, fill_missing,
+                                    iddata,
                                     iddata_from_handle, idfilt, mat_variables, merge, read_csv, read_mat, resample,
                                     retrend, split)
 from spt.control.sysid.evaluate import CompareResult, ResidResult, compare, pe, predict, resid, sim
@@ -24,7 +25,7 @@ from spt.control.sysid.subspace import d2c_ss, n4sid, ssest
 __all__ = [
     # veri
     "IDData", "TrendInfo", "iddata", "merge", "split", "detrend", "retrend", "idfilt", "resample", "fill_missing",
-    "check_complete", "iddata_from_handle", "read_csv", "read_mat", "mat_variables",
+    "check_complete", "excitation_warnings", "iddata_from_handle", "read_csv", "read_mat", "mat_variables",
     # modeller
     "IDModel", "IDPoly", "IDSS", "IDTF", "IDProc", "IDFRD", "Fit", "Report", "idpoly", "idss", "idtf", "idproc",
     "IDNLARX", "IDNLHW",

@@ -246,7 +246,7 @@ def _eval_signals(cm: CompiledModel, t: float, X: np.ndarray, XD: list[np.ndarra
         for i in cm.order:
             b = blocks[i]
             xs = X[cm.xsl[i]] if b.nx else np.zeros(0)
-            u = [Y[s][p] for s, p in cm.src[i]]
+            u = cm.gather(Y, i)
             if i in zz and zz[i] is not None:
                 Y[i] = [zz[i].copy()]
                 continue
@@ -393,7 +393,7 @@ def linearize(model: Model, io: list[LinPoint] | LinPoint, op: OperatingPoint | 
         if i not in keep:
             continue
         xs = X[cm.xsl[i]] if b.nx else np.zeros(0)
-        u = [Y[s][p] for s, p in cm.src[i]]
+        u = cm.gather(Y, i)
         A, B, C, D = block_jacobian(b, t, xs, XD[i], u)
         loc[i] = (A, B, C, D)
     # ---------------- hedef hız
@@ -747,7 +747,7 @@ def findop(model: Model, spec: OperSpec | None = None, *, tol: float = 1e-6, max
         names_res.clear()
         for i, (x, known, steady) in st_info.items():
             b = blocks[i]
-            u = [Y[s][p] for s, p in cm.src[i]]
+            u = cm.gather(Y, i)
             if b.nx:
                 d = np.asarray(b.derivatives(t, X[cm.xsl[i]], XD[i], u), float)
             else:

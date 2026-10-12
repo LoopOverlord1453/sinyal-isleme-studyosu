@@ -11,7 +11,8 @@ MATLAB karşılıkları (R2025b'den ölçülen davranışlar):
 - `sumblk('e = r - y', n)`: statik toplama bloğu (tf), çok kanallıda e(1) … adları.
 - `loopsens(P, C)`: Si, Ti, Li, So, To, Lo, PSi, CSo, Poles, Stable (negatif geri besleme).
 - Gecikme: sürekli zamanda geri besleme halkasındaki gecikme iç gecikme gerektirir → açık hata (pade önerisi);
-  ayrık zamanda gecikmeler duruma tam katılır.
+  feedback'te halka dışındaki (geri beslenmeyen kanallardaki) giriş / çıkış gecikmeleri korunur; ayrık zamanda
+  gecikmeler duruma tam katılır. Bilinen sınır: connect / lft / loopsens halka dışı sürekli gecikmeyi de reddeder.
 """
 from __future__ import annotations
 
@@ -198,6 +199,15 @@ def feedback(sys1, sys2=1.0, sign: int = -1, feedin=None, feedout=None) -> LTI:
         if _pzero(den):
             raise ControlError("Kapalı çevrim paydası sıfır (cebirsel döngü tekil).")
         return TransferFunction(num, den, Ts, input_names=s1.input_names, output_names=s1.output_names)
+    keep_in = keep_out = None
+    if Ts == 0 and (s1.has_delay() or s2.has_delay()):
+        # Halka dışında kalan gecikmeler (geri beslenmeyen girişlerin / çıkışların) dışarıda tutulabilir; halkadaki
+        # gecikme sürekli zamanda iç gecikme gerektirir (aşağıda _ss_nodelay hata verir).
+        a0 = convert.to_ss(s1)
+        if not s2.has_delay() and not np.any(a0.input_delay[fin]) and not np.any(a0.output_delay[fout]):
+            keep_in, keep_out = a0.input_delay.copy(), a0.output_delay.copy()
+            s1 = StateSpace(a0.A, a0.B, a0.C, a0.D, Ts, state_names=a0.state_names, input_names=a0.input_names,
+                            output_names=a0.output_names)
     a, b = _ss_nodelay(s1, Ts), _ss_nodelay(s2, Ts)
     big = _append_ss([a, b])
     m1, p1 = a.ninputs, a.noutputs
@@ -208,7 +218,8 @@ def feedback(sys1, sys2=1.0, sign: int = -1, feedin=None, feedout=None) -> LTI:
         K[m1 + idx, i] = 1.0
     Ac, Bc, Cc, Dc = _close(big.A, big.B, big.C, big.D, K)
     out = StateSpace(Ac, Bc[:, :m1], Cc[:p1], Dc[:p1, :m1], Ts, state_names=big.state_names,
-                     input_names=s1.input_names, output_names=s1.output_names)
+                     input_names=s1.input_names, output_names=s1.output_names, input_delay=keep_in,
+                     output_delay=keep_out)
     if cls is StateSpace:
         return out
     return convert.to_tf(out) if cls is TransferFunction else convert.to_zpk(out)

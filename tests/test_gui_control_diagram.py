@@ -558,13 +558,17 @@ def test_layout_readable_at_1366x768(ed, app, tmp_path):
     assert ed.btn_lin.geometry().right() <= ed.width()                # araç çubuğu sığar
     assert ed.btn_run.isVisible() and ed.solver.isVisible() and ed.stop_edit.isVisible()
     assert list(ed.scopes.cards) == ["Çıkış"]
-    plot = ed.scopes.plots["Çıkış"]                                    # sonuçtan sonra skop alanı açılır,
+    assert ed.center_tabs.currentIndex() == 1                        # sonuç gelince Sonuçlar sekmesi
+    plot = ed.scopes.plots["Çıkış"]
     vp = ed.scopes.scroll.viewport()
     from PyQt6.QtCore import QPoint, QRect
 
-    assert plot.height() >= 120 and vp.rect().contains(QRect(plot.mapTo(vp, QPoint(0, 0)), plot.size()))  # kaydırmasız
-    ov = ed.status_overlay.geometry()                                # durum satırı tuvalin içinde, altta
-    assert ed.view.viewport().geometry().contains(ov.center()) and "Benzetim bitti" in ed.status_text
+    assert plot.height() >= 170 and vp.rect().contains(QRect(plot.mapTo(vp, QPoint(0, 0)), plot.size()))  # kaydırmasız
+    # durum satırı tuvalin dışında (blokları örtmez)
+    assert ed.status_overlay.parentWidget() is not ed.view and "Benzetim bitti" in ed.status_text
+    ed.center_tabs.setCurrentIndex(0)
+    pump(app, 0.2)
+    assert ed.view.height() >= 300                                    # tuval tam boy
     # tüm bloklar görünür alanda (Sığdır)
     vr = ed.view.mapToScene(ed.view.viewport().rect()).boundingRect()
     for it in ed.scene.blocks.values():
@@ -644,3 +648,89 @@ def test_subsystem_block_loads_runs_and_copies_with_contents(ed):
     made = ed.scene.paste()
     assert len(made) == 1 and made[0].name == "Alt 2"
     assert made[0].block.system.blocks["K"].params["K"][0, 0] == 2.0 and made[0].n_in() == 1
+
+
+def test_logged_signals_and_templates_show_results(ed, app):
+    """Kullanıcı bildirimi: "skop kayıt çalışmıyor" — İHA şablonları sinyalleri telde kaydediyordu (log), sonuç paneli
+    yalnız Skop bloklarını gösterdiği için hiçbir şey görünmüyordu. Artık kaydedilen sinyaller ayrı kartlarda."""
+    names = [t.name for t in __import__("spt.gui.control.diagram_editor", fromlist=["templates"]).templates()]
+    tpl = next(n for n in names if "roll" in n)
+    ed.load_template(tpl)
+    assert ed.run(wait=True), ed.status_text
+    pump(app, 0.2)
+    res = ed.last_result
+    assert res.signals and set(ed.scopes.signal_cards) == set(res.signals)
+    for sig, arr in res.signals.items():
+        tr = ed.scopes.traces["sinyal:" + sig]
+        assert np.array_equal(tr[0].item.yData, np.asarray(arr).reshape(len(res.t), -1)[:, 0])
+    assert "Sonuçlar (" in ed.center_tabs.tabText(1)
+    cols = ed.scopes.series_colors()
+    assert len(set(cols)) == len(cols)                                # aynı görünümde renk tekrarı yok
+    # telde "Sinyali kaydet": Skop'suz diyagramda da sonuç gelir
+    ed.new_diagram(confirm=False)
+    ed.add_block("Step", "Basamak", (0, 0))
+    ed.add_block("TransferFcn", "G", (200, 0))
+    ed.add_block("Terminator", "Son", (400, 0))
+    ed.connect("Basamak", "G")
+    ed.connect("G", "Son")
+    ed.set_signal_log("G", 0, True)
+    assert ed.run(wait=True), ed.status_text
+    pump(app, 0.2)
+    assert list(ed.scopes.signal_cards) == ["G"] and not ed.scopes.cards
+    y = ed.scopes.traces["sinyal:G"][0].item.yData
+    assert y[-1] == pytest.approx(1 - np.exp(-9.0), rel=1e-5)        # 1/(s+1), basamak t = 1 s; RK4 h = 0.2 s hatası
+    ed.set_signal_log("G", 0, False)
+    assert ed.run(wait=True)
+    pump(app, 0.2)
+    assert ed.scopes.count == 0
+
+
+def test_scope_added_from_palette_records(ed, app):
+    """Kullanıcı bildirimi: paletten eklenen Skop'un varsayılan adı "Skop / kayıt" idi; '/' blok adında yasak
+    (alt sistem yol ayıracı) olduğundan Çalıştır istisna fırlatıyordu. Artık ad "Skop" ve kayıt çalışır."""
+    names = []
+    for tn in ("Step", "TransferFcn", "Scope", "MinMax"):
+        before = set(ed.scene.blocks)
+        ed._add_at_center(tn)
+        names.append(sorted(set(ed.scene.blocks) - before)[0])
+    assert names[2] == "Skop" and names[3] == "En küçük"
+    assert not any(c in n for n in names for c in "/\n\t")
+    ed.remove_block(names[3]) if hasattr(ed, "remove_block") else ed.scene.blocks[names[3]].setSelected(True)
+    if names[3] in ed.scene.blocks:
+        ed.scene.delete_selection()
+    ed.connect(names[0], names[1])
+    ed.connect(names[1], names[2])
+    assert ed.run(wait=True), ed.status_text
+    pump(app, 0.2)
+    assert list(ed.scopes.cards) == ["Skop"] and ed.last_error is None
+
+
+def test_every_palette_block_adds_and_round_trips(ed, app, tmp_path):
+    """Paletteki her blok türü: çift tıklamayla eklenir, seçilince parametre paneli açılır, modele dönüşür, kaydedilip
+    açılır (geçersiz varsayılan ad ya da panel hatası kalmasın)."""
+    from spt.control.diagram import block_types
+    from spt.control.diagram.model import Model
+
+    for tn in block_types():
+        ed.new_diagram(confirm=False)
+        ed._add_at_center(tn)
+        (name,) = list(ed.scene.blocks)
+        assert not any(c in name for c in "/\n\t"), (tn, name)
+        ed.scene.blocks[name].setSelected(True)
+        pump(app, 0.01)
+        path = tmp_path / "x.sptd"
+        ed.to_model(settings=False).save(path)
+        assert name in Model.load(path).blocks, tn
+
+
+def test_results_tab_title_resets_on_new_and_load(ed):
+    """Denetim: yeni / açılan diyagramda 'Sonuçlar (n)' başlığı eski sayıyla kalmamalı."""
+    build_pid_loop(ed)
+    assert ed.run(wait=True), ed.status_text
+    assert ed.center_tabs.tabText(1).startswith("Sonuçlar (")
+    assert ed.new_diagram(confirm=False)
+    assert ed.center_tabs.tabText(1) == "Sonuçlar"
+    build_pid_loop(ed)
+    assert ed.run(wait=True), ed.status_text
+    ed.load_model(ed.to_model())
+    assert ed.center_tabs.tabText(1) == "Sonuçlar"

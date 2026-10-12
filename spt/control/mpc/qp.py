@@ -17,7 +17,9 @@ yönteminin türevidir; kaynak kodu yayımlanmamıştır (p-kod). Burada GI'nin 
 (Cholesky + Givens tabanlı QR güncellemeleri) uygulanır. Kesin konveks QP'nin çözümü tek olduğundan sonuç (x, aktif
 küme, çarpanlar) KWIK ve quadprog ile aynıdır (testler: ~1e-14). Yineleme sayısı MATLAB'in sayımıyla aynı kuralla
 verilir: ``1 + (ekleme + çıkarma adımları)``; eşitlikler ve sıcak başlangıç eklemeleri sayılmaz, sıcak başlangıçta
-negatif çarpanlı kısıt çıkarmaları sayılır (MATLAB'den ölçüldü). İhlal edilen kısıt seçimi "en çok ihlal edilen"dir;
+negatif çarpanlı kısıt çıkarmaları sayılır (MATLAB'den ölçüldü). Sınır: ekleme + çıkarma adımı (sıcak başlangıç
+çıkarmaları dahil) en çok ``MaxIterations``; dolayısıyla bildirilen yineleme en çok MaxIterations + 1'dir
+(MATLAB R2025b: MaxIterations = 4 iken 1 + 4 adımlı problem çözülür, 3 iken durum 0). İhlal edilen kısıt seçimi "en çok ihlal edilen"dir;
 KWIK'in seçim kuralı yayımlanmadığından yol (dolayısıyla yineleme sayısı) bazen farklıdır — çözüm aynıdır.
 
 Durum kodları (``status``, MATLAB ``mpcActiveSetSolver`` exitflag anlamıyla):
@@ -295,8 +297,8 @@ def _gi_core(Linv, f, C, bvec, m, iA0, max_iter, tol, ws: QPWorkspace):
             if t1 == inf and t2 == inf:
                 status = STATUS_INFEASIBLE
                 break
-            if iters >= max_iter:
-                status = STATUS_MAXITER
+            if iters - 1 >= max_iter:          # MATLAB: ekleme / çıkarma (sıcak başlangıç çıkarmaları dahil)
+                status = STATUS_MAXITER        # sayısı ≤ MaxIterations; bildirilen yineleme = 1 + bu sayı
                 break
             iters += 1
             if t2 == inf:                     # yalnız çift adım

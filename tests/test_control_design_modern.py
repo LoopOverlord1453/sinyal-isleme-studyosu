@@ -84,6 +84,16 @@ try
 catch e
   out.err_estim = e.message;
 end
+QXUm = [2 0.5 0 0.3 0; 0.5 1 0 0 0.2; 0 0 1 0.1 0.1; 0.3 0 0.1 1 0.2; 0 0.2 0.1 0.2 2];
+QWVm = [1 0.2 0 0.1 0; 0.2 0.5 0 0 0.05; 0 0 0.8 0.05 0; 0.1 0 0.05 0.3 0.05; 0 0.05 0 0.05 0.2];
+rg = lqg(sysd, QXUm, QWVm, 'current'); out.lqgNc = struct('A', rg.A, 'B', rg.B, 'C', rg.C, 'D', rg.D);
+rg = lqg(sysd, QXUm, QWVm, [1 0.1; 0.1 0.5], '2dof', 'current');
+out.lqgN2c = struct('A', rg.A, 'B', rg.B, 'C', rg.C, 'D', rg.D);
+rg = lqg(sysd, QXUm, QWVm, [1 0.1; 0.1 0.5], '1dof', 'current');
+out.lqgN1c = struct('A', rg.A, 'B', rg.B, 'C', rg.C, 'D', rg.D);
+out.place_unc = place([-1 0; 0 -2], [0; 1], [-1 -3]);
+out.place_dep = place([0 1; -2 -3], [0 0; 1 1], [-4 -5]);
+try, kalmd(ss(A, [B(:, 1), [0.5; 1; 0]], [1 0 0], [0 0.3]), 0.7, 0.05, 0.1); catch e, out.err_kalmdH = e.message; end
 try, lqr([1 0; 0 2], [1; 0], eye(2), 1); catch e, out.err_lqr = e.message; end
 try, place([1 0; 0 2], [1; 0], [-1 -2]); catch e, out.err_place = e.message; end
 try, kalman(ss([1 0; 0 2], [1 0; 0 1], [1 0], 0), 1, 1); catch e, out.err_kalman = e.message; end
@@ -238,6 +248,18 @@ def test_place_acker(ref):
         md.place(A, B, [-1 + 1j, -1 + 1j, -4])      # eşlenik değil
     with pytest.raises(ControlError):
         md.acker(np.diag([1.0, 2.0]), [1.0, 0.0], [-1, -2])
+    # kontrol edilemeyen kipin özdeğeri p'de (MATLAB K = [0 1]) ve bağımlı B sütunları (MATLAB [9 3; 9 3])
+    rel(md.place(np.diag([-1.0, -2.0]), [[0.0], [1.0]], [-1, -3]), ref["place_unc"], 1e-12)
+    rel(md.place([[0, 1], [-2, -3.0]], [[0, 0], [1, 1.0]], [-4, -5]), ref["place_dep"], 1e-12)
+    with pytest.raises(ControlError, match="istenen kutuplar arasında yok"):
+        md.place(np.diag([-1.0, -2.0]), [[0.0], [1.0]], [-4, -3])
+    rng = np.random.default_rng(1)          # döndürülmüş, çok girişli, kontrol edilemeyen iki kip
+    T = np.linalg.qr(rng.standard_normal((4, 4)))[0]
+    Ab = np.block([[rng.standard_normal((2, 2)), rng.standard_normal((2, 2))],
+                   [np.zeros((2, 2)), np.diag([0.7, -1.3])]])
+    Bb = np.vstack([rng.standard_normal((2, 2)), np.zeros((2, 2))])
+    K = md.place(T @ Ab @ T.T, T @ Bb, [-1.3, 0.7, -2, -5])
+    same_set(np.linalg.eigvals(T @ Ab @ T.T - T @ Bb @ K), [-1.3, 0.7, -2, -5], 1e-9)
 
 
 # ---------------------------------------------------------------------------------------------------------------
@@ -273,6 +295,9 @@ def test_kalmd(ref):
     rel(P, m["P"])
     rel(Mx, M(m["M"]).reshape(Mx.shape))
     rel(Z, m["Z"])
+    assert "err_kalmdH" in ref                  # MATLAB: gürültüden çıkışa doğrudan geçişte hata
+    with pytest.raises(ControlError, match="doğrudan geçiş"):
+        md.kalmd((A, sysc[1], sysc[2], np.array([[0.0, 0.3]])), 0.7, 0.05, 0.1)
 
 
 def test_lqg_reg_estim(ref):
@@ -290,6 +315,20 @@ def test_lqg_reg_estim(ref):
         ss_cmp(sys, ref[key])
     es = md.estim((A, BK, CY, DK), [[0.3, 0], [0.1, 0.2], [0, 0.4]], sensors=[0, 1], known=[0, 1])
     ss_cmp(es, ref["estim"])
+
+
+def test_lqg_current_with_cross_covariance(ref):
+    """'current' + Nn ≠ 0 (+ Nxu ≠ 0, D ≠ 0): MATLAB lqg ŵ[n|n] kestirimini de kullanır (u = −Kx·x̂[n|n] −
+    Kw·ŵ[n|n]). Eskiden yalnız lqgreg(kalman(…), K) karşılığı kuruluyordu (MATLAB lqg ile ~%9 fark)."""
+    sd = ref["sysd"]
+    sysd = (M(sd["A"]), M(sd["B"]), M(sd["C"]), M(sd["D"]), 0.1)
+    QXUm = np.array([[2, .5, 0, .3, 0], [.5, 1, 0, 0, .2], [0, 0, 1, .1, .1], [.3, 0, .1, 1, .2], [0, .2, .1, .2, 2]])
+    QWVm = np.array([[1, .2, 0, .1, 0], [.2, .5, 0, 0, .05], [0, 0, .8, .05, 0], [.1, 0, .05, .3, .05],
+                     [0, .05, 0, .05, .2]])
+    QIm = np.array([[1, 0.1], [0.1, 0.5]])
+    ss_cmp(md.lqg(sysd, QXUm, QWVm, estimator="current"), ref["lqgNc"])
+    ss_cmp(md.lqg(sysd, QXUm, QWVm, QIm, "2dof", estimator="current"), ref["lqgN2c"])
+    ss_cmp(md.lqg(sysd, QXUm, QWVm, QIm, "1dof", estimator="current"), ref["lqgN1c"])
 
 
 def test_errors_match_matlab(ref):

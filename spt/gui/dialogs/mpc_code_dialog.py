@@ -37,10 +37,15 @@ def _measure(bridge: _Bridge, generation: int, obj, opts, name: str, compilers) 
     try:
         fp = mpc_c.footprint(obj, opts, compilers, name)
         cost = mpc_c.cost(obj, opts)
-        bridge.done.emit(generation, obj, opts, fp, cost, "")
+        err = ""
     except Exception as exc:  # noqa: BLE001 — ölçüm başarısız olsa da kod üretilmiş olmalı
         log.exception("MPC C kodu ölçümü başarısız")
-        bridge.done.emit(generation, obj, opts, None, None, f"{type(exc).__name__}: {exc}")
+        fp = cost = None
+        err = f"{type(exc).__name__}: {exc}"
+    try:
+        bridge.done.emit(generation, obj, opts, fp, cost, err)
+    except RuntimeError:  # pencere ölçüm sürerken kapatıldı (köprü silindi): sonucu bekleyen yok
+        pass
 
 
 class MpcCodeDialog(CodeDialog):
@@ -199,7 +204,9 @@ class MpcCodeDialog(CodeDialog):
             pass
         self.set_summary(self._summary_html(obj, opts, fp, cost))
         c = cost[0]
-        state = "critical" if c.load_max > 100 else "warning" if c.load_wc > 100 or c.load_max > 50 else "good"
+        level, _ = mpc_c.budget_advice(c, opts.prefix.upper())
+        state = "critical" if c.load_max > 100 or level == "critical" else \
+            "warning" if level != "good" or c.load_max > 50 or mpc_c.numeric_warnings(obj, opts) else "good"
         self.set_status(f"Ölçüm tamamlandı · CPU yükü ort. %{c.load_mean:.3g}, en pahalı adım %{c.load_max:.3g}, "
                         f"en kötü durum %{c.load_wc:.3g} @ {1.0 / obj.data.Ts:g} Hz", state)
 
@@ -225,7 +232,7 @@ class MpcCodeDialog(CodeDialog):
             rows.append(f"<tr><td>{html.escape(mcu.COMPILERS.get(r.compiler, r.compiler))}</td>"
                         f"<td align='right'>{r.flash_code}</td><td align='right'>{r.flash_with_libm or '—'}</td>"
                         f"<td align='right'>{flash / flash_b * 100:.2g}%</td><td align='right'>{r.ram_state}</td>"
-                        f"<td align='right'>{r.ram_state / ram_b * 100:.2g}%</td><td align='right'>{stack}</td>"
+                        f"<td align='right'>{mpc_c.ram_bytes(r) / ram_b * 100:.2g}%</td><td align='right'>{stack}</td>"
                         f"<td>{meas}</td></tr>")
         c = cost[0]
 
@@ -237,26 +244,29 @@ class MpcCodeDialog(CodeDialog):
                 f"<td align='right'>{load_cell(ld)}</td></tr>"
                 for lbl, cyc, us, ld in (("Ortalama adım", c.cycles_mean, c.us_mean, c.load_mean),
                                          ("En pahalı adım (senaryo)", c.cycles_max, c.us_max, c.load_max),
-                                         (f"En kötü durum ({c.max_iter} yineleme)", c.cycles_wc, c.us_wc, c.load_wc))]
+                                         (f"En kötü durum ({c.max_iter} QP adımı)" if c.max_iter else
+                                          "En kötü durum (kısıtsız: sabit)", c.cycles_wc, c.us_wc, c.load_wc))]
         head = (f"<h3>{html.escape(self._name)} · {html.escape(prof.name)} · {opts.clock_mhz:g} MHz · "
                 f"{html.escape(opts.real)} · {html.escape(opts.opt)} · çağrı hızı {fs:g} Hz (Ts = {d.Ts:g} s)</h3>"
                 f"<p>Flash {opts.flash_kb:g} KB · RAM {opts.ram_kb:g} KB · örnek çipler: {html.escape(prof.examples)}"
                 f"</p>")
         fp_table = ("<h4>Bellek (derleyiciye göre)</h4><table border='1' cellspacing='0' cellpadding='4'>"
                     "<tr><th>Derleyici</th><th>Kod + sabitler (B)</th><th>libm dahil (B)</th><th>Flash %</th>"
-                    "<th>RAM durum (B)</th><th>RAM %</th><th>Yığın kendi / libm dahil (B)</th><th>Yöntem</th></tr>"
-                    + "".join(rows) + "</table>")
+                    "<th>RAM durum (B)</th><th>RAM % (durum + yığın)</th><th>Yığın kendi / libm dahil (B)</th>"
+                    "<th>Yöntem</th></tr>" + "".join(rows) + "</table>"
+                    f"<p>{html.escape(mpc_c.RAM_PERCENT_NOTE)}</p>")
         cost_table = ("<h4>İşlem maliyeti (adım başına)</h4><table border='1' cellspacing='0' cellpadding='4'>"
                       "<tr><th></th><th>Çevrim</th><th>µs</th><th>CPU yükü</th></tr>" + "".join(crow) + "</table>"
                       f"<p>Bir QP yinelemesi ≤ {c.cycles_iter:,.0f} çevrim · senaryoda yineleme ort. "
                       f"{c.iters_mean:.2f}, en çok {c.iters_max} · Ts bütçesine en çok <b>{c.iter_budget}</b> "
                       f"yineleme sığar (sınır {c.max_iter}){note(c.method)}</p>")
+        level, advice = mpc_c.budget_advice(c, opts.prefix.upper())
         warn = ""
-        if c.iter_budget < c.max_iter:
-            warn = (f"<p><span style='color:{t.warning}'>⚠ En kötü durum ({c.max_iter} yineleme) Ts'yi aşıyor.</span> "
-                    f"<code>-D{opts.prefix.upper()}_MAX_ITER=n</code> ile sınırı ölçülen en çok yinelemenin üstünde, "
-                    "bütçenin altında bir değere indirin (sınıra takılan adımda MV önceki değerinde tutulur) ya da "
-                    "daha hızlı çekirdek / daha kısa ufuk seçin. Ayrıntı: KULLANIM.</p>")
+        if level != "good":
+            color = t.critical if level == "critical" else t.warning
+            warn = f"<p><span style='color:{color}'>⚠ {html.escape(advice)}</span> Ayrıntı: KULLANIM.</p>"
+        for w in mpc_c.numeric_warnings(obj, opts):
+            warn += f"<p><span style='color:{t.warning}'>⚠ Sayısal: {html.escape(w)}</span></p>"
         notes = ("<p><b>Notlar:</b> Kod boyutu makinedeki araç zinciriyle gerçekten derlenerek ölçülür; IAR ve yerel "
                  "derleyicisi olmayan çekirdekler <i>tahmin</i>dir. RAM = durum yapısı (QP çalışma alanı dahil; malloc "
                  "yok). İşlem sayıları üretilen C'nin kapalı çevrimde C++ sayaçla çalıştırılmasıyla ölçülür; en kötü "

@@ -916,7 +916,7 @@ static int spt_qp_solve(spt_t *s, const SPT_REAL *f)
                 status = SPT_STATUS_INFEASIBLE;
                 break;
             }
-            if (iters >= SPT_MAX_ITER) {
+            if (iters - 1 >= SPT_MAX_ITER) {          /* MATLAB: adım (ekleme / çıkarma) sayısı ≤ MaxIterations */
                 status = SPT_STATUS_MAXITER;
                 break;
             }
@@ -2116,9 +2116,10 @@ def cost(mpcobj, opts: MpcCodegenOptions | None = None, *, T: int | None = None,
               "çözümsüz": int(np.sum(run.status == -1)), "sayısal": int(np.sum(run.status == -2)),
               "geçersiz giriş": int(np.sum(run.status == -3))}
     soft = ", double yazılım kayan nokta" if opts.real == "double" and prof.double_is_soft() else ""
-    method = (f"işlem sayısı ölçüldü (C++ sayaç, {T} adım kapalı çevrim: {label}); en kötü durum = analitik üst sınır "
-              f"(MaxIterations = {pl.max_iter} yineleme, her yineleme en kötü aktif küme boyuyla); çevrim çekirdek "
-              f"tablosundan tahmin ({prof.name}, {opts.real}{soft})")
+    wc_txt = (f"analitik üst sınır (MaxIterations = {pl.max_iter} QP adımı, her adım en kötü aktif küme boyuyla)"
+              if pl.nc else "sabit adım (kısıtsız: QP ve yineleme yok)")
+    method = (f"işlem sayısı ölçüldü (C++ sayaç, {T} adım kapalı çevrim: {label}); en kötü durum = {wc_txt}; çevrim "
+              f"çekirdek tablosundan tahmin ({prof.name}, {opts.real}{soft})")
     return [MpcCostRow(scenario=label, ops_mean={op: float(x) for op, x in zip(OPS, ops.mean(axis=0))},
                        cycles_mean=float(cyc.mean()), cycles_max=float(cyc.max()), cycles_wc=wc,
                        cycles_iter=iter_cyc, us_mean=float(us.mean()), us_max=float(us.max()),
@@ -2334,36 +2335,69 @@ def _cost_md(pl: _Plan, opts: MpcCodegenOptions, rows: list[MpcCostRow]) -> str:
     out = []
     for c in rows:
         table = [f"| | Çevrim | µs @ {opts.clock_mhz:g} MHz | CPU yükü @ {fs:g} Hz |", "|---|---:|---:|---:|"]
+        wc_lbl = (f"**En kötü durum** ({c.max_iter} QP adımı, analitik üst sınır)" if c.max_iter else
+                  "**En kötü durum** (kısıtsız: sabit adım)")
         for lbl, cyc, us, ld in (("Ortalama adım (ölçülen senaryo)", c.cycles_mean, c.us_mean, c.load_mean),
                                  ("En pahalı adım (ölçülen senaryo)", c.cycles_max, c.us_max, c.load_max),
-                                 (f"**En kötü durum** ({c.max_iter} yineleme, analitik üst sınır)", c.cycles_wc,
-                                  c.us_wc, c.load_wc)):
+                                 (wc_lbl, c.cycles_wc, c.us_wc, c.load_wc)):
             table.append(f"| {lbl} | {_fmt_int(cyc)} | {us:.1f} | %{ld:.2f} |")
-        table.append(f"| Bir QP yinelemesi (üst sınır) | {_fmt_int(c.cycles_iter)} | "
-                     f"{c.cycles_iter / opts.clock_mhz:.2f} | — |")
+        if c.max_iter:
+            table.append(f"| Bir QP yinelemesi (üst sınır) | {_fmt_int(c.cycles_iter)} | "
+                         f"{c.cycles_iter / opts.clock_mhz:.2f} | — |")
         counts = ", ".join(f"{k} {v}" for k, v in c.status_counts.items())
         ops = ", ".join(f"{k} {v:.1f}" for k, v in c.ops_mean.items() if v)
+        budget_cyc = _fmt_int(pl.Ts * opts.clock_mhz * 1e6)
+        if c.max_iter:
+            it_line = (f"- Senaryo: {c.scenario}. Yineleme: ortalama {c.iters_mean:.2f}, en çok {c.iters_max} (sınır "
+                       f"`{P}_MAX_ITER` = {c.max_iter} adım; bildirilen yineleme = 1 + adım). Durumlar: {counts}.\n"
+                       f"- **Ts bütçesi:** {pl.Ts:g} s × {opts.clock_mhz:g} MHz = {budget_cyc} çevrim → CPU'nun "
+                       f"tamamı ayrılsa en çok **{c.iter_budget}** yineleme (QP adımı) sığar.{_budget_note(c, P)}")
+        else:
+            it_line = (f"- Senaryo: {c.scenario}. Durumlar: {counts}.\n- **Ts bütçesi:** {pl.Ts:g} s × "
+                       f"{opts.clock_mhz:g} MHz = {budget_cyc} çevrim.{_budget_note(c, P)}")
         out.append("\n".join(table) + f"""
 
-- Senaryo: {c.scenario}. Yineleme: ortalama {c.iters_mean:.2f}, en çok {c.iters_max} (sınır `{P}_MAX_ITER` =
-  {c.max_iter}). Durumlar: {counts}.
-- **Ts bütçesi:** {pl.Ts:g} s × {opts.clock_mhz:g} MHz = {_fmt_int(pl.Ts * opts.clock_mhz * 1e6)} çevrim → CPU'nun
-  tamamı ayrılsa en çok **{c.iter_budget}** yineleme sığar.{_budget_note(c, P)}
+{it_line}
 - {c.method}.
 
 Adım başına ortalama işlem sayıları (ölçülen): {ops}.""")
     return "\n\n".join(out)
 
 
+_FASTER = ("daha hızlı çekirdek / saat (FPU'lu çekirdekte float), daha kısa tahmin ufku ya da daha az hamle bloğu, "
+           "daha az durum (model indirgeme)")
+
+
+def budget_advice(c: MpcCostRow, P: str) -> tuple[str, str]:
+    """Ts bütçesi değerlendirmesi: (düzey 'good' / 'warning' / 'critical', Türkçe metin). Yük doğrudan
+    karşılaştırılır (yük = µs × fs / 10⁴ %). Kısıtsız tasarımda (max_iter = 0) yineleme yoktur; kısıtlıda sabit kısım
+    (0 yineleme) bile sığmıyorsa MAX_ITER düşürmek çözüm değildir (her aktif kısıtta MV tutulurdu)."""
+    if c.max_iter == 0:
+        if c.load_wc <= 100.0:
+            return "good", f"Kısıtsız (QP yok): adım süresi sabit, CPU yükü %{c.load_wc:.3g} — bütçeye sığıyor."
+        return "critical", (f"Kısıtsız (QP yok) adım Ts'yi aşıyor: CPU yükü %{c.load_wc:.3g}. Yineleme sınırı yoktur; "
+                            f"çözüm: {_FASTER}.")
+    if c.load_wc <= 100.0:
+        return "good", f"En kötü durum bile bütçeye sığıyor (CPU yükü %{c.load_wc:.3g})."
+    base = max(c.cycles_wc - c.max_iter * c.cycles_iter, 0.0)
+    base_load = c.load_wc * base / c.cycles_wc if c.cycles_wc > 0 else 0.0
+    if base_load > 100.0:
+        return "critical", (f"QP yinelemesi olmadan bile adım Ts'yi aşıyor (sabit kısım yükü %{base_load:.3g}): "
+                            f"`{P}_MAX_ITER`'ı düşürmek çözüm değildir (her aktif kısıtta MV tutulurdu). Çözüm: "
+                            f"{_FASTER}, daha az kısıt.")
+    need = max(c.iters_max - 1, 0)                 # senaryoda gereken en çok adım (yineleme = 1 + adım)
+    if c.iter_budget >= max(need, 1):
+        return "warning", (f"En kötü durum ({c.max_iter} adım) Ts'yi aşıyor (yük %{c.load_wc:.3g}). "
+                           f"`-D{P}_MAX_ITER={c.iter_budget}` ile en kötü durum Ts'ye sığar (senaryoda en çok {need} "
+                           f"adım gerekti); sınıra takılan adımda MV önceki değerinde tutulur. Diğer çözümler: "
+                           f"{_FASTER}, daha az kısıt.")
+    return "critical", (f"Senaryoda gereken QP yinelemesi bile Ts'ye sığmıyor (bütçe {c.iter_budget} adım, gereken "
+                        f"{need}; en kötü durum yükü %{c.load_wc:.3g}). Çözüm: {_FASTER}, daha az kısıt.")
+
+
 def _budget_note(c: MpcCostRow, P: str) -> str:
-    if c.iter_budget >= c.max_iter:
-        return " En kötü durum bile bütçeye sığıyor."
-    need = min(max(c.iters_max + 2, 1), max(c.iter_budget, 1))
-    return (f" **En kötü durum Ts'yi aşıyor:** `{P}_MAX_ITER`'ı ölçülen en çok yinelemenin ({c.iters_max}) üstünde "
-            f"ve bütçenin altında bir değere indirin (ör. `-D{P}_MAX_ITER={need}`); sınıra takılan adımda MV önceki "
-            "değerinde tutulur (güvenli ama o adımda kontrol yok). Diğer çözümler: daha hızlı çekirdek / saat, daha "
-            "kısa ufuk ya da daha az hamle bloğu, daha az kısıt (ör. çıkış kısıtlarını ufkun ilk adımlarıyla "
-            "sınırlamak).")
+    level, text = budget_advice(c, P)
+    return " " + (text if level == "good" else f"**{text}**")
 
 
 def usage_markdown(mpcobj, opts: MpcCodegenOptions | None = None, name: str | None = None,
@@ -2435,7 +2469,16 @@ def usage_markdown(mpcobj, opts: MpcCodegenOptions | None = None, name: str | No
              (f"`{P}_STATUS_NUMERICAL` (−2)", "NaN / sonsuz (bozuk veri, aşırı kötü koşul)", "önceki değer tutulur"),
              (f"`{P}_STATUS_BAD_INPUT` (−3)", "`ym` / `ref` / `md` NaN / sonsuz ya da satır sayısı geçersiz",
               "önceki değer; durum değişmez")]
+    if not pl.nc:                      # kısıtsız: QP yok → yalnız 1 ve geçersiz giriş
+        codes = [("1", "Kapalı biçim çözüm (kısıtsız; QP ve yineleme yok)", "u(k) = u(k−1) + Δu"), codes[-1]]
     codes_md = "\n".join(f"| {a} | {b} | {c_} |" for a, b, c_ in codes)
+    macros = (f"`{P}_USE_DOUBLE=0/1`, `{P}_MAX_ITER=n`, `{P}_TOL=…`" if pl.nc else
+              f"`{P}_USE_DOUBLE=0/1` (kısıtsız tasarım: QP makroları yok)")
+    qp_num = (f" Float'ta QP'nin doğrusal bağımlılık eşiği `{P}_DEP_TOL = 1e3·FLT_EPSILON`'dur (double: "
+              f"1e6·DBL_EPSILON, Python / MATLAB ile aynı). Kısıt toleransı `{P}_TOL` = {pl.tol:g} boyutsuz birimdir; "
+              "float'ta çok küçük ölçek çarpanlarıyla birlikte yuvarlama düzeyine yaklaşırsa büyütün.") if pl.nc else ""
+    nw = numeric_warnings(mpcobj, opts)
+    num_note = "".join(f"\n> **Sayısal uyarı:** {w}\n" for w in nw)
     pv = ("açık" if pl.ref_preview else "kapalı", "açık" if pl.md_preview else "kapalı")
     if pl.nc:
         warm = ("Çözücü önceki adımın aktif kümesinden başlar (`s.iA`): kararlı durumda çoğu adım **1** yinelemede "
@@ -2443,9 +2486,12 @@ def usage_markdown(mpcobj, opts: MpcCodegenOptions | None = None, name: str | No
                 "başlar.")
         wc_md = f"""- {warm}
 - En kötü durum süresi `{P}_MAX_ITER` ile sınırlıdır (varsayılan MATLAB'in `4·max(30, n_z + n_c)` = {pl.max_iter}).
-  Gerçek zamanlı garanti için en kötü durum çevrimi Ts bütçesine sığmalıdır; sığmıyorsa `{P}_MAX_ITER`'ı ölçülen
-  en çok yinelemenin (aşağıdaki tablo; sahada `s.iter_max`) biraz üstüne indirin. Sınıra takılan adımda MV
-  {"kırpılmış alt-en iyi hamleyle" if pl.subopt else "önceki değerinde"} kalır."""
+  Sınır MATLAB kuralıyla QP **adım** (kısıt ekleme / çıkarma) sayısıdır: bildirilen yineleme = 1 + adım, yani en çok
+  `{P}_MAX_ITER` + 1. Gerçek zamanlı garanti için en kötü durum çevrimi Ts bütçesine sığmalıdır; sığmıyorsa
+  `{P}_MAX_ITER`'ı Ts'ye sığan adım sayısına indirin (ölçülen en çok yineleme − 1'den küçük olmamalı; aşağıdaki
+  tablo, sahada `s.iter_max`). Sınıra takılan adımda MV
+  {"kırpılmış alt-en iyi hamleyle" if pl.subopt else "önceki değerinde"} kalır; bu adımlarda çözüm yolu MATLAB
+  KWIK'inkinden farklı olabileceğinden MATLAB ile birebir eşleşme beklenmez."""
     else:
         wc_md = ("Kısıt olmadığından QP ve yineleme yoktur: her adımın süresi sabittir (en kötü durum = ortalama).")
     qp_line = (f"QP: {pl.nz} değişken ({pl.nfree} serbest hamle + ε), {pl.nc} kısıt satırı, en çok {pl.max_iter} "
@@ -2462,7 +2508,7 @@ MV {pl.nmv}, MD {pl.nmd}, MO {pl.nmy}, UO {len(pl.uyindex)} · kestirici {pl.nx}
 
 **Seçimler:** sayı türü `{opts.real}` · MCU {prof.name} ({prof.examples}) · derleyici {COMPILERS[opts.compiler]}
 `{opts.opt}` · saat {opts.clock_mhz:g} MHz · referans önizlemesi {pv[0]} · MD önizlemesi {pv[1]}
-{real_note}
+{real_note}{num_note}
 ## Dosyalar
 
 | Dosya | İçerik |
@@ -2531,7 +2577,7 @@ eder: üst katmanda güvenli kipe geçin.
 3. *MCU GCC Linker → Libraries*: `m` (`-lm`; yalnız `sqrtf` / `fabsf` kullanılır).
 4. **`-ffast-math` kullanmayın** (NaN / sonsuz denetimleri kaldırılır). `-O2` ya da `-Os` önerilir; `-O0` 2–4×
    yavaştır.
-5. İsteğe bağlı komut satırı makroları: `{P}_USE_DOUBLE=0/1`, `{P}_MAX_ITER=n`, `{P}_TOL=…`.
+5. İsteğe bağlı komut satırı makroları: {macros}.
 
 ### Keil MDK (Arm Compiler 6) / IAR EWARM
 Dosyaları gruba ekleyin, C99; *Floating Point Hardware* = Single (M4F / M33F) ya da Double (M7). Fast-math kapalı.
@@ -2582,10 +2628,9 @@ tabloları **tahmindir** (`spt/codegen/mcu.py`). CPU yükü = µs/adım × fs / 
 ## Sayı türü ve FPU
 
 {prof.name}: {fpu}. `{P}_USE_DOUBLE` ile seçilir. Sabitler `{P}_C()` ile doğru türde yazılmıştır (float modunda
-istemsiz double yükseltmesi yok; `-Wdouble-promotion` temiz). Float'ta QP'nin doğrusal bağımlılık eşiği
-`{P}_DEP_TOL = 1e3·FLT_EPSILON`'dur (double: 1e6·DBL_EPSILON, Python / MATLAB ile aynı). Kısıt toleransı
-`{P}_TOL` = {pl.tol:g} boyutsuz birimdir; float'ta çok küçük ölçek çarpanlarıyla birlikte yuvarlama düzeyine
-yaklaşırsa büyütün.
+istemsiz double yükseltmesi yok; `-Wdouble-promotion` temiz). Float aralığı dışındaki sabitler: |x| < FLT_MIN
+float'ta 0 (`{P}_CT`), sınırlarda |x| > FLT_MAX float'ta ±FLT_MAX (`{P}_CH`); matrislerde |x| > FLT_MAX ise float
+derlemesi `#error` ile durur.{qp_num}
 
 ## Python / MATLAB referansından farklar
 

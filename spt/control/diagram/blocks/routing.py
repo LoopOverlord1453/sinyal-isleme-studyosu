@@ -41,6 +41,9 @@ class Mux(Block):
     def output(self, t, x, xd, u):
         return [np.concatenate(u)]
 
+    def route(self):
+        return [[(q, e) for q, w in enumerate(self.in_widths) for e in range(w)]]
+
     def linearize(self, t, x, xd, u):
         w = self.out_widths[0]
         return _static(np.eye(w))
@@ -102,6 +105,10 @@ class Demux(Block):
         c = self._cuts
         return [v[c[i]:c[i + 1]].copy() for i in range(len(c) - 1)]
 
+    def route(self):
+        c = self._cuts
+        return [[(0, e) for e in range(int(c[i]), int(c[i + 1]))] for i in range(len(c) - 1)]
+
     def linearize(self, t, x, xd, u):
         w = self.in_widths[0]
         return _static(np.eye(w))
@@ -132,6 +139,9 @@ class Selector(Block):
 
     def output(self, t, x, xd, u):
         return [u[0][self._idx]]
+
+    def route(self):
+        return [[(0, int(e)) for e in self._idx]]
 
     def linearize(self, t, x, xd, u):
         D = np.zeros((self._idx.size, self.in_widths[0]))

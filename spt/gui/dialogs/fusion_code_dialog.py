@@ -51,10 +51,15 @@ def _measure(bridge: _Bridge, generation: int, module, opts, compilers) -> None:
     try:
         fp = module.footprint(opts, compilers)
         cost = module.cost(opts)
-        bridge.done.emit(generation, opts, fp, cost, "")
+        err = ""
     except Exception as exc:  # noqa: BLE001 — ölçüm başarısız olsa da kod üretilmiş olmalı
         log.exception("C kodu ölçümü başarısız")
-        bridge.done.emit(generation, opts, None, None, f"{type(exc).__name__}: {exc}")
+        fp = cost = None
+        err = f"{type(exc).__name__}: {exc}"
+    try:
+        bridge.done.emit(generation, opts, fp, cost, err)
+    except RuntimeError:  # pencere ölçüm sürerken kapatıldı (köprü silindi): sonucu bekleyen yok
+        pass
 
 
 class FusionCodeDialog(CodeDialog):

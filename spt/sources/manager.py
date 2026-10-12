@@ -51,7 +51,7 @@ class SourceManager(QObject):
     state_changed = pyqtSignal(str, str)       # durum, ayrıntı
     replay_progress = pyqtSignal(float, float, bool, bool)  # konum, süre, duraklatıldı, bitti
     recording_changed = pyqtSignal(bool, str, int)
-    marker_received = pyqtSignal(str, int, int, str)
+    marker_received = pyqtSignal(str, int, int, str, object)   # akış, örnek indeksi, kod, metin, tampon indeksi
 
     def __init__(self, parent: QObject | None = None):
         super().__init__(parent)

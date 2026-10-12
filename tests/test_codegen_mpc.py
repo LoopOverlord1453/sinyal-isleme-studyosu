@@ -677,10 +677,111 @@ def test_kullanim_kilavuzu():
               "ölçümsüz üretildi"):
         assert s in md, s
     fp = [mc.FootprintRow("x", "gcc", 4000, 4300, 640, 220, True, "ölçüldü (deneme)", 200)]
-    cost = [mc.MpcCostRow("senaryo", {op: 1.0 for op in OPS}, 5000, 20000, 900000, 4000, 30, 120, 5400, 0.1, 0.6,
-                          27.0, 1.5, 9, 344, 12, {"çözüldü": 120}, "yöntem")]
+    # tutarlı veri: Ts 0.02 s × 168 MHz = 3.36e6 çevrim; sabit kısım 3.035e6 sığıyor, 344 adımlık en kötü durum değil
+    cost = [mc.MpcCostRow("senaryo", {op: 1.0 for op in OPS}, 5000, 20000, 11979000, 26000, 30, 120, 71304, 0.1,
+                          0.6, 356.5, 1.5, 9, 344, 12, {"çözüldü": 120}, "yöntem")]
     md2 = mc.usage_markdown(o, opts, footprint_rows=fp, cost_rows=cost)
     assert "En kötü durum" in md2 and "**12** yineleme" in md2 and "Ts'yi aşıyor" in md2 and "ölçümsüz" not in md2
+    assert "IRTIFA_MAX_ITER=12" in md2                       # bütçeye sığan adım sayısı önerilir
+    assert mc.RAM_PERCENT_NOTE in md2
+
+
+def test_butce_tavsiyesi_dogrudan_yuk_karsilastirmasi():
+    """Denetim bulgusu 5: kısıtsız tasarımda yineleme yok — yük doğrudan karşılaştırılır; kısıtlıda sabit kısım
+    sığmıyorsa MAX_ITER düşürmek önerilmez."""
+    def row(wc, it, max_iter, budget, load_wc, iters_max=5):
+        return mc.MpcCostRow("s", {op: 0.0 for op in OPS}, 1, 1, wc, it, 1, 1, 1, 1, 1, load_wc, 1, iters_max,
+                             max_iter, budget, {}, "m")
+    lvl, txt = mc.budget_advice(row(32000, 0.0, 0, 0, 1971.0), "X")
+    assert lvl == "critical" and "Kısıtsız" in txt and "MAX_ITER" not in txt and "hızlı" in txt
+    assert mc.budget_advice(row(1000, 0.0, 0, 0, 40.0), "X")[0] == "good"
+    lvl, txt = mc.budget_advice(row(2.0e6, 1000, 120, 0, 200.0), "X")       # sabit kısım 1.88e6: yük %188 > 100
+    assert lvl == "critical" and "-DX_MAX_ITER" not in txt and "çözüm değildir" in txt
+    lvl, txt = mc.budget_advice(row(2.0e6, 15000, 120, 40, 200.0), "X")     # sabit kısım 2e5: %20
+    assert lvl == "warning" and "-DX_MAX_ITER=40" in txt
+    o = case1()                                                              # kısıtsız KULLANIM: QP makroları yok
+    md = mc.usage_markdown(o, mc.MpcCodegenOptions(prefix="kz"))
+    for s in ("KZ_MAX_ITER", "KZ_TOL", "KZ_DEP_TOL", "KZ_STATUS_MAXITER", "KZ_STATUS_INFEASIBLE"):
+        assert s not in md, s
+    assert "KZ_STATUS_BAD_INPUT" in md
+
+
+def test_float_sabit_araligi_ve_onek_cakismasi():
+    """Denetim bulguları 3 ve 11: |x| < FLT_MIN sabitler float'ta 0 (SPT_CT), sınırlarda |x| > FLT_MAX ±FLT_MAX
+    (SPT_CH); matriste |x| > FLT_MAX float'ta açık hata; <stdint.h> ile çakışan önek reddedilir."""
+    o = MPC(([[-3000.0, 0], [0, -1.0]], [[3000.0], [1.0]], [[1.0, 1.0]], [[0.0]]), 0.1, 10, 2)
+    o.MV[0].Min, o.MV[0].Max = -1, 1
+    c_txt = next(f.text for f in mc.generate(o, mc.MpcCodegenOptions(prefix="hz")) if f.name == "hz.c")
+    assert "HZ_CT(" in c_txt and not re.search(r"HZ_C\(-?\d[\d.]*e-(?:[4-9]\d|\d{3})\)", c_txt)
+    o2 = MPC(([[0.9]], [[1.0]], [[1.0]], [[0.0]], 0.1), 0.1)
+    o2.MV[0].Max = 1e40
+    c2 = next(f.text for f in mc.generate(o2, mc.MpcCodegenOptions(prefix="bk")) if f.name == "bk.c")
+    assert "BK_CH(1e+40)" in c2
+    assert mc._lit(-1e40, True) == "(-SPT_CH(1e+40))" and mc._lit(5e-131) == "(SPT_CT(5e-131))"
+    assert mc._lit(-0.25) == "SPT_C(-0.25)"
+    o3 = MPC(([[0.9]], [[1e39]], [[1.0]], [[0.0]], 0.1), 0.1)               # ScaleFactor 1e-39 → 1/ölçek > FLT_MAX
+    o3.MV[0].ScaleFactor = 1e-39
+    o3.MV[0].Max = 1
+    with pytest.raises(ValueError, match="float aralığını"):
+        mc.generate(o3, mc.MpcCodegenOptions(real="float"))
+    c3 = next(f.text for f in mc.generate(o3, mc.MpcCodegenOptions(real="double", prefix="dv")) if f.name == "dv.c")
+    assert "#error" in c3 and "DV_USE_DOUBLE" in c3
+    for bad in ("uint8", "int16", "intmax", "size", "math", "stdint"):
+        with pytest.raises(ValueError, match="çakışır"):
+            mc.check_options(mc.MpcCodegenOptions(prefix=bad))
+    assert mc.default_prefix("Time") == "time_mpc"
+
+
+@needs_cross
+def test_float_sabit_araligi_werror_derlenir():
+    """Hızlı kutup (τ = 1/3000 s, Ts = 0.1 s → ~5e-131) ve MV.Max = 1e40: float -Werror derlemesi (gcc / clang)."""
+    o = MPC(([[-3000.0, 0], [0, -1.0]], [[3000.0], [1.0]], [[1.0, 1.0]], [[0.0]]), 0.1, 10, 2)
+    o.MV[0].Min, o.MV[0].Max = -1, 1e40
+    files = {f.name: f.text for f in mc.generate(o, mc.MpcCodegenOptions(real="float", prefix="hizli"))}
+    for comp in ("gcc", "clang"):
+        if tc.cross_flags(MCU_PROFILES["cortex-m4f"], comp) is None:
+            continue
+        b = tc.compile_cross(files, ["hizli.c"], MCU_PROFILES["cortex-m4f"], comp, "-O2",
+                             defines=["HIZLI_USE_DOUBLE=0"], extra=["-Wdouble-promotion"], stack_usage=False)
+        assert b.ok and not b.log.strip(), (comp, b.log[:600])
+
+
+@needs_cc
+@pytest.mark.parametrize("so", [0, 1])
+def test_c_yineleme_siniri_matlab_drone(so):
+    """Denetim bulgusu 1 (C şablonu): MaxIterations = 3, drone ekseni — üretilen C (double) MATLAB sim ile ~1e-13;
+    MaxIterations = 2'de bildirilen yineleme ≤ 3 (adım ≤ MaxIterations)."""
+    from tests.test_control_mpc_denetim import DENETIM_SCRIPT
+    try:
+        ref = fixture("mpc_denetim_cases", DENETIM_SCRIPT)
+    except OracleUnavailable as e:  # pragma: no cover
+        pytest.skip(str(e))
+    o = case5()
+    o.Optimizer.MaxIterations = 3
+    o.Optimizer.UseSuboptimalSolution = bool(so)
+    res = mc.run_closed_loop(o, DOUBLE, 60, [2, 0])
+    _close(res.u, ref[f"dr3_{so}"]["u"], TOL_ML, "u")
+    _close(res.y, ref[f"dr3_{so}"]["y"], TOL_ML, "y")
+    o.Optimizer.MaxIterations = 2
+    res2 = mc.run_closed_loop(o, DOUBLE, 60, [2, 0])
+    assert res2.status.max() <= 3 and np.array_equal(res2.status, sim(o, 60, [2, 0]).status.astype(int))
+
+
+def test_kotu_kosullu_hessian_float_uyarisi():
+    """Denetim bulgusu 4: özdeş iki MV, MV ve oran ağırlığı 0 (BadH = 1, koşul ~6e9): float'ta açık uyarı ve
+    KULLANIM notu; iyi koşullu tasarımda uyarı yok."""
+    o = MPC(([[0.9]], [[1, 1]], [[1]], [[0, 0]], 0.1), 0.1, 10, 3)
+    o.Weights.ManipulatedVariables = [0, 0]
+    o.Weights.ManipulatedVariablesRate = [0, 0]
+    o.MV[0].Min, o.MV[0].Max, o.MV[1].Min, o.MV[1].Max = -1, 1, -1, 1
+    with pytest.warns(Warning):
+        o.data
+    w = mc.numeric_warnings(o, FLOAT)
+    assert len(w) == 2 and "BadH" in w[0] and "double" in w[0]
+    with pytest.warns(Warning, match="koşul sayısı"):
+        files = mc.generate(o, mc.MpcCodegenOptions(real="float", prefix="tk"))
+    assert "Sayısal uyarı" in next(f.text for f in files if f.name.endswith(".md"))
+    assert mc.numeric_warnings(drone_altitude(), FLOAT) == []
 
 
 # ============================================================================ arayüz

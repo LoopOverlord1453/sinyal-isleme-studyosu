@@ -22,6 +22,7 @@ from scipy import signal
 from spt.control.errors import ControlError
 
 __all__ = ["IDData", "iddata", "merge", "TrendInfo", "detrend", "retrend", "idfilt", "resample", "split",
+           "excitation_warnings",
            "fill_missing", "iddata_from_handle", "read_csv", "read_mat", "mat_variables"]
 
 
@@ -346,6 +347,19 @@ def check_complete(data: IDData, what: str = "Tahmin") -> None:
             raise ControlError(f"{what} verisinde {int(bad.sum())} eksik (NaN) örnek var ({exp}ilki {first}. örnek). "
                                "Eksik örnekleri doldurun (Eksikleri doldur: doğrusal ya da modelle) ya da eksiksiz "
                                "bir aralık seçin.")
+
+
+def excitation_warnings(data: IDData) -> list[str]:
+    """Sabit (uyarımsız) giriş kanalları için Türkçe uyarılar: böyle bir girişin dinamiği veriden tanımlanamaz."""
+    out = []
+    for j, name in enumerate(data.input_names):
+        u = np.concatenate([x[:, j] for x in data.us])
+        u = u[np.isfinite(u)]
+        amp = float(np.max(np.abs(u))) if len(u) else 0.0
+        if amp == 0.0 or float(np.std(u)) <= 1e-9 * amp:
+            out.append(f"'{name}' girişi sabit (yetersiz uyarım): bu girişten çıkışa dinamik veriden tanımlanamaz, "
+                       "ilgili parametreler anlamsızdır")
+    return out
 
 
 # ======================================================================================== trend

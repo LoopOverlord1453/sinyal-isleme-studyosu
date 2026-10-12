@@ -395,7 +395,11 @@ def invariant_zeros(A, B, C, D):
     IE = np.hstack([np.eye(nr), np.zeros((nr, B2.shape[1]))]) @ V
     Af, Bf = AB[:, :nr], IE[:, :nr]
     alpha, beta = sla.eig(Af, Bf, right=False, homogeneous_eigvals=True)
-    fin = np.abs(beta) > 1e3 * EPS * np.maximum(np.abs(alpha), 1.0)
+    # Sonsuz özdeğer yuvarlamayla |β| ~ n·eps·‖kalem‖ olarak sonlu görünebilir: büyüklüğü kalem normunun 1/√eps
+    # katını aşan "sıfır" sayısal olarak sonsuzdan ayırt edilemez (ör. 16. derece tf'de sahte −1.6e12 sıfırı).
+    nrm = max(1.0, float(np.linalg.norm(np.block([[A, B], [C, D]]), 2)))
+    lim = nrm / SQRT_EPS
+    fin = (np.abs(beta) > 1e3 * EPS * np.maximum(np.abs(alpha), 1.0)) & (np.abs(alpha) <= lim * np.abs(beta))
     z = alpha[fin] / beta[fin]
     return cplxpair(z, tol=1e-7), rank
 

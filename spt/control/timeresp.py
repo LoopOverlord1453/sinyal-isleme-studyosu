@@ -60,7 +60,7 @@ def _auto_tfinal(sys: LTI) -> float:
     """Sürekli eşdeğer kutuplardan yeterli benzetim süresi (bizim seçimimiz)."""
     p = _poles_of(sys)
     if sys.is_discrete and p.size:
-        with np.errstate(divide="ignore"):
+        with np.errstate(divide="ignore", invalid="ignore"):  # z = 0 kutbu: log 0 = −∞ (aşağıda atılır)
             p = np.log(p.astype(complex)) / sys.Ts
         p = p[np.isfinite(p)]
     tmax = float(np.max(sys.total_delay())) if sys.has_delay() else 0.0
@@ -482,12 +482,13 @@ def _info_array(y, t, yfinal, yinit, thr, lims, interp=True) -> dict:
     yf = float(y[-1]) if yfinal is None else float(yfinal)
     y0 = 0.0 if yinit is None else float(yinit)
     dy = yf - y0
-    if not np.isfinite(yf) or dy == 0 and not np.allclose(y, y0):
-        out = dict(_NAN_INFO)
-        return out
-    if dy == 0:
+    if not np.isfinite(yf):
+        return dict(_NAN_INFO)
+    if dy == 0 and np.all(y == y0):
         return dict(RiseTime=0.0, TransientTime=0.0, SettlingTime=0.0, SettlingMin=y0, SettlingMax=y0,
                     Overshoot=0.0, Undershoot=0.0, Peak=0.0, PeakTime=float(t[0]))
+    if dy == 0:
+        return _info_zero_change(y, t, yf, y0, thr, interp)
     e = (y - y0) / dy
     t_lo, _ = _first_cross(e, t, lims[0], interp)
     t_hi, k_hi = _first_cross(e, t, lims[1], interp)
@@ -504,6 +505,20 @@ def _info_array(y, t, yfinal, yinit, thr, lims, interp=True) -> dict:
     kp = int(np.argmax(a))
     return dict(RiseTime=rise, TransientTime=tr, SettlingTime=st, SettlingMin=smin, SettlingMax=smax,
                 Overshoot=ov, Undershoot=un, Peak=float(a[kp]), PeakTime=float(t[kp]))
+
+
+def _info_zero_change(y, t, yf, y0, thr, interp=True) -> dict:
+    """Son değer = başlangıç değeri ama cevap sıfır değil (ör. S = feedback(1, L)): yüzdelik ölçütler tanımsız.
+
+    MATLAB R2025b'den ölçüldü: RiseTime 0, SettlingTime NaN, Overshoot = Undershoot = ∞; TransientTime, SettlingMin /
+    SettlingMax (tüm cevap), Peak = max|y − yinit| ve PeakTime olağan tanımla. (MATLAB ayrık modelde yfinal'i ~1e-17
+    yuvarlama kalıntısı olarak bulup 1e15 mertebesinde sonlu aşım verir; tanımın limiti ∞'dur.)"""
+    tr = _settle(y, t, yf, thr * float(np.max(np.abs(y - yf))), interp)
+    a = np.abs(y - y0)
+    kp = int(np.argmax(a))
+    return dict(RiseTime=0.0, TransientTime=tr, SettlingTime=math.nan, SettlingMin=float(np.min(y)),
+                SettlingMax=float(np.max(y)), Overshoot=math.inf, Undershoot=math.inf, Peak=float(a[kp]),
+                PeakTime=float(t[kp]))
 
 
 def stepinfo(sys_or_y, t=None, yfinal=None, yinit=None, SettlingTimeThreshold: float = 0.02,
@@ -588,6 +603,25 @@ def _stepinfo_siso(e: StateSpace, yf: float, tau: float, thr, lims, y0) -> dict:
     if not stable or not np.isfinite(yf):
         return dict(_NAN_INFO)
     dy = yf - y0
+    if dy == 0 and e.nx and np.any(e.C) and np.any(e.B) or dy == 0 and np.any(e.D):
+        # son değer = başlangıç ama geçici cevap var: sık ızgarada MATLAB'in sıfır değişim anlamları
+        tf_ = _auto_tfinal(e)
+        if e.is_discrete:
+            n = int(round(tf_ / e.Ts))
+            tt = np.arange(n + 1) * e.Ts
+        else:
+            tt = np.linspace(0.0, tf_, 20001)
+        yy = step(e, tt)[0][:, 0, 0]
+        if not np.any(yy != y0):
+            return dict(RiseTime=0.0, TransientTime=0.0, SettlingTime=0.0, SettlingMin=yf, SettlingMax=yf,
+                        Overshoot=0.0, Undershoot=0.0, Peak=0.0, PeakTime=0.0)
+        if tau:
+            tt, yy = np.concatenate([[0.0], tt + tau]), np.concatenate([[y0], yy])
+        info = _info_zero_change(yy, tt, yf, y0, thr, interp=not e.is_discrete)
+        # son değer (sınır) da cevabın değerler kümesindedir: alt / üst sınır pencereden bağımsız
+        info["SettlingMin"] = min(info["SettlingMin"], yf)
+        info["SettlingMax"] = max(info["SettlingMax"], yf)
+        return info
     if e.nx == 0 or dy == 0:
         return dict(RiseTime=0.0, TransientTime=0.0, SettlingTime=0.0, SettlingMin=yf, SettlingMax=yf,
                     Overshoot=0.0, Undershoot=0.0, Peak=abs(dy), PeakTime=tau if dy else 0.0)
@@ -611,9 +645,10 @@ def _stepinfo_disc(e, yf, tau, thr, lims, y0, p):
 
 
 def _limit_peak(info: dict, y: np.ndarray, y0: float, yf: float, discrete: bool):
-    """Tekdüze yaklaşımda tepe sonsuzdaki sınırdır: Peak = |yf − y0|, PeakTime = ∞."""
+    """Tekdüze yaklaşımda tepe sonsuzdaki sınırdır: Peak = |yf − y0|, PeakTime = ∞. Tepe sonlu bir örnekte de
+    erişilmişse (eşitlik dahil) o ilk örnek kalır."""
     a = np.abs(y - y0)
-    if a[-1] >= np.max(a[:-1]) - 1e-14 * max(1.0, abs(yf)) and abs(yf - y0) >= info["Peak"] - 1e-12 * abs(yf - y0):
+    if np.max(a) < abs(yf - y0) * (1 - 1e-14):          # sınır hiçbir örnekte erişilmiyor
         info["Peak"] = abs(yf - y0)
         info["PeakTime"] = math.inf
 
@@ -688,8 +723,9 @@ def _stepinfo_cont(e: StateSpace, yf, tau, thr, lims, y0, p):
     ov = 100.0 * max(0.0, ((ymax if dy > 0 else ymin) - y0) / dy - 1.0)
     un = 100.0 * max(0.0, -((ymin if dy > 0 else ymax) - y0) / dy)
     cand = [(tt, abs(v - y0)) for tt, v in pts]
-    pk_t, pk = max(cand, key=lambda z: z[1])
-    if abs(dy) >= pk * (1 - 1e-13):
+    pk = float(max(c[1] for c in cand))
+    pk_t = min(tt for tt, v in cand if v >= pk * (1 - 1e-13))      # eşit tepelerde ilk an (MATLAB gibi)
+    if abs(dy) > pk * (1 + 1e-12):                                   # tepe yalnız sonsuzda erişilen sınır
         pk_t, pk = math.inf, abs(dy)
     if k_hi >= 0:
         after = [f(t_hi), yf]

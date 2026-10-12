@@ -383,6 +383,66 @@ def test_pidtune_options_and_errors():
         cl.pidtune(Gd, "PI", 40.0)          # Nyquist frekansının üstü
 
 
+def _all_pm(G, C, wmin=1e-4, wmax=1e3):
+    """Bağımsız ölçüm: yoğun ızgarada |L| = 1 geçişleri (kök inceltme) ve faz payları (derece)."""
+    from scipy.optimize import brentq
+    w = np.geomspace(wmin, wmax, 200001)
+    Gs = cl._Siso(G)
+    lm = np.log(np.abs(C.evalfr(Gs.point(w)) * Gs.freq(w)))
+    out = []
+    for i in np.flatnonzero(np.sign(lm[:-1]) * np.sign(lm[1:]) < 0):
+        r = brentq(lambda x: math.log(abs(_loop(G, C, x))), w[i], w[i + 1], xtol=1e-14)
+        out.append((r, (math.degrees(cmath.phase(_loop(G, C, r))) + 180.0 + 180.0) % 360.0 - 180.0))
+    return out
+
+
+def test_pidtune_unstable_plants_sign_and_all_crossovers():
+    """Denetim bulguları (MATLAB R2025b karşılaştırması, kısa denetim):
+    1. 1/(s − 1) — DC kazancı negatif ama kararlı P kazancı pozitif: pidtune(G, 'P', √3) MATLAB Kp = 2 (kararlı,
+       PM 60°); eskiden işaret DC kazancından alınıp Kp = −2 (kararsız) dönüyordu. wc'siz MATLAB Kp = 2.001, PM 59.98°;
+       ayrık c2d(·, 0.1) MATLAB Kp = 2.50, PM 60°.
+    2. (5 − s)/((s − 1)(s + 3)) PID: eski tasarımın 3 kazanç geçişi var (0.390 / 1.056 / 2.516 rad/s; paylar
+       2.49° / 60° / 71.8°, MATLAB margin 2.49°) ama info 60° diyordu. Artık info['PhaseMargin'] en küçük pay ve
+       wc'siz tasarım TÜM geçişlerde ≥ 60°.
+    3. Ayrık c2d(1/(s − 1), 0.1) PI (gereken denetleyici fazı ≈ −1°, eski pencere −85…−5° dışında): MATLAB Kp = 7.41,
+       Ki = 1.01, PM 60.35°; eskiden "bulunamadı".
+    4. Gizli kararsız kip (s − 1)/((s − 1)(s + 2)): ileti nedeni söyler."""
+    from spt.control.discretize import c2d
+    G = lti.tf([1.0], [1.0, -1.0])
+    Gd = c2d(G, 0.1, "zoh")
+    with warnings.catch_warnings():
+        warnings.simplefilter("error", ControlWarning)          # kararlı tasarımda uyarı olmamalı
+        C, info = cl.pidtune(G, "P", math.sqrt(3))
+        assert abs(C.Kp - 2.0) < 1e-12 and info["Stable"] and abs(info["PhaseMargin"] - 60) < 1e-9
+        for plant, typ in ((G, "P"), (Gd, "P"), (Gd, "PI"), (G, "PI"), (G, "PID")):
+            C, info = cl.pidtune(plant, typ)
+            assert info["Stable"] and C.Kp > 0, (typ, C.parallel())
+            pms = _all_pm(plant, C, wmax=(math.pi / 0.1 * 0.999 if plant.Ts else 1e3))
+            assert pms and min(p for _, p in pms) >= 60 - 1e-6, (typ, pms)
+            assert abs(info["PhaseMargin"] - min(p for _, p in pms)) < 1e-6
+            assert _targets(_loop(plant, C, info["CrossoverFrequency"]), 60.0)[1] < 1e-7
+        C, info = cl.pidtune(Gd, "P", 1.7)
+        assert C.Kp > 0 and info["Stable"]
+    Gm = lti.tf([-1.0, 5.0], [1.0, 2.0, -3.0])
+    with pytest.warns(ControlWarning, match="başka kazanç geçişi"):
+        C, info = cl.pidtune(Gm, "PID", 1.0557470559060464)    # eski wc'siz tasarımın geçiş frekansı
+    pms = _all_pm(Gm, C)
+    assert len(pms) == 3 and info["Stable"]
+    assert abs(min(p for _, p in pms) - 2.4909) < 1e-3 and abs(info["PhaseMargin"] - min(p for _, p in pms)) < 1e-6
+    assert len(info["Crossovers"]) == 3 and abs(info["CrossoverFrequency"] - 1.0557470559060464) < 1e-15
+    with warnings.catch_warnings():
+        warnings.simplefilter("error", ControlWarning)
+        for typ in ("PID", "PIDF", "PD"):
+            C, info = cl.pidtune(Gm, typ)
+            pms = _all_pm(Gm, C)
+            assert info["Stable"] and min(p for _, p in pms) >= 60 - 1e-6, (typ, pms)
+    with pytest.raises(ControlError, match="gizli kararsız kip"):
+        cl.pidtune(lti.tf([1.0, -1.0], [1.0, 1.0, -2.0]), "PI")
+    with pytest.warns(ControlWarning, match="gizli kararsız kip"):
+        _, info = cl.pidtune(lti.tf([1.0, -1.0], [1.0, 1.0, -2.0]), "P", 1.0)
+    assert not info["Stable"]
+
+
 def test_pidtune_delay_plant_stability_by_nyquist():
     """Gecikmeli sürekli bitkide kararlılık Nyquist sarım sayısıyla: P kazancının analitik sınırı."""
     from scipy.optimize import brentq

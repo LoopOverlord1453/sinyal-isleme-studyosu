@@ -346,3 +346,66 @@ def test_evalfr(M, name):
     for q, p in enumerate(pts):
         v = np.asarray(evalfr(G, p)).reshape(G.shape)
         assert np.all(np.abs(v - H[:, :, q]) <= 1e-10 * np.abs(H[:, :, q]) + 1e-300)
+
+
+@pytest.mark.parametrize("Ts", [0.01, 0.001])
+def test_discrete_margin_small_wTs_crossovers_are_found(Ts):
+    """Regresyon: ayrık çevrimde ωTs küçükken cos θ polinomunun kökleri 1 çevresine kümelenip yuvarlamayla atılıyordu;
+    margin kazanç geçişini kaçırıp Pm = inf, Wcp = nan veriyordu (ör. Ts = 1 ms, ωc = 0.01…3 rad/s, PI/PID)."""
+    from spt.control.classical import pidtune
+    from spt.control.discretize import c2d
+    G = c2d(zpk([], [0, -2, -5], 10), Ts)
+    for typ, wc in (("PI", 0.01), ("PI", 0.3), ("PID", 0.1), ("PIDF", 1.0)):
+        C = pidtune(G, typ, wc)
+        C = C[0] if isinstance(C, tuple) else C
+        L = C * G
+        Gm, Pm, Wcg, Wcp = margin(L)
+        assert math.isfinite(Pm) and math.isfinite(Wcp), (typ, wc)
+        h = freqresp(L, [Wcp])[0, 0, 0]
+        assert abs(abs(h) - 1.0) < 1e-9
+        assert abs(((math.degrees(np.angle(h)) + 180.0 - Pm) + 180.0) % 360.0 - 180.0) < 1e-6
+
+
+# ---------------------------------------------------------------------------------------------------------------
+# Bağımsız denetim regresyonları (MATLAB R2025b değerleri denetçi oturumundan: spt_denetim/kisa_lti/ml1.json)
+# ---------------------------------------------------------------------------------------------------------------
+def test_delay_margin_sign_rule():
+    """Kararsız kapalı çevrim: çevrimde gecikme varsa DM = Pm/ω (negatif), yoksa (Pm mod 360°)/ω (MATLAB)."""
+    from spt.control.discretize import c2d
+    a = allmargin(tf([0.5], [1, -0.9], 0.1, io_delay=3))            # MATLAB −0.120422 (yaklaşık); kesin −0.1203571
+    assert not a["Stable"]
+    assert a["DelayMargin"][0] == pytest.approx(-0.12035708045983422, rel=1e-9)
+    assert a["DelayMargin"][0] == pytest.approx(-0.12042241262823783, rel=1e-3)
+    a = allmargin(c2d(tf([5], [1, 1]) * tf([1], [0.01, 0.001, 1]), 0.01))
+    assert a["DelayMargin"][0] == pytest.approx(40.01476178214942, rel=1e-3)
+    a = allmargin(tf([0.1, 0.05], [1, -1.98, 0.9801], 0.01))
+    assert a["DelayMargin"][0] == pytest.approx(15.981720146246426, rel=1e-3)
+
+
+def test_no_spurious_crossings_near_tustin_zeros():
+    """Tustin'in z = −1 sıfırları civarında |G| ~ 1e-17: faz gürültüsü geçiş sayılmaz (MATLAB yalnız gerçek geçiş)."""
+    from spt.control.discretize import c2d
+    G = c2d(tf([5], [1, 1]) * tf([1], [0.01, 0.001, 1]), 0.0005, "tustin")
+    a = allmargin(G)
+    assert a["GainMargin"].size == 1
+    # MATLAB'in frekansı yaklaşık (∠G artığı 1.3e-4); bizimki kesin (artık ~1e-9, keskin rezonans):
+    assert a["GainMargin"][0] == pytest.approx(0.02022029934691279, rel=1e-4)
+    assert a["GMFrequency"][0] == pytest.approx(10.0049843687426, rel=1e-5)
+    h = freqresp(G, a["GMFrequency"])[0, 0, 0]       # Ts = 0.5 ms'de kümelenmiş kutuplu tf: polyval ~1e-10 doğruluk
+    assert abs(h.imag) <= 1e-8 * abs(h) and h.real < 0
+    # Tustin sonrası z = 1 + 5e-10'daki integratör tanınır: ω = 0'da sahte kazanç payı yok
+    a = allmargin(c2d(tf([10], [1, 2, 10, 0]), 0.0005, "tustin"))
+    assert a["GainMargin"].size == 1 and a["GainMargin"][0] == pytest.approx(2.0, rel=1e-5)
+    assert math.isinf(dcgain(c2d(tf([10], [1, 2, 10, 0]), 0.0005, "tustin")))
+
+
+def test_degenerate_static_and_allpass_loops():
+    a = allmargin(tf(-1.0))                                           # MATLAB: GM 1 @ 1 rad/s, PM NaN, DM 0 @ NaN
+    assert list(a["GainMargin"]) == [1.0] and list(a["GMFrequency"]) == [1.0]
+    assert math.isnan(a["PhaseMargin"][0]) and math.isnan(a["DMFrequency"][0]) and not a["Stable"]
+    Gm, Pm, Wcg, Wcp = margin(tf(-1.0))
+    assert Gm == 1.0 and Wcg == 1.0 and math.isnan(Pm) and math.isnan(Wcp)
+    a = allmargin(tf([1, -1], [1, 1]))                                # MATLAB: DM yalnız 0 @ 0
+    assert list(a["DelayMargin"]) == [0.0] and list(a["DMFrequency"]) == [0.0]
+    a = allmargin(tf([1], [1], 0.1))                                  # MATLAB: DM [∞, 1] @ [0, ∞]
+    assert list(a["DelayMargin"]) == [math.inf, 1.0] and list(a["DMFrequency"]) == [0.0, math.inf]

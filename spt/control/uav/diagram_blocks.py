@@ -527,7 +527,11 @@ class LinearMPCBlock(DiscreteController):
     def compute(self, t, u, memory):
         from spt.control.mpc import mpcmove
         st = memory.copy()
-        mv, _ = mpcmove(self._mpc(), st, np.asarray(u[0], float), np.asarray(u[1], float))
+        ym, r = np.asarray(u[0], float), np.asarray(u[1], float)
+        try:
+            mv, _ = mpcmove(self._mpc(), st, ym, r)
+        except ControlError as exc:              # ör. sonlu olmayan ölçüm (NaN) — blok adıyla bildir
+            self.error(f"t = {t:.6g} s: {exc}")
         return np.asarray(mv, float).ravel(), st
 
     def linearize(self, t, x, xd, u):

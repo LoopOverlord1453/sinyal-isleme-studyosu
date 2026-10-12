@@ -64,6 +64,11 @@ def spa(data: IDData, M: int | None = None, w=None) -> IDFRD:
     if M < 2:
         raise ControlError("Pencere uzunluğu M en az 2 olmalı")
     w = _default_w(Ts) if w is None else np.unique(np.atleast_1d(np.asarray(w, float)))
+    from spt.control.sysid.data import excitation_warnings
+
+    const = excitation_warnings(data)
+    if const:
+        raise ControlError("Spektral analiz yapılamaz: " + "; ".join(const))
     R = covf(data, M)  # (M, nz, nz), τ = 0…M−1
     ny, nu = data.ny, data.nu
     win = np.r_[1.0, 0.5 + 0.5 * np.cos(np.pi * np.arange(1, M) / (M - 1))]
@@ -82,7 +87,11 @@ def spa(data: IDData, M: int | None = None, w=None) -> IDFRD:
         if nu:
             Fu = F[ny:, ny:]
             Fyu = F[:ny, ny:]
-            G = np.linalg.solve(Fu.T, Fyu.T).T
+            try:
+                G = np.linalg.solve(Fu.T, Fyu.T).T
+            except np.linalg.LinAlgError:
+                raise ControlError("Spektral analiz yapılamaz: giriş spektrumu tekil (girişler doğrusal bağımlı ya da "
+                                   "yetersiz uyarım)") from None
             S = F[:ny, :ny] - G @ np.conj(Fyu.T)
             resp[:, :, k] = G
         else:

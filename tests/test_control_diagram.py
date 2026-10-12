@@ -29,6 +29,19 @@ from spt.control.errors import ControlError, ControlWarning  # noqa: E402
 
 
 # ============================================================================ yardımcılar
+@pytest.fixture
+def clean_registry():
+    """Testte kaydedilen deneme blok türlerini sonra geri alır (diğer test dosyaları genel kaydı görür)."""
+    from spt.control.diagram import block as blk
+    blk._ensure_builtin()
+    reg, lazy = dict(blk._REGISTRY), dict(blk._LAZY)
+    yield
+    blk._REGISTRY.clear()
+    blk._REGISTRY.update(reg)
+    blk._LAZY.clear()
+    blk._LAZY.update(lazy)
+
+
 def unity_loop(ctrl_type="Gain", ctrl=None, plant=None, ref="Step", **ref_kw):
     m = Model("döngü")
     r = m.add(ref, "R", **ref_kw)
@@ -622,7 +635,7 @@ def test_catalog_all_blocks_instantiate_and_json():
             assert c["display_name"] and c["category_label"]
 
 
-def test_plugin_register_custom_block():
+def test_plugin_register_custom_block(clean_registry):
     @register_block
     class Kare(Block):
         type_name = "TestKare"
@@ -651,7 +664,7 @@ def test_plugin_register_custom_block():
         create_block("TestYokModul")
 
 
-def test_plugin_bases_continuous_plant_and_discrete_controller():
+def test_plugin_bases_continuous_plant_and_discrete_controller(clean_registry):
     class Tank(ContinuousPlant):
         type_name = "TestTank"
         display_name = "Tank (test)"
@@ -890,3 +903,83 @@ def test_encoded_params_roundtrip_all_blocks():
                 np.testing.assert_array_equal(v, v2)
             else:
                 assert v == v2, (c["type"], k)
+
+
+# ============================================================================ denetim regresyonları
+def test_routing_blocks_do_not_create_false_algebraic_loop():
+    """Sabit → Mux.1, Kazanç → Mux.2, Mux → Demux, Demux.1 → Kazanç, Demux.2 → çıkış: eleman düzeyinde döngü yok
+    (Simulink 'AlgebraicLoopMsg=error' ile çalıştırıyor, y = 2)."""
+    m = Model()
+    m.add("Constant", "C", value=1.0)
+    m.add("Gain", "K", K=2.0)
+    m.add("Mux", "Mux", inputs=2)
+    m.add("Demux", "D", outputs=2)
+    m.add("Outport", "O")
+    m.connect("C", "Mux")
+    m.connect("K", "Mux", dst_port=1)
+    m.connect("Mux", "D")
+    m.connect("D", "K", src_port=0)
+    m.connect("D", "O", src_port=1)
+    res = simulate(m, 1.0, solver="ode4", step=0.1, log_all=True)
+    assert res.outputs[1][-1, 0] == 2.0
+    np.testing.assert_array_equal(res.signals["Mux"][-1], [1.0, 2.0])     # yönlendirme çıkışı yine kaydedilir
+    L = linearize(m, [linio("C", 0, "input"), linio("D", 1, "output")])
+    assert L.D[0, 0] == pytest.approx(2.0)
+    # gerçek döngü (Mux / Demux / Seçici üzerinden) hâlâ yakalanır
+    m2 = Model()
+    m2.add("Constant", "R", value=1.0)
+    m2.add("Sum", "S", signs="+-")
+    m2.add("Gain", "G", K=0.5)
+    m2.add("Mux", "M", inputs=2)
+    m2.add("Selector", "Sel", indices=[2])
+    m2.connect("R", "S")
+    m2.connect("S", "G")
+    m2.connect("R", "M")
+    m2.connect("G", "M", dst_port=1)
+    m2.connect("M", "Sel")
+    m2.connect("Sel", "S", dst_port=1)
+    with pytest.raises(ControlError, match="Cebirsel döngü.*'S'.*'G'|Cebirsel döngü.*'G'.*'S'"):
+        compile_model(m2)
+
+
+def test_long_fixed_step_cancel_and_limit_are_immediate():
+    import time
+    m = Model()
+    m.add("Step", "r", step_time=0.0)
+    m.add("TransferFcn", "G", num=[1.0], den=[1.0, 1.0])
+    m.add("Terminator", "T")
+    m.connect("r", "G")
+    m.connect("G", "T")
+    ev = threading.Event()
+    ev.set()
+    t0 = time.perf_counter()
+    res = simulate(m, 4e4, solver="ode4", step=1e-3, cancel=ev)
+    assert res.cancelled and res.t.size == 1 and res.t[0] == 0.0
+    with pytest.raises(ControlError, match="üst sınır"):
+        simulate(m, 1e5, solver="ode4", step=1e-3)
+    assert time.perf_counter() - t0 < 2.0
+    # zaman ızgarası t = t0 + k·h (birikimli toplama değil) ve kısa son adım
+    r = simulate(m, 0.95, solver="ode4", step=0.1, start_time=0.3)
+    np.testing.assert_array_equal(r.t[:-1], 0.3 + np.arange(7) * 0.1)
+    assert r.t[-1] == 0.95 and r.t.size == 8
+
+
+def test_logged_signal_key_collision_is_reported():
+    m = Model()
+    m.add("Step", "A")
+    m.add("Gain", "B")
+    m.add("Terminator", "T")
+    m.add("Terminator", "T2")
+    m.connect("A", "B")
+    m.connect("B", "T")
+    m.connect("A", "T2")
+    m.log_signal("A", name="B")
+    m.log_signal("B")
+    rep = m.validate()
+    assert not rep.ok and "aynı adı taşıyor: 'B'" in rep.errors[0].message
+    with pytest.raises(ControlError, match="aynı adı taşıyor"):
+        simulate(m, 1.0, solver="ode4", step=0.1)
+    m.signals[("B", 0)]["log"] = False
+    res = simulate(m, 1.0, solver="ode4", step=0.1, log_all=True)     # otomatik kayıtta ayrışır: 'B', 'B:1'
+    assert {"B", "B:1"} <= set(res.signals)
+    np.testing.assert_array_equal(res.signals["B"][:, 0], (res.t >= 1.0).astype(float))   # A (Basamak)

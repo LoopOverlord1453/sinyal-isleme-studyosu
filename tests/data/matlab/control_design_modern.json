@@ -1,7 +1,7 @@
 {
- "script_sha": "d3b4393bddb7f50d7fde12a0867d527775d54393984614d944157b7513224f51",
+ "script_sha": "1b67ca7ec7fe3432f80e07e2f459ec6e0ad4e787ef874de5ba0dacca3c1376e1",
  "matlab": "R2025b",
- "script": "A = [-0.5 1 0; 0 -1 2; 1 0 -3]; B = [1 0; 0 1; 1 1];\nQ = [2 0.5 0; 0.5 1 0; 0 0 1]; R = [1 0.2; 0.2 2]; S = [0.1 0; 0 0.2; 0.1 0.1]; E = [1 0.1 0; 0 1 0; 0 0 1.2];\nAd = [0.9 0.2 0; 0 0.8 0.1; 0.1 0 1.05];\n[X, K, L] = icare(A, B, Q, R, S, E); out.care = struct('X', X, 'K', K, 'L', spt_c(L));\ntry\n  [X, K, L] = icare(A, B, Q, []); out.care0 = struct('X', X, 'K', K, 'L', spt_c(L));\ncatch e\n  out.err_care0 = e.message;\nend\n[X, K, L] = idare(Ad, B, Q, R, S, E); out.dare = struct('X', X, 'K', K, 'L', spt_c(L));\n[X, K, L] = idare(Ad, B, Q, R); out.dare0 = struct('X', X, 'K', K, 'L', spt_c(L));\nNx = [0.1 0; 0 0.2; 0.1 0.1];\n[K, Sx, Pc] = lqr(A, B, Q, R, Nx); out.lqr = struct('K', K, 'S', Sx, 'P', spt_c(Pc));\n[K, Sx, Pc] = lqr(ss(Ad, B, eye(3), 0, 0.1), Q, R, Nx); out.lqrsysd = struct('K', K, 'S', Sx, 'P', spt_c(Pc));\n[K, Sx, Pc] = dlqr(Ad, B, Q, R, Nx); out.dlqr = struct('K', K, 'S', Sx, 'P', spt_c(Pc));\n[K, Sx, Pc] = lqrd(A, B, Q, R, Nx, 0.1); out.lqrd = struct('K', K, 'S', Sx, 'P', spt_c(Pc));\n[K, Sx, Pc] = lqrd(A, B, Q, R, 0.05); out.lqrd0 = struct('K', K, 'S', Sx, 'P', spt_c(Pc));\nCy = [1 0 0; 0 1 1]; Dy = [0 0; 0.1 0];\nsysc = ss(A, B, Cy, Dy); sysd = c2d(sysc, 0.1);\nout.sysd = struct('A', sysd.A, 'B', sysd.B, 'C', sysd.C, 'D', sysd.D);\n[K, Sx, Pc] = lqi(sysc, blkdiag(Q, [1 0.1; 0.1 0.5]), R); out.lqic = struct('K', K, 'S', Sx, 'P', spt_c(Pc));\n[K, Sx, Pc] = lqi(sysd, blkdiag(Q, [1 0.1; 0.1 0.5]), R, [Nx; 0.05 0; 0 0.05]);\nout.lqid = struct('K', K, 'S', Sx, 'P', spt_c(Pc));\nQy = [2 0.3; 0.3 1]; Ny = [0.1 0; 0 0.2];\n[K, Sx, Pc] = lqry(sysc, Qy, R, Ny); out.lqryc = struct('K', K, 'S', Sx, 'P', spt_c(Pc));\n[K, Sx, Pc] = lqry(sysd, Qy, R, Ny); out.lqryd = struct('K', K, 'S', Sx, 'P', spt_c(Pc));\nK = place(A, B(:, 1), [-1 -2 -3]); out.place1 = K;\nK = place(A, B, [-1+1i -1-1i -4]); out.place2 = spt_c(eig(A - B * K));\nK = place(Ad, B, [0.5 0.2+0.3i 0.2-0.3i]); out.place3 = spt_c(eig(Ad - B * K));\nK = acker(A, B(:, 1), [-1+2i -1-2i -3]); out.acker = K;\nBk = [B, [0.5 0; 1 0.2; 0 1]]; Dk = [0 0 0.1 0; 0 0 0 0.2];\nsysk = ss(A, Bk, Cy, Dk);\nQn = [1 0.2; 0.2 0.5]; Rn = [0.3 0.05; 0.05 0.2]; Nn = [0.05 0; 0 0.02];\n[kest, L, Pk] = kalman(sysk, Qn, Rn, Nn);\nout.kalc = struct('A', kest.A, 'B', kest.B, 'C', kest.C, 'D', kest.D, 'L', L, 'P', Pk);\nsyskd = c2d(sysk, 0.1);\nout.syskd = struct('A', syskd.A, 'B', syskd.B, 'C', syskd.C, 'D', syskd.D);\n[kest, L, Pk, Mx, Z, My] = kalman(syskd, Qn, Rn, Nn);\nout.kald = struct('A', kest.A, 'B', kest.B, 'C', kest.C, 'D', kest.D, 'L', L, 'P', Pk, 'Mx', Mx, 'Z', Z, 'My', My);\n[kest, L, Pk, Mx, Z] = kalman(syskd, Qn, Rn, Nn, 'delayed');\nout.kaldd = struct('A', kest.A, 'B', kest.B, 'C', kest.C, 'D', kest.D);\ntry, [kest, L, Pk] = kalman(sysk, Qn, 0.2, [0.05; 0.02], 2, [1 2]); catch e, out.err_kalsk = e.message; end\nif exist('kest', 'var'), out.kalsk = struct('A', kest.A, 'B', kest.B, 'C', kest.C, 'D', kest.D, 'L', L, 'P', Pk); end\n[kest, L, Pk, M, Z] = kalmd(ss(A, [B(:, 1), [0.5; 1; 0]], [1 0 0], 0), 0.7, 0.05, 0.1);\nout.kalmd = struct('A', kest.A, 'B', kest.B, 'C', kest.C, 'D', kest.D, 'L', L, 'P', Pk, 'M', M, 'Z', Z);\nA1 = [0.9 0.1; -0.2 0.8]; B1 = [1; 0]; C1 = [1 0.3];\nsd1 = ss(A1, B1, C1, 0, 0.1); sd2 = ss(A1, B1, C1, 0.3, 0.1);\nQXU = blkdiag(eye(2), 1); QWV = blkdiag(0.5 * eye(2), 0.2);\nrg = lqg(sd1, QXU, QWV); out.lqg1 = struct('A', rg.A, 'B', rg.B, 'C', rg.C, 'D', rg.D);\ntry\n  rg = lqg(sd2, QXU, QWV, 'current'); out.lqg2 = struct('A', rg.A, 'B', rg.B, 'C', rg.C, 'D', rg.D);\ncatch e\n  out.err_lqg2 = e.message;\nend\ntry\n  rg = lqg(sd2, QXU, QWV, 2, '2dof', 'current'); out.lqg3 = struct('A', rg.A, 'B', rg.B, 'C', rg.C, 'D', rg.D);\ncatch e\n  out.err_lqg3 = e.message;\nend\nrg = lqg(sd2, QXU, QWV, 2, '1dof'); out.lqg4 = struct('A', rg.A, 'B', rg.B, 'C', rg.C, 'D', rg.D);\nsc = ss([0 1; -2 -3], [0; 1], [1 0], 0.2);\nrg = lqg(sc, QXU, QWV, 2); out.lqg5 = struct('A', rg.A, 'B', rg.B, 'C', rg.C, 'D', rg.D);\nrg = lqg(sc, QXU, QWV); out.lqg6 = struct('A', rg.A, 'B', rg.B, 'C', rg.C, 'D', rg.D);\nrg = reg(sd2, [0.5 0.2], [0.3; 0.1]); out.reg = struct('A', rg.A, 'B', rg.B, 'C', rg.C, 'D', rg.D);\ntry\n  es = estim(ss(A, Bk, Cy, Dk), [0.3 0; 0.1 0.2; 0 0.4], [1 2], [1 2]);\n  out.estim = struct('A', es.A, 'B', es.B, 'C', es.C, 'D', es.D);\ncatch e\n  out.err_estim = e.message;\nend\ntry, lqr([1 0; 0 2], [1; 0], eye(2), 1); catch e, out.err_lqr = e.message; end\ntry, place([1 0; 0 2], [1; 0], [-1 -2]); catch e, out.err_place = e.message; end\ntry, kalman(ss([1 0; 0 2], [1 0; 0 1], [1 0], 0), 1, 1); catch e, out.err_kalman = e.message; end\ntry, lqr(A, B, Q, -R); catch e, out.err_R = e.message; end",
+ "script": "A = [-0.5 1 0; 0 -1 2; 1 0 -3]; B = [1 0; 0 1; 1 1];\nQ = [2 0.5 0; 0.5 1 0; 0 0 1]; R = [1 0.2; 0.2 2]; S = [0.1 0; 0 0.2; 0.1 0.1]; E = [1 0.1 0; 0 1 0; 0 0 1.2];\nAd = [0.9 0.2 0; 0 0.8 0.1; 0.1 0 1.05];\n[X, K, L] = icare(A, B, Q, R, S, E); out.care = struct('X', X, 'K', K, 'L', spt_c(L));\ntry\n  [X, K, L] = icare(A, B, Q, []); out.care0 = struct('X', X, 'K', K, 'L', spt_c(L));\ncatch e\n  out.err_care0 = e.message;\nend\n[X, K, L] = idare(Ad, B, Q, R, S, E); out.dare = struct('X', X, 'K', K, 'L', spt_c(L));\n[X, K, L] = idare(Ad, B, Q, R); out.dare0 = struct('X', X, 'K', K, 'L', spt_c(L));\nNx = [0.1 0; 0 0.2; 0.1 0.1];\n[K, Sx, Pc] = lqr(A, B, Q, R, Nx); out.lqr = struct('K', K, 'S', Sx, 'P', spt_c(Pc));\n[K, Sx, Pc] = lqr(ss(Ad, B, eye(3), 0, 0.1), Q, R, Nx); out.lqrsysd = struct('K', K, 'S', Sx, 'P', spt_c(Pc));\n[K, Sx, Pc] = dlqr(Ad, B, Q, R, Nx); out.dlqr = struct('K', K, 'S', Sx, 'P', spt_c(Pc));\n[K, Sx, Pc] = lqrd(A, B, Q, R, Nx, 0.1); out.lqrd = struct('K', K, 'S', Sx, 'P', spt_c(Pc));\n[K, Sx, Pc] = lqrd(A, B, Q, R, 0.05); out.lqrd0 = struct('K', K, 'S', Sx, 'P', spt_c(Pc));\nCy = [1 0 0; 0 1 1]; Dy = [0 0; 0.1 0];\nsysc = ss(A, B, Cy, Dy); sysd = c2d(sysc, 0.1);\nout.sysd = struct('A', sysd.A, 'B', sysd.B, 'C', sysd.C, 'D', sysd.D);\n[K, Sx, Pc] = lqi(sysc, blkdiag(Q, [1 0.1; 0.1 0.5]), R); out.lqic = struct('K', K, 'S', Sx, 'P', spt_c(Pc));\n[K, Sx, Pc] = lqi(sysd, blkdiag(Q, [1 0.1; 0.1 0.5]), R, [Nx; 0.05 0; 0 0.05]);\nout.lqid = struct('K', K, 'S', Sx, 'P', spt_c(Pc));\nQy = [2 0.3; 0.3 1]; Ny = [0.1 0; 0 0.2];\n[K, Sx, Pc] = lqry(sysc, Qy, R, Ny); out.lqryc = struct('K', K, 'S', Sx, 'P', spt_c(Pc));\n[K, Sx, Pc] = lqry(sysd, Qy, R, Ny); out.lqryd = struct('K', K, 'S', Sx, 'P', spt_c(Pc));\nK = place(A, B(:, 1), [-1 -2 -3]); out.place1 = K;\nK = place(A, B, [-1+1i -1-1i -4]); out.place2 = spt_c(eig(A - B * K));\nK = place(Ad, B, [0.5 0.2+0.3i 0.2-0.3i]); out.place3 = spt_c(eig(Ad - B * K));\nK = acker(A, B(:, 1), [-1+2i -1-2i -3]); out.acker = K;\nBk = [B, [0.5 0; 1 0.2; 0 1]]; Dk = [0 0 0.1 0; 0 0 0 0.2];\nsysk = ss(A, Bk, Cy, Dk);\nQn = [1 0.2; 0.2 0.5]; Rn = [0.3 0.05; 0.05 0.2]; Nn = [0.05 0; 0 0.02];\n[kest, L, Pk] = kalman(sysk, Qn, Rn, Nn);\nout.kalc = struct('A', kest.A, 'B', kest.B, 'C', kest.C, 'D', kest.D, 'L', L, 'P', Pk);\nsyskd = c2d(sysk, 0.1);\nout.syskd = struct('A', syskd.A, 'B', syskd.B, 'C', syskd.C, 'D', syskd.D);\n[kest, L, Pk, Mx, Z, My] = kalman(syskd, Qn, Rn, Nn);\nout.kald = struct('A', kest.A, 'B', kest.B, 'C', kest.C, 'D', kest.D, 'L', L, 'P', Pk, 'Mx', Mx, 'Z', Z, 'My', My);\n[kest, L, Pk, Mx, Z] = kalman(syskd, Qn, Rn, Nn, 'delayed');\nout.kaldd = struct('A', kest.A, 'B', kest.B, 'C', kest.C, 'D', kest.D);\ntry, [kest, L, Pk] = kalman(sysk, Qn, 0.2, [0.05; 0.02], 2, [1 2]); catch e, out.err_kalsk = e.message; end\nif exist('kest', 'var'), out.kalsk = struct('A', kest.A, 'B', kest.B, 'C', kest.C, 'D', kest.D, 'L', L, 'P', Pk); end\n[kest, L, Pk, M, Z] = kalmd(ss(A, [B(:, 1), [0.5; 1; 0]], [1 0 0], 0), 0.7, 0.05, 0.1);\nout.kalmd = struct('A', kest.A, 'B', kest.B, 'C', kest.C, 'D', kest.D, 'L', L, 'P', Pk, 'M', M, 'Z', Z);\nA1 = [0.9 0.1; -0.2 0.8]; B1 = [1; 0]; C1 = [1 0.3];\nsd1 = ss(A1, B1, C1, 0, 0.1); sd2 = ss(A1, B1, C1, 0.3, 0.1);\nQXU = blkdiag(eye(2), 1); QWV = blkdiag(0.5 * eye(2), 0.2);\nrg = lqg(sd1, QXU, QWV); out.lqg1 = struct('A', rg.A, 'B', rg.B, 'C', rg.C, 'D', rg.D);\ntry\n  rg = lqg(sd2, QXU, QWV, 'current'); out.lqg2 = struct('A', rg.A, 'B', rg.B, 'C', rg.C, 'D', rg.D);\ncatch e\n  out.err_lqg2 = e.message;\nend\ntry\n  rg = lqg(sd2, QXU, QWV, 2, '2dof', 'current'); out.lqg3 = struct('A', rg.A, 'B', rg.B, 'C', rg.C, 'D', rg.D);\ncatch e\n  out.err_lqg3 = e.message;\nend\nrg = lqg(sd2, QXU, QWV, 2, '1dof'); out.lqg4 = struct('A', rg.A, 'B', rg.B, 'C', rg.C, 'D', rg.D);\nsc = ss([0 1; -2 -3], [0; 1], [1 0], 0.2);\nrg = lqg(sc, QXU, QWV, 2); out.lqg5 = struct('A', rg.A, 'B', rg.B, 'C', rg.C, 'D', rg.D);\nrg = lqg(sc, QXU, QWV); out.lqg6 = struct('A', rg.A, 'B', rg.B, 'C', rg.C, 'D', rg.D);\nrg = reg(sd2, [0.5 0.2], [0.3; 0.1]); out.reg = struct('A', rg.A, 'B', rg.B, 'C', rg.C, 'D', rg.D);\ntry\n  es = estim(ss(A, Bk, Cy, Dk), [0.3 0; 0.1 0.2; 0 0.4], [1 2], [1 2]);\n  out.estim = struct('A', es.A, 'B', es.B, 'C', es.C, 'D', es.D);\ncatch e\n  out.err_estim = e.message;\nend\nQXUm = [2 0.5 0 0.3 0; 0.5 1 0 0 0.2; 0 0 1 0.1 0.1; 0.3 0 0.1 1 0.2; 0 0.2 0.1 0.2 2];\nQWVm = [1 0.2 0 0.1 0; 0.2 0.5 0 0 0.05; 0 0 0.8 0.05 0; 0.1 0 0.05 0.3 0.05; 0 0.05 0 0.05 0.2];\nrg = lqg(sysd, QXUm, QWVm, 'current'); out.lqgNc = struct('A', rg.A, 'B', rg.B, 'C', rg.C, 'D', rg.D);\nrg = lqg(sysd, QXUm, QWVm, [1 0.1; 0.1 0.5], '2dof', 'current');\nout.lqgN2c = struct('A', rg.A, 'B', rg.B, 'C', rg.C, 'D', rg.D);\nrg = lqg(sysd, QXUm, QWVm, [1 0.1; 0.1 0.5], '1dof', 'current');\nout.lqgN1c = struct('A', rg.A, 'B', rg.B, 'C', rg.C, 'D', rg.D);\nout.place_unc = place([-1 0; 0 -2], [0; 1], [-1 -3]);\nout.place_dep = place([0 1; -2 -3], [0 0; 1 1], [-4 -5]);\ntry, kalmd(ss(A, [B(:, 1), [0.5; 1; 0]], [1 0 0], [0 0.3]), 0.7, 0.05, 0.1); catch e, out.err_kalmdH = e.message; end\ntry, lqr([1 0; 0 2], [1; 0], eye(2), 1); catch e, out.err_lqr = e.message; end\ntry, place([1 0; 0 2], [1; 0], [-1 -2]); catch e, out.err_place = e.message; end\ntry, kalman(ss([1 0; 0 2], [1 0; 0 1], [1 0], 0), 1, 1); catch e, out.err_kalman = e.message; end\ntry, lqr(A, B, Q, -R); catch e, out.err_R = e.message; end",
  "out": {
   "care": {
    "X": [
@@ -1722,6 +1722,264 @@
     ]
    ]
   },
+  "lqgNc": {
+   "A": [
+    [
+     0.1061970999812131,
+     0.05589161359630075,
+     -0.01745238818488847
+    ],
+    [
+     -0.09117179366450726,
+     0.49142155724486514,
+     -0.23379574708309017
+    ],
+    [
+     0.0891404281116927,
+     -0.4319383007406292,
+     0.32585515110374247
+    ]
+   ],
+   "B": [
+    [
+     0.7367682535223562,
+     -0.013730004760046863
+    ],
+    [
+     0.11850038628395577,
+     0.3871466611760598
+    ],
+    [
+     -0.07416537969422388,
+     0.3759230296886996
+    ]
+   ],
+   "C": [
+    [
+     -0.16552701226235622,
+     -0.11373604819358873,
+     -0.00989053205548499
+    ],
+    [
+     0.0073738678485769935,
+     -0.14807912749347063,
+     0.03577021028241469
+    ]
+   ],
+   "D": [
+    [
+     -0.9650017989246226,
+     -0.3957981064781897
+    ],
+    [
+     -0.165844996240123,
+     -0.26000450360236854
+    ]
+   ]
+  },
+  "lqgN2c": {
+   "A": [
+    [
+     0.09993069047717015,
+     0.04722226470850739,
+     -0.014497260039415672,
+     0.0923000876783087,
+     0.013049116539367793
+    ],
+    [
+     -0.08784307499250187,
+     0.49663776777607516,
+     -0.23928830612655796,
+     -0.04275416507604855,
+     0.04410370243951895
+    ],
+    [
+     0.08693399807418292,
+     -0.43450501059715924,
+     0.32377690806332693,
+     0.03748863636343425,
+     0.04516955087695011
+    ],
+    [
+     0,
+     0,
+     0,
+     1,
+     0
+    ],
+    [
+     0,
+     0,
+     0,
+     0,
+     1
+    ]
+   ],
+   "B": [
+    [
+     0,
+     0,
+     0.69162378028352,
+     -0.02204595480871656
+    ],
+    [
+     0,
+     0,
+     0.14561725766115413,
+     0.3714750454039018
+    ],
+    [
+     0,
+     0,
+     -0.0875676269404618,
+     0.35702345939061647
+    ],
+    [
+     0.1,
+     0,
+     -0.1,
+     0
+    ],
+    [
+     0,
+     0.1,
+     0,
+     -0.1
+    ]
+   ],
+   "C": [
+    [
+     -0.23191501335182912,
+     -0.20588836844407482,
+     0.023387380485381564,
+     0.9746991596620013,
+     0.11260963179664091
+    ],
+    [
+     0.019523674227480747,
+     -0.1254832830863533,
+     -0.007110786420811765,
+     -0.1195240515273051,
+     0.45803712050131523
+    ]
+   ],
+   "D": [
+    [
+     0,
+     0,
+     -1.444849634983411,
+     -0.47380832597629063
+    ],
+    [
+     0,
+     0,
+     -0.04861435697563052,
+     -0.4341370169385869
+    ]
+   ]
+  },
+  "lqgN1c": {
+   "A": [
+    [
+     0.09993069047717015,
+     0.04722226470850739,
+     -0.014497260039415672,
+     0.0923000876783087,
+     0.013049116539367793
+    ],
+    [
+     -0.08784307499250187,
+     0.49663776777607516,
+     -0.23928830612655796,
+     -0.04275416507604855,
+     0.04410370243951895
+    ],
+    [
+     0.08693399807418292,
+     -0.43450501059715924,
+     0.32377690806332693,
+     0.03748863636343425,
+     0.04516955087695011
+    ],
+    [
+     0,
+     0,
+     0,
+     1,
+     0
+    ],
+    [
+     0,
+     0,
+     0,
+     0,
+     1
+    ]
+   ],
+   "B": [
+    [
+     -0.69162378028352,
+     0.02204595480871656
+    ],
+    [
+     -0.14561725766115413,
+     -0.3714750454039018
+    ],
+    [
+     0.0875676269404618,
+     -0.35702345939061647
+    ],
+    [
+     0.1,
+     0
+    ],
+    [
+     0,
+     0.1
+    ]
+   ],
+   "C": [
+    [
+     -0.23191501335182912,
+     -0.20588836844407482,
+     0.023387380485381564,
+     0.9746991596620013,
+     0.11260963179664091
+    ],
+    [
+     0.019523674227480747,
+     -0.1254832830863533,
+     -0.007110786420811765,
+     -0.1195240515273051,
+     0.45803712050131523
+    ]
+   ],
+   "D": [
+    [
+     1.444849634983411,
+     0.4738083259762907
+    ],
+    [
+     0.04861435697563052,
+     0.4341370169385869
+    ]
+   ]
+  },
+  "place_unc": [
+   0,
+   1
+  ],
+  "place_dep": [
+   [
+    8.999999999999982,
+    2.9999999999999956
+   ],
+   [
+    8.999999999999982,
+    2.9999999999999956
+   ]
+  ],
+  "err_kalmdH": "The \"kalmd\" command cannot be used for models with direct feedthrough from w to y.",
   "err_lqr": "Cannot compute a stabilizing LQR gain (the Riccati solution S and gain matrix K are infinite). \nThis could be because: \n  * (A,E) has unstable modes that are not controllable through B, \n  * Q,R,N values are too large, \n  * [Q N;N' R] is indefinite, \n  * The E matrix in the state equation is singular.",
   "err_place": "The \"place\" command could not place the poles at the specified locations. Probable causes include:\n* (A,B) is nearly uncontrollable\n* The specified locations are too close to each other.",
   "err_kalman": "Cannot compute a convergent Kalman filter (the Riccati solution P and gain matrix L are infinite). \nThis could be because: \n  * A has unstable modes that are not observable through C, \n  * The QN,RN,NN values are too large, \n  * [QN NN;NN' RN] is indefinite, \n  * The E matrix in the state equation is singular.",

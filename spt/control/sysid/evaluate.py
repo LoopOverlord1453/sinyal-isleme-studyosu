@@ -309,6 +309,10 @@ def resid(data: IDData, model, *, max_lag: int = 25, initial_condition="e", num_
         for j in range(nu):
             uj = ny + j
             norm = np.sqrt(R[0, i, i] * R[0, uj, uj])
+            if not norm > 0:  # sabit giriş (yetersiz uyarım): çapraz ilinti tanımsız → NaN
+                cross[:, i, j] = np.nan
+                conf_cross[i, j] = np.nan
+                continue
             # τ ≥ 0: E[u(t) e(t+τ)] = R[τ, u, e]; τ < 0: E[u(t) e(t−|τ|)] = E[e(t) u(t+|τ|)] = R[|τ|, e, u]
             pos = R[:, uj, i]
             neg = R[1:, i, uj][::-1]

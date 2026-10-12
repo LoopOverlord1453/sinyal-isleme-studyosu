@@ -3,7 +3,7 @@ import pytest
 
 from spt.core.ring import SharedRing
 from spt.core.stream_store import StreamInfo, StreamStore
-from spt.protocol.builder import build_data, build_descriptor
+from spt.protocol.builder import build_data, build_descriptor, build_marker
 from spt.protocol.format import SAMPLE_TYPES_BY_NAME, ChannelInfo, Descriptor, Layout
 from spt.protocol.recording import SptrReader, SptrWriter
 
@@ -188,6 +188,19 @@ def test_planar_fast_path_writes_same_samples_as_interleaved():
     assert np.array_equal(got, values)
     ring.close()
     store.close()
+
+
+def test_marker_position_maps_stream_index_to_ring_index(h):
+    """MARKER'ın örnek indeksi (first_sample ekseni) tampon indeksine çevrilir: veriden önce gelen işaret ilk DATA
+    gelince konumlanır; ortadan katılmada ve kayıptan sonra da çizgi doğru örneğe düşer."""
+    h.feed(build_descriptor(_desc()))
+    h.feed(build_marker(7, 1, 0, 0, 105, 1, "erken"))   # henüz tampon yok: bekletilir
+    assert not [e for e in h.events if e[0] == "marker"]
+    h.data(100)                                          # ortadan katılma: tampon indeksi 0 ↔ örnek 100
+    h.data(130)                                          # 110..129 kayıp (tampon atlar)
+    h.feed(build_marker(7, 1, 0, 0, 135, 2, "sonra"))
+    marks = [e for e in h.events if e[0] == "marker"]
+    assert [(m[2], m[3], m[4], m[5]) for m in marks] == [(105, 1, "erken", 5), (135, 2, "sonra", 35)]
 
 
 def test_recording_started_mid_stream_gets_descriptor_first(h):

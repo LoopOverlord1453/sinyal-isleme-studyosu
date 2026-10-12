@@ -1,0 +1,718 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Signal Processing Toolbox — Data brief (Rev 1)</title>
+<style>
+/* ------------------------------------------------------------------
+   Renk anlamları (her renk tek anlam):
+   turuncu  = PC uygulaması (Signal Processing Toolbox)
+   mavi     = gömülü kütüphane (SPTF-UDP, MCU tarafı)
+   mürekkep = genel / SPTF v1 bağlantısı (nötr)
+   ------------------------------------------------------------------ */
+@page { size: A4; margin: 0; }
+:root {
+  --ink: #151311;
+  --text: #24211e;
+  --text2: #5c5650;
+  --muted: #776f68;
+  --rule: #e4dfd9;
+  --rule2: #cdc6be;
+  --panel: #f7f5f2;
+
+  --pc: #b4530b;        /* PC metni / dolgu (beyazla 5.0:1) */
+  --pc-tint: #fdf2e9;
+  --pc-line: #efc9a8;
+  --pc-on-dark: #ec7c22;
+
+  --mcu: #1f63c6;       /* MCU metni / dolgu (beyazla 5.7:1) */
+  --mcu-tint: #edf3fc;
+  --mcu-line: #c3d5f1;
+  --mcu-on-dark: #8fb4ec;
+
+  --band: #121110;
+  --band-text: #fffdfb;
+  --band-text2: #b3aca5;
+  --band-rule: #38332f;
+
+  --f-display: "Segoe UI Variable Display", "Segoe UI", system-ui, sans-serif;
+  --f-text: "Segoe UI Variable Text", "Segoe UI", system-ui, sans-serif;
+  --f-num: "Bahnschrift", "Segoe UI", sans-serif;
+  --f-mono: "Cascadia Mono", Consolas, monospace;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+body {
+  background: #d6d2cc;
+  color: var(--text);
+  font-family: var(--f-text);
+  font-size: 8pt;
+  line-height: 1.38;
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
+  padding: 24px 0;
+}
+section.page {
+  width: 210mm;
+  height: 297mm;
+  overflow: hidden;
+  position: relative;
+  background: #ffffff;
+  margin: 0 auto 24px;
+  break-after: page;
+  page-break-after: always;
+  box-shadow: 0 2px 14px rgba(0,0,0,.18);
+}
+section.page:last-of-type { break-after: auto; page-break-after: auto; margin-bottom: 0; }
+@media print {
+  body { background: #ffffff; padding: 0; }
+  section.page { margin: 0; box-shadow: none; }
+}
+b, strong { font-weight: 650; }
+.num { font-family: var(--f-num); font-weight: 600; letter-spacing: -0.01em; }
+code, .mono { font-family: var(--f-mono); font-size: 0.94em; }
+
+/* ---------- ortak bölüm başlığı ---------- */
+.h {
+  font-family: var(--f-display);
+  font-size: 10pt;
+  font-weight: 650;
+  color: var(--ink);
+  display: flex;
+  align-items: center;
+  gap: 2.2mm;
+  padding-bottom: 1.3mm;
+  margin-bottom: 2.1mm;
+  border-bottom: 0.6pt solid var(--rule2);
+  line-height: 1.15;
+}
+.h::before { content: ""; width: 2.2mm; height: 2.2mm; background: var(--ink); flex: none; }
+.h.mcu::before { background: var(--mcu); }
+.h.pc::before { background: var(--pc); }
+.h .aside { margin-left: auto; font-family: var(--f-text); font-size: 6.8pt; font-weight: 400; color: var(--muted); }
+
+.content { padding: 0 12mm; }
+
+/* ---------- sayfa altı ---------- */
+.pfoot {
+  position: absolute; left: 12mm; right: 12mm; bottom: 7mm;
+  display: flex; justify-content: space-between; align-items: center;
+  border-top: 0.6pt solid var(--rule2);
+  padding-top: 1.6mm;
+  font-size: 6.6pt; color: var(--muted);
+}
+.pfoot .pg { font-family: var(--f-num); font-weight: 600; color: var(--ink); font-size: 7.4pt; }
+
+/* =================== SAYFA 1 =================== */
+.band {
+  background:
+    radial-gradient(120mm 70mm at 18% 0%, #2a1a0c 0%, rgba(18,17,16,0) 70%),
+    var(--band);
+  color: var(--band-text);
+  padding: 8mm 12mm 3.6mm;
+  position: relative;
+}
+.band-grid { display: grid; grid-template-columns: 1fr 80mm; gap: 7mm; }
+.eyebrow {
+  display: flex; align-items: center; gap: 2.4mm;
+  font-size: 7pt; color: var(--band-text2); letter-spacing: 0.02em;
+}
+.eyebrow svg { width: 6.2mm; height: 6.2mm; flex: none; }
+.eyebrow .db {
+  font-weight: 700; color: var(--band-text); letter-spacing: 0.16em; font-size: 7.4pt;
+  border: 0.7pt solid var(--pc-on-dark); padding: 0.5mm 1.8mm; border-radius: 1mm;
+}
+.band h1 {
+  font-family: var(--f-display);
+  font-weight: 650;
+  font-size: 26pt;
+  line-height: 1.0;
+  letter-spacing: -0.015em;
+  margin-top: 4mm;
+}
+.band h1 .accent { color: var(--pc-on-dark); }
+.tagline {
+  margin-top: 2.8mm;
+  font-size: 8.8pt;
+  line-height: 1.38;
+  color: #e3ddd6;
+}
+.vers { display: flex; flex-wrap: wrap; gap: 1.6mm; margin-top: 3.2mm; }
+.vers span {
+  display: inline-flex; align-items: baseline; gap: 1.4mm;
+  border: 0.6pt solid var(--band-rule);
+  background: rgba(255,255,255,.035);
+  border-radius: 1mm;
+  padding: 0.7mm 2mm;
+  font-size: 6.9pt; color: var(--band-text2);
+}
+.vers span b { font-family: var(--f-num); font-weight: 600; color: var(--band-text); font-size: 8pt; }
+
+.hero { margin-top: 1mm; }
+.hero img {
+  display: block; width: 80mm; height: 45mm;
+  border-radius: 1.6mm;
+  border: 0.8pt solid #4a443e;
+  box-shadow: 0 0 0 1.2mm rgba(236,124,34,.07), 0 3mm 7mm rgba(0,0,0,.45);
+}
+.hero figcaption { margin-top: 1.6mm; font-size: 6.4pt; line-height: 1.3; color: var(--band-text2); }
+
+.steps {
+  list-style: none;
+  display: grid; grid-template-columns: 1fr auto 1fr auto 1fr;
+  align-items: center;
+  border-top: 0.6pt solid var(--band-rule);
+  margin-top: 3.4mm;
+  padding-top: 2.4mm;
+  column-gap: 3mm;
+}
+.steps li { display: flex; align-items: center; gap: 2.6mm; }
+.steps .n { font-family: var(--f-num); font-weight: 600; font-size: 15pt; color: var(--pc-on-dark); line-height: 1; }
+.steps .t { font-size: 6.9pt; color: var(--band-text2); line-height: 1.3; }
+.steps .t strong { display: block; font-family: var(--f-display); font-size: 10pt; color: var(--band-text); font-weight: 650; line-height: 1.15; }
+.steps .chev { width: 4mm; height: 4mm; color: #6d655e; }
+
+/* KPI şeridi */
+.kpis { display: grid; grid-template-columns: repeat(6, 1fr); gap: 3mm; margin-top: 5mm; }
+.kpi { border-top: 0.9mm solid var(--ink); padding-top: 1.6mm; }
+.kpi.pc { border-top-color: var(--pc); }
+.kpi.mcu { border-top-color: var(--mcu); }
+.kpi .dom { font-size: 6pt; font-weight: 700; letter-spacing: 0.12em; color: var(--ink); }
+.kpi.pc .dom { color: var(--pc); }
+.kpi.mcu .dom { color: var(--mcu); }
+.kpi .v { font-family: var(--f-num); font-weight: 600; font-size: 18pt; line-height: 1.05; color: var(--ink); margin-top: 0.5mm; white-space: nowrap; }
+.kpi .v small { font-size: 9pt; font-weight: 500; margin-left: 0.6mm; color: var(--text2); }
+.kpi .l { font-size: 6.3pt; line-height: 1.3; color: var(--text2); margin-top: 0.6mm; }
+
+/* Öne çıkanlar */
+.sec { margin-top: 5.2mm; }
+.p1 .sec { margin-top: 7.4mm; }
+.p1 .kpis { margin-top: 5.6mm; }
+.hl-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 7mm; }
+.hl-col h3 {
+  font-family: var(--f-display); font-size: 8.2pt; font-weight: 650; margin-bottom: 1.2mm;
+}
+.hl-col.pc h3 { color: var(--pc); }
+.hl-col.mcu h3 { color: var(--mcu); }
+.hl-col h3 .sub { color: var(--muted); font-weight: 400; font-size: 7pt; margin-left: 1mm; }
+.ul { list-style: none; }
+.ul li { position: relative; padding-left: 3.2mm; margin-bottom: 0.85mm; font-size: 7.2pt; line-height: 1.32; }
+.ul li::before { content: ""; position: absolute; left: 0.3mm; top: 1.2mm; width: 1.3mm; height: 1.3mm; background: var(--ink); }
+.pc .ul li::before { background: var(--pc); }
+.mcu .ul li::before { background: var(--mcu); }
+.ul li b { color: var(--ink); }
+
+/* Blok diyagram */
+.legend { display: flex; gap: 4mm; margin-left: auto; font-family: var(--f-text); font-size: 6.6pt; font-weight: 400; color: var(--text2); }
+.legend i { display: inline-block; width: 2.4mm; height: 2.4mm; margin-right: 1.1mm; vertical-align: -0.35mm; border-radius: 0.4mm; }
+svg.blk { display: block; width: 100%; height: auto; font-family: var(--f-text); }
+.blk .bt { font-size: 10.4px; font-weight: 650; fill: var(--text); text-anchor: middle; }
+.blk .bs { font-size: 8.6px; fill: var(--text2); text-anchor: middle; }
+.blk .inv .bt { fill: #ffffff; }
+.blk .inv .bs { fill: #f4ede6; }
+.blk .mod { font-size: 9px; font-weight: 600; fill: var(--text); text-anchor: middle; }
+.blk .pl { font-size: 8.4px; font-weight: 700; letter-spacing: 0.12em; }
+.blk .pr { font-size: 8.4px; fill: var(--muted); text-anchor: end; }
+.blk .cap1 { font-size: 8.2px; font-weight: 700; letter-spacing: 0.14em; fill: var(--muted); text-anchor: middle; }
+.blk .cap2 { font-size: 9.4px; fill: var(--text2); text-anchor: middle; }
+.blk .ph { font-size: 9.6px; font-weight: 650; fill: var(--ink); }
+.blk .phn { font-size: 8px; font-weight: 700; fill: #ffffff; text-anchor: middle; }
+
+/* Açıklama + uygulama alanları */
+.desc .cols { column-count: 2; column-gap: 7mm; }
+.desc p { font-size: 7.8pt; line-height: 1.48; color: var(--text); break-inside: avoid; }
+.desc p + p { margin-top: 1.2mm; }
+.apps { display: flex; flex-wrap: wrap; align-items: center; gap: 1.1mm; margin-top: 2.6mm; white-space: nowrap; }
+.apps .lbl { font-size: 6.9pt; font-weight: 650; color: var(--ink); margin-right: 0.8mm; }
+.apps span.c { font-size: 6.3pt; color: var(--text); border: 0.6pt solid var(--rule2); border-radius: 3mm; padding: 0.35mm 1.7mm; background: #fff; }
+
+/* =================== SAYFA 2 =================== */
+.runhead {
+  display: flex; align-items: center; gap: 2.4mm;
+  margin: 0 12mm; padding: 8mm 0 2.2mm;
+  border-bottom: 0.6pt solid var(--rule2);
+  font-size: 7pt; color: var(--text2);
+  position: relative;
+}
+.runhead::after { content: ""; position: absolute; left: 0; bottom: -0.6pt; width: 24mm; height: 0.8mm; background: var(--pc); }
+.runhead svg { width: 5mm; height: 5mm; }
+.runhead b { font-family: var(--f-display); color: var(--ink); font-size: 9pt; }
+.runhead .r { margin-left: auto; }
+
+.row { display: grid; gap: 7mm; margin-top: 5mm; }
+.r1 { grid-template-columns: 1.32fr 1fr; }
+.r3 { grid-template-columns: 1.55fr 1fr; align-items: start; }
+.r4 { grid-template-columns: 1.3fr 0.95fr 1.05fr; }
+
+/* anahtar–değer tabloları */
+table { border-collapse: collapse; width: 100%; }
+.kv td { padding: 0.8mm 0; border-bottom: 0.5pt solid var(--rule); vertical-align: top; font-size: 7pt; line-height: 1.32; }
+.kv tr:first-child td { border-top: 0.5pt solid var(--rule); }
+.kv td.k { width: 22mm; color: var(--text2); padding-right: 2.4mm; font-weight: 500; }
+.kv td.v { color: var(--text); }
+.kv td.v i { font-style: normal; color: var(--muted); font-size: 6.4pt; }
+.kv td.v b { color: var(--ink); }
+.kv .em { font-family: var(--f-num); font-weight: 600; font-size: 8pt; color: var(--ink); }
+.kv tr.hi td { background: var(--panel); }
+.kv tr.hi td.k { padding-left: 1.4mm; }
+.note { display: block; color: var(--muted); font-size: 6.2pt; line-height: 1.28; margin-top: 0.2mm; }
+
+/* doğrulama */
+.ver { list-style: none; }
+.ver li { display: grid; grid-template-columns: 4mm 1fr; gap: 0.6mm; font-size: 6.95pt; line-height: 1.3; padding: 0.75mm 0; border-bottom: 0.5pt solid var(--rule); }
+.ver li:first-child { border-top: 0.5pt solid var(--rule); }
+.ver svg { width: 2.8mm; height: 2.8mm; margin-top: 0.3mm; }
+.ver b { color: var(--ink); }
+.ver .tag { display: inline-block; font-size: 5.8pt; font-weight: 700; letter-spacing: 0.08em; padding: 0 1mm; border-radius: 0.6mm; margin-right: 1mm; vertical-align: 0.2mm; }
+.ver .tag.mcu { color: var(--mcu); border: 0.5pt solid var(--mcu-line); background: var(--mcu-tint); }
+.ver .tag.pc { color: var(--pc); border: 0.5pt solid var(--pc-line); background: var(--pc-tint); }
+
+/* ayak izi */
+.fp { display: grid; grid-template-columns: 1.12fr 1fr; gap: 7mm; }
+.fp h4 { font-size: 7.6pt; font-weight: 650; color: var(--ink); margin-bottom: 0.6mm; }
+.fp h4 .sub { font-weight: 400; color: var(--muted); font-size: 6.7pt; margin-left: 0.8mm; }
+.flash-legend { display: flex; gap: 4mm; font-size: 6.6pt; color: var(--text2); margin: 1.2mm 0 1.4mm; }
+.sw { display: inline-block; width: 4.2mm; height: 2.4mm; vertical-align: -0.35mm; margin-right: 1.2mm; }
+.sw.base { background: var(--mcu); }
+.sw.crc, .seg.crc {
+  background: #b3cbf1;
+  box-shadow: inset 0 0 0 0.6pt var(--mcu);
+}
+.ft { width: 100%; table-layout: fixed; }
+.ft th { font-size: 6.4pt; font-weight: 600; color: var(--muted); text-align: right; padding: 0 0 0.9mm; border-bottom: 0.6pt solid var(--rule2); }
+.ft th.c, .ft td.c { text-align: left; }
+.ft th.c { width: 20mm; }
+.ft th.n { width: 15mm; }
+.ft td { font-size: 7.1pt; padding: 0.8mm 0; border-bottom: 0.5pt solid var(--rule); text-align: right; vertical-align: middle; }
+.ft td.c { color: var(--text); font-weight: 500; width: 20mm; }
+.ft td.n { font-family: var(--f-num); font-weight: 600; font-size: 7.8pt; color: var(--ink); width: 15mm; padding-right: 0; }
+.ft td.bar { padding-left: 4mm; width: auto; }
+.track { position: relative; height: 2.6mm; }
+.track .grid { position: absolute; top: -1mm; bottom: -1mm; width: 0; border-left: 0.5pt dotted var(--rule2); }
+.seg { position: absolute; top: 0; bottom: 0; }
+.seg.base { left: 0; background: var(--mcu); }
+.seg.crc { border-radius: 0 0.7mm 0.7mm 0; }
+.axis { position: relative; height: 3mm; margin-left: calc(20mm + 30mm + 4mm); font-size: 6pt; color: var(--muted); }
+.axis span { position: absolute; top: 0.6mm; transform: translateX(-50%); white-space: nowrap; }
+.fp-notes { margin-top: 1.4mm; font-size: 6.7pt; color: var(--text2); line-height: 1.4; }
+.fp-notes div { padding-left: 2.6mm; position: relative; }
+.fp-notes div::before { content: "–"; position: absolute; left: 0; color: var(--muted); }
+.fp-notes b { color: var(--ink); font-weight: 600; }
+.est {
+  display: inline-block; font-size: 5.8pt; font-weight: 700; letter-spacing: 0.1em;
+  color: var(--text2); border: 0.6pt dashed var(--text2); border-radius: 0.6mm;
+  padding: 0 1mm; margin-left: 1mm; vertical-align: 0.25mm;
+}
+
+/* kod kutusu */
+.code {
+  background: var(--band);
+  border-radius: 1.6mm;
+  padding: 2.6mm 3mm 2.8mm;
+  font-family: var(--f-mono);
+  font-size: 6.9pt;
+  line-height: 1.55;
+  color: #ddd7d0;
+  counter-reset: ln;
+  border-left: 1mm solid var(--mcu);
+}
+.code div { white-space: pre; counter-increment: ln; }
+.code div::before { content: counter(ln); display: inline-block; width: 4mm; color: #6d655e; }
+.code .f { color: var(--mcu-on-dark); }
+.code .k { color: #fffdfb; font-weight: 700; }
+.code .c { color: #9a938c; font-style: italic; }
+.code-cap { margin-top: 1.6mm; font-size: 6.7pt; color: var(--text2); line-height: 1.4; }
+.code-cap b { color: var(--ink); font-weight: 600; }
+
+.shot2 img { display: block; width: 100%; border-radius: 1.2mm; border: 0.6pt solid var(--rule2); }
+.shot2 figcaption { margin-top: 1.4mm; font-size: 6.6pt; color: var(--text2); line-height: 1.35; }
+.shot2 figcaption b { color: var(--ink); font-weight: 600; }
+
+/* listeler */
+.ul.sm li { font-size: 6.9pt; margin-bottom: 0.7mm; }
+.ul.sm li::before { top: 1.15mm; }
+.doc { font-family: var(--f-mono); font-size: 6.7pt; color: var(--ink); }
+
+.rev { width: 100%; margin-top: 1mm; }
+.rev th { font-size: 6.3pt; font-weight: 600; color: var(--muted); text-align: left; padding: 0 2mm 0.7mm 0; border-bottom: 0.6pt solid var(--rule2); }
+.rev td { font-size: 7.1pt; padding: 0.9mm 2mm 0.9mm 0; border-bottom: 0.5pt solid var(--rule); }
+.lic { font-size: 7pt; line-height: 1.4; margin-bottom: 1.8mm; }
+.lic .doc { font-size: 6pt; white-space: nowrap; }
+.lic b { color: var(--ink); }
+
+.disclaimer {
+  margin: 4mm 12mm 0;
+  padding: 1.6mm 3mm;
+  background: var(--panel);
+  border-left: 0.8mm solid var(--ink);
+  font-size: 6.7pt; line-height: 1.42; color: var(--text2);
+}
+.disclaimer b { color: var(--ink); }
+</style>
+</head>
+<body>
+
+<!-- ============================ SAYFA 1 ============================ -->
+<section class="page p1">
+  <header class="band">
+    <div class="band-grid">
+      <div>
+        <div class="eyebrow">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><rect width="24" height="24" rx="6" fill="#ec7c22"/><path d="M4.2 12.5c1.6-5.2 3.4-5.2 5 0s3.4 5.2 5 0 3.2-5 5.6-1.4" fill="none" stroke="#fff" stroke-width="2.3" stroke-linecap="round"/></svg>
+          <span class="db">DATA BRIEF</span>
+          <span>Rev 1 · 12 Ekim 2026</span>
+        </div>
+        <h1>Signal Processing<br><span class="accent">Toolbox</span></h1>
+        <p class="tagline">Gömülü sistemler için gerçek zamanlı sinyal analizi, filtre / füzyon / kontrolcü tasarımı ve mikrodenetleyici C kodu üretimi — karttan Ethernet (UDP) ile gelen veri üzerinde.</p>
+        <div class="vers">
+          <span>Uygulama <b>0.1.0</b></span>
+          <span>SPTF-UDP <b>1.0.0</b></span>
+          <span>Protokol <b>SPTF v1</b> · UDP <b>50505</b></span>
+        </div>
+      </div>
+      <figure class="hero">
+        <img src="../gorseller/gomulu_udp_canli.png" alt="Canlı İzleme: SPTF-UDP göndericisinden gelen iki akış ve MARKER olay çizgileri">
+        <figcaption>Gerçek ekran · Canlı İzleme: C SPTF-UDP göndericisinden 2 akış (3&nbsp;×&nbsp;int16 20&nbsp;kHz, 6&nbsp;×&nbsp;float32 1&nbsp;kHz), etiketli MARKER olay çizgileri, kayıp 0 örnek.</figcaption>
+      </figure>
+    </div>
+    <ol class="steps">
+      <li><span class="n">01</span><span class="t"><strong>İzle</strong>karttan ham veriyi kayıpsız al, kaydet, oynat</span></li>
+      <li aria-hidden="true"><svg class="chev" viewBox="0 0 16 16"><path d="M5 2l6 6-6 6" fill="none" stroke="currentColor" stroke-width="1.6"/></svg></li>
+      <li><span class="n">02</span><span class="t"><strong>Tasarla</strong>filtre, füzyon, kontrolcü — gerçek veride</span></li>
+      <li aria-hidden="true"><svg class="chev" viewBox="0 0 16 16"><path d="M5 2l6 6-6 6" fill="none" stroke="currentColor" stroke-width="1.6"/></svg></li>
+      <li><span class="n">03</span><span class="t"><strong>Aktar</strong>tasarımı MCU C koduna dönüştür</span></li>
+    </ol>
+  </header>
+
+  <div class="content">
+    <!-- Kilit sayılar -->
+    <div class="kpis">
+      <div class="kpi pc"><div class="dom">PC · ALICI</div><div class="v">113<small>MB/s</small></div><div class="l">kayıpsız alım · 1472 B datagram · ölçüldü, localhost</div></div>
+      <div class="kpi"><div class="dom">SPTF v1</div><div class="v">%96.5</div><div class="l">yük verimi · 1472 B datagram</div></div>
+      <div class="kpi"><div class="dom">SPTF v1</div><div class="v">17<small>tip</small></div><div class="l">örnek tipi (I/Q dahil) · akış başına 1–256 kanal</div></div>
+      <div class="kpi mcu"><div class="dom">MCU · FLASH</div><div class="v">≈3.3<small>KB</small></div><div class="l">flash · çekirdek kütüphane, GCC -Os, CRC tablosuz</div></div>
+      <div class="kpi mcu"><div class="dom">MCU · RAM</div><div class="v">0<small>B</small></div><div class="l">statik RAM · dinamik bellek yok</div></div>
+      <div class="kpi mcu"><div class="dom">MCU · YIĞIN</div><div class="v">≤280<small>B</small></div><div class="l">yığın, en kötü çağrı zinciri · M3/M4F/M7/M33F</div></div>
+    </div>
+
+    <!-- Öne çıkanlar -->
+    <div class="sec">
+      <h2 class="h">Öne çıkanlar</h2>
+      <div class="hl-grid">
+        <div class="hl-col pc">
+          <h3>PC uygulaması</h3>
+          <ul class="ul">
+            <li><b>Canlı İzleme</b> — çoklu UDP akışı, zaman / frekans, kayıp sayımı, <code>.sptr</code> kayıt</li>
+            <li><b>İnceleme</b> — canlı akışı dondur, anlık görüntüde ölç ve filtrele</li>
+            <li><b>Filtre Tasarımcısı</b> — IIR, FIR, özel; faz, grup gecikmesi, kutup-sıfır</li>
+            <li><b>Sensör Füzyonu</b> — Mahony, Madgwick, Kalman, EKF, UKF, parçacık filtresi</li>
+            <li><b>Kontrol Tasarımı</b> — sistem tanımlama, PID / LQR / LQG / MPC</li>
+            <li><b>Sinyal Üreteci</b> — DAC nicemleme analizi (THD, SNR, ENOB), C tablosu</li>
+            <li><b>Kod Üretimi</b> — MCU C kodu; derleyiciye göre bellek ve işlem maliyeti</li>
+          </ul>
+        </div>
+        <div class="hl-col mcu">
+          <h3>SPTF-UDP gömülü kütüphane</h3>
+          <ul class="ul">
+            <li><b>C99</b> — dinamik bellek, özyineleme, <code>packed</code> yapı yok; endian bağımsız</li>
+            <li><b>lwIP raw</b> — sıfır kopya, doğrudan pbuf'a yazım; çıplak metal, FreeRTOS</li>
+            <li><b>BSD soket</b> — lwIP / POSIX / Winsock; ya da 2 fonksiyonluk kendi taşımanız</li>
+            <li><b>Kendini tanımlayan akış</b> — hız, kanal, tip, birim, ölçek akışla gelir</li>
+            <li><b>Otomatik</b> — DESCRIPTOR tekrarı (≤ 500 ms), datagram bölme, sayaçlar</li>
+            <li><b>Kayıp görünür</b> — 64 bit örnek sayacı; boşluk alıcıda NaN olarak gösterilir</li>
+            <li><b>MARKER + CRC-32</b> — olay işaretleri; isteğe bağlı CRC-32 (ISO-HDLC)</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <!-- Blok diyagram -->
+    <div class="sec">
+      <h2 class="h">Sistem blok diyagramı
+        <span class="legend">
+          <span><i style="background:#1f63c6"></i>MCU · SPTF-UDP</span>
+          <span><i style="background:#151311"></i>SPTF v1 bağlantısı</span>
+          <span><i style="background:#b4530b"></i>PC uygulaması</span>
+        </span>
+      </h2>
+      <svg class="blk" viewBox="0 0 720 270" role="img" aria-labelledby="blk-t">
+        <title id="blk-t">MCU tarafında SPTF-UDP kütüphanesi veriyi UDP 50505 üzerinden PC uygulamasına gönderir; PC'de tasarlanan C kodu MCU'ya geri aktarılır.</title>
+        <defs>
+          <marker id="ah-mcu" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto"><path d="M0 0L10 5L0 10z" fill="#1f63c6"/></marker>
+          <marker id="ah-pc" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto"><path d="M0 0L10 5L0 10z" fill="#b4530b"/></marker>
+          <marker id="ah-ink" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5" markerHeight="5" orient="auto"><path d="M0 0L10 5L0 10z" fill="#151311"/></marker>
+        </defs>
+
+        <!-- MCU paneli -->
+        <rect x="44" y="8" width="632" height="98" rx="10" fill="#edf3fc" stroke="#c3d5f1"/>
+        <text x="58" y="25" class="pl" fill="#1f63c6">MCU · HEDEF KART</text>
+        <text x="662" y="25" class="pr">SPTF-UDP 1.0.0 · C99 · statik RAM 0 B</text>
+
+        <g>
+          <rect x="58" y="36" width="105" height="54" rx="6" fill="#fff" stroke="#c3d5f1"/>
+          <text x="110.5" y="60" class="bt">ADC · IMU</text>
+          <text x="110.5" y="74" class="bs">kontrol çevrimi</text>
+
+          <rect x="183" y="36" width="105" height="54" rx="6" fill="#fff" stroke="#c3d5f1"/>
+          <text x="235.5" y="60" class="bt">DMA</text>
+          <text x="235.5" y="74" class="bs">yarım / tam tampon</text>
+
+          <g class="inv">
+            <rect x="307" y="36" width="105" height="54" rx="6" fill="#1f63c6"/>
+            <text x="359.5" y="60" class="bt">SPTF-UDP</text>
+            <text x="359.5" y="74" class="bs">kütüphanesi</text>
+          </g>
+
+          <rect x="432" y="36" width="105" height="54" rx="6" fill="#fff" stroke="#c3d5f1"/>
+          <text x="484.5" y="60" class="bt">lwIP raw API</text>
+          <text x="484.5" y="74" class="bs">veya BSD soket</text>
+
+          <rect x="557" y="36" width="105" height="54" rx="6" fill="#fff" stroke="#c3d5f1"/>
+          <text x="609.5" y="67" class="bt">Ethernet MAC</text>
+        </g>
+        <g stroke="#1f63c6" stroke-width="1.8" marker-end="url(#ah-mcu)">
+          <line x1="164" y1="63" x2="181" y2="63"/>
+          <line x1="289" y1="63" x2="305" y2="63"/>
+          <line x1="413" y1="63" x2="430" y2="63"/>
+          <line x1="538" y1="63" x2="555" y2="63"/>
+        </g>
+
+        <!-- Kablo: UDP 50505 / SPTF v1 -->
+        <path d="M662 63H700V201H665" fill="none" stroke="#151311" stroke-width="2.6" marker-end="url(#ah-ink)"/>
+        <text x="557" y="130" class="pr" style="font-size:9px">Ethernet</text>
+        <rect x="566" y="113" width="126" height="25" rx="12.5" fill="#151311"/>
+        <text x="629" y="129.2" text-anchor="middle" style="font-size:9.4px;font-weight:700;fill:#fff">SPTF v1 · UDP 50505</text>
+
+        <!-- Orta açıklama -->
+        <text x="300" y="121" class="cap1">KAPALI DÖNGÜ</text>
+        <text x="300" y="135" class="cap2">Karttan gelen gerçek veride tasarla, C kodunu aynı karta geri aktar</text>
+
+        <!-- PC paneli -->
+        <rect x="44" y="146" width="632" height="116" rx="10" fill="#fdf2e9" stroke="#efc9a8"/>
+        <text x="58" y="163" class="pl" fill="#b4530b">PC · SIGNAL PROCESSING TOOLBOX</text>
+        <text x="662" y="163" class="pr">uygulama 0.1.0</text>
+
+        <rect x="562" y="174" width="100" height="54" rx="6" fill="#fff" stroke="#efc9a8"/>
+        <text x="612" y="198" class="bt">UDP alıcı süreci</text>
+        <text x="612" y="212" class="bs">çok akışlı</text>
+
+        <rect x="442" y="174" width="100" height="54" rx="6" fill="#fff" stroke="#efc9a8"/>
+        <text x="492" y="198" class="bt">Halka tampon</text>
+        <text x="492" y="212" class="bs">paylaşımlı bellek</text>
+
+        <g fill="#fff" stroke="#efc9a8">
+          <rect x="342" y="174" width="80" height="25" rx="5"/>
+          <rect x="342" y="203" width="80" height="25" rx="5"/>
+          <rect x="258" y="174" width="80" height="25" rx="5"/>
+          <rect x="258" y="203" width="80" height="25" rx="5"/>
+          <rect x="174" y="174" width="80" height="25" rx="5"/>
+          <rect x="174" y="203" width="80" height="25" rx="5"/>
+        </g>
+        <text x="382" y="190" class="mod">Canlı İzleme</text>
+        <text x="382" y="219" class="mod">İnceleme</text>
+        <text x="298" y="190" class="mod">Filtre</text>
+        <text x="298" y="219" class="mod">Füzyon</text>
+        <text x="214" y="190" class="mod">Kontrol</text>
+        <text x="214" y="219" class="mod">Sinyal Üreteci</text>
+
+        <g class="inv">
+          <rect x="58" y="174" width="96" height="54" rx="6" fill="#b4530b"/>
+          <text x="106" y="198" class="bt">Kod Üretimi</text>
+          <text x="106" y="212" class="bs">MCU C kodu</text>
+        </g>
+
+        <g stroke="#b4530b" stroke-width="1.8" marker-end="url(#ah-pc)">
+          <line x1="561" y1="201" x2="544" y2="201"/>
+          <line x1="441" y1="201" x2="424" y2="201"/>
+          <line x1="173" y1="201" x2="156" y2="201"/>
+        </g>
+
+        <!-- Geri dönüş: C kodu -> MCU -->
+        <path d="M58 201H22V63H55" fill="none" stroke="#b4530b" stroke-width="2" stroke-dasharray="5 4" marker-end="url(#ah-pc)"/>
+        <text transform="translate(14 132) rotate(-90)" text-anchor="middle" style="font-size:9px;font-weight:650;fill:#b4530b">C kodu → MCU</text>
+
+        <!-- Aşama parantezleri -->
+        <g fill="none" stroke="#8b847d" stroke-width="1">
+          <path d="M60 233V237H152V233"/>
+          <path d="M176 233V237H336V233"/>
+          <path d="M344 233V237H660V233"/>
+        </g>
+        <g>
+          <circle cx="86" cy="249" r="6.5" fill="#151311"/><text x="86" y="252" class="phn">3</text><text x="96" y="252.5" class="ph">Aktar</text>
+          <circle cx="232" cy="249" r="6.5" fill="#151311"/><text x="232" y="252" class="phn">2</text><text x="242" y="252.5" class="ph">Tasarla</text>
+          <circle cx="487" cy="249" r="6.5" fill="#151311"/><text x="487" y="252" class="phn">1</text><text x="497" y="252.5" class="ph">İzle</text>
+        </g>
+      </svg>
+    </div>
+
+    <!-- Açıklama + uygulama alanları -->
+    <div class="sec desc">
+      <h2 class="h">Açıklama</h2>
+      <div class="cols">
+        <p>Signal Processing Toolbox; bir PC uygulaması ile SPTF-UDP gömülü C kütüphanesinden oluşur. Kart, ADC, IMU veya kontrol çevrimi verisini kendini tanımlayan SPTF v1 çerçeveleriyle Ethernet (UDP) üzerinden gönderir; PC tarafında ayar gerekmez.</p>
+        <p>Uygulama akışı alır, kaydeder ve oynatır. Filtre, sensör füzyonu ve kontrolcü aynı gerçek veride tasarlanıp karşılaştırılır; sonuç, derleyiciye göre bellek ve işlem maliyetiyle birlikte MCU C koduna dönüştürülür.</p>
+      </div>
+      <div class="apps">
+        <span class="lbl">Uygulama alanları</span>
+        <span class="c">Motor sürücü, güç elektroniği (faz akımları, PWM)</span>
+        <span class="c">IMU / dron uçuş telemetrisi</span>
+        <span class="c">Yazılım tanımlı radyo I/Q</span>
+        <span class="c">Ses / titreşim</span>
+        <span class="c">PID / LQR / MPC ayarı</span>
+      </div>
+    </div>
+  </div>
+
+  <footer class="pfoot">
+    <span>Signal Processing Toolbox · Data brief · Rev 1 · 12 Ekim 2026</span>
+    <span class="pg">1 / 2</span>
+  </footer>
+</section>
+
+<!-- ============================ SAYFA 2 ============================ -->
+<section class="page p2">
+  <div class="runhead">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><rect width="24" height="24" rx="6" fill="#ec7c22"/><path d="M4.2 12.5c1.6-5.2 3.4-5.2 5 0s3.4 5.2 5 0 3.2-5 5.6-1.4" fill="none" stroke="#fff" stroke-width="2.3" stroke-linecap="round"/></svg>
+    <b>Signal Processing Toolbox</b><span>Data brief</span>
+    <span class="r">Uygulama 0.1.0 · SPTF-UDP 1.0.0 · Rev 1</span>
+  </div>
+
+  <div class="content">
+    <!-- Satır 1: protokol + doğrulama -->
+    <div class="row r1">
+      <div>
+        <h2 class="h">Bağlantı ve protokol <span class="aside">SPTF v1 · SPTF-UDP</span></h2>
+        <table class="kv">
+          <tr><td class="k">Taşıma</td><td class="v">Ethernet · yalnız <b>UDP</b> · varsayılan port <b>50505</b></td></tr>
+          <tr><td class="k">Çerçeve</td><td class="v">Kendini tanımlayan (hız, kanal, tip, birim, ölçek akışla gelir); <b>DESCRIPTOR</b> · <b>DATA</b> · <b>MARKER</b> (olay işareti)</td></tr>
+          <tr><td class="k">Örnek tipleri</td><td class="v"><span class="em">17</span> — int8/16/24/32/64, uint8/16/24/32/64, float16/32/64, cint16/cint32/cfloat32/cfloat64 (I/Q)</td></tr>
+          <tr><td class="k">Kanal / hız</td><td class="v">Akış başına <b>1–256 kanal</b> · <b>0.001 Hz – 10¹² Hz</b> · interleaved veya planar</td></tr>
+          <tr><td class="k">Sayaç / zaman</td><td class="v"><b>64 bit</b> örnek sayacı (kayıp tam sayılır, boşluk NaN) · ns zaman damgası</td></tr>
+          <tr><td class="k">Bütünlük</td><td class="v">İsteğe bağlı <b>CRC-32</b> (ISO-HDLC, kontrol değeri <code>0xCBF43926</code>)</td></tr>
+          <tr><td class="k">Datagram</td><td class="v"><b>1472 B</b> standart (IP parçalanması yok) · <b>8972 B</b> jumbo · en fazla <b>65507 B</b></td></tr>
+          <tr><td class="k">1472 B'de</td><td class="v">Yük verimi <span class="em">%96.5</span> · DESCRIPTOR ≤ 21 kanal · 2 kanal int16 → 356 örnek/çerçeve</td></tr>
+          <tr class="hi"><td class="k">Alıcı kapasitesi</td><td class="v"><span class="em">113 MB/s</span> (~77 000 datagram/s) <b>kayıpsız</b>, 1472 B · 113.5 MB/s, jumbo / 65507 B · <i>ölçüldü, localhost</i></td></tr>
+          <tr><td class="k">1 Gbit/s ölçeği</td><td class="v">Teorik örnek verisi ~115 MB/s (ör. 4 kanal × int16 × 14.4 MS/s)</td></tr>
+        </table>
+      </div>
+      <div>
+        <h2 class="h">Doğrulama</h2>
+        <ul class="ver">
+          <li><svg viewBox="0 0 12 12"><circle cx="6" cy="6" r="5.4" fill="none" stroke="#151311" stroke-width="1"/><path d="M3.4 6.2l1.8 1.8 3.5-3.7" fill="none" stroke="#151311" stroke-width="1.3"/></svg><span><span class="tag mcu">SPTF-UDP</span><b>75 otomatik test</b>: C birim testleri (GCC + Clang; küçük / büyük uçlu, bit bit CRC, CRC'siz derlemeler)</span></li>
+          <li><svg viewBox="0 0 12 12"><circle cx="6" cy="6" r="5.4" fill="none" stroke="#151311" stroke-width="1"/><path d="M3.4 6.2l1.8 1.8 3.5-3.7" fill="none" stroke="#151311" stroke-width="1.3"/></svg><span><b>68 yapılandırmada</b> Python referans kodlayıcısıyla bayt bayt aynı çıktı (17 tip × 2 yerleşim × CRC açık/kapalı)</span></li>
+          <li><svg viewBox="0 0 12 12"><circle cx="6" cy="6" r="5.4" fill="none" stroke="#151311" stroke-width="1"/><path d="M3.4 6.2l1.8 1.8 3.5-3.7" fill="none" stroke="#151311" stroke-width="1.3"/></svg><span>Gerçek UDP, 50 kHz × 4 kanal rampa: <b>kayıpsız</b>, tüm örnekler bit düzeyinde aynı</span></li>
+          <li><svg viewBox="0 0 12 12"><circle cx="6" cy="6" r="5.4" fill="none" stroke="#151311" stroke-width="1"/><path d="M3.4 6.2l1.8 1.8 3.5-3.7" fill="none" stroke="#151311" stroke-width="1.3"/></svg><span><code>-Wall -Wextra -Wpedantic -Wconversion … -Werror</code> ile temiz (GCC, Clang, arm-none-eabi-gcc)</span></li>
+          <li><svg viewBox="0 0 12 12"><circle cx="6" cy="6" r="5.4" fill="none" stroke="#151311" stroke-width="1"/><path d="M3.4 6.2l1.8 1.8 3.5-3.7" fill="none" stroke="#151311" stroke-width="1.3"/></svg><span>Gerçek STM32Cube H7 projeleriyle derleme: lwIP 2.2.1 çıplak metal (NO_SYS=1), FreeRTOS + lwIP socket</span></li>
+          <li><svg viewBox="0 0 12 12"><circle cx="6" cy="6" r="5.4" fill="none" stroke="#151311" stroke-width="1"/><path d="M3.4 6.2l1.8 1.8 3.5-3.7" fill="none" stroke="#151311" stroke-width="1.3"/></svg><span>cppcheck (genel) <b>0 bulgu</b> · clang-tidy (CERT, bugprone, clang-analyzer) <b>0 bulgu</b></span></li>
+          <li><svg viewBox="0 0 12 12"><circle cx="6" cy="6" r="5.4" fill="none" stroke="#151311" stroke-width="1"/><path d="M3.4 6.2l1.8 1.8 3.5-3.7" fill="none" stroke="#151311" stroke-width="1.3"/></svg><span>MISRA C:2012 (cppcheck eklentisi): <b>çekirdek kütüphanede</b> zorunlu kural ihlali 0 (yalnız tavsiye niteliğinde 15.5 ve 11.5 için gerekçeli sapma); BSD soket portunda API'nin gerektirdiği tek belgelenmiş sapma (Kural 11.3, sockaddr_in → sockaddr)</span></li>
+          <li><svg viewBox="0 0 12 12"><circle cx="6" cy="6" r="5.4" fill="none" stroke="#151311" stroke-width="1"/><path d="M3.4 6.2l1.8 1.8 3.5-3.7" fill="none" stroke="#151311" stroke-width="1.3"/></svg><span>Doxygen: tüm genel API belgeli (uyarı = hata ayarıyla temiz)</span></li>
+          <li><svg viewBox="0 0 12 12"><circle cx="6" cy="6" r="5.4" fill="none" stroke="#151311" stroke-width="1"/><path d="M3.4 6.2l1.8 1.8 3.5-3.7" fill="none" stroke="#151311" stroke-width="1.3"/></svg><span><span class="tag pc">PC</span>Kontrol Tasarımı: MATLAB R2025b referansıyla doğrulandı</span></li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- Satır 2: ayak izi -->
+    <div class="sec">
+      <h2 class="h mcu">Gömülü kütüphane: kaynak ayak izi <span class="aside">SPTF-UDP 1.0.0 · çekirdek kütüphane</span></h2>
+      <div class="fp">
+        <div>
+          <h4>Flash <span class="sub">arm-none-eabi-gcc 13.3 · -Os · ölçüldü</span></h4>
+          <div class="flash-legend">
+            <span><i class="sw base"></i>CRC tablosuz</span>
+            <span><i class="sw crc"></i>+ 1 KiB CRC tablosu (= CRC tablolu)</span>
+          </div>
+          <table class="ft">
+            <tr><th class="c">Çekirdek</th><th class="n">Tablosuz</th><th class="n">Tablolu</th><th></th></tr>
+            <tr><td class="c">Cortex-M0+</td><td class="n">3339 B</td><td class="n">4351 B</td>
+              <td class="bar"><div class="track"><span class="grid" style="left:22.222%"></span><span class="grid" style="left:44.444%"></span><span class="grid" style="left:66.667%"></span><span class="grid" style="left:88.889%"></span><span class="seg base" style="width:74.200%"></span><span class="seg crc" style="left:calc(74.200% + 0.5mm);width:calc(22.489% - 0.5mm)"></span></div></td></tr>
+            <tr><td class="c">Cortex-M3</td><td class="n">3265 B</td><td class="n">4281 B</td>
+              <td class="bar"><div class="track"><span class="grid" style="left:22.222%"></span><span class="grid" style="left:44.444%"></span><span class="grid" style="left:66.667%"></span><span class="grid" style="left:88.889%"></span><span class="seg base" style="width:72.556%"></span><span class="seg crc" style="left:calc(72.556% + 0.5mm);width:calc(22.578% - 0.5mm)"></span></div></td></tr>
+            <tr><td class="c">Cortex-M4F</td><td class="n">3261 B</td><td class="n">4277 B</td>
+              <td class="bar"><div class="track"><span class="grid" style="left:22.222%"></span><span class="grid" style="left:44.444%"></span><span class="grid" style="left:66.667%"></span><span class="grid" style="left:88.889%"></span><span class="seg base" style="width:72.467%"></span><span class="seg crc" style="left:calc(72.467% + 0.5mm);width:calc(22.578% - 0.5mm)"></span></div></td></tr>
+            <tr><td class="c">Cortex-M7</td><td class="n">3279 B</td><td class="n">4295 B</td>
+              <td class="bar"><div class="track"><span class="grid" style="left:22.222%"></span><span class="grid" style="left:44.444%"></span><span class="grid" style="left:66.667%"></span><span class="grid" style="left:88.889%"></span><span class="seg base" style="width:72.867%"></span><span class="seg crc" style="left:calc(72.867% + 0.5mm);width:calc(22.578% - 0.5mm)"></span></div></td></tr>
+            <tr><td class="c">Cortex-M33F</td><td class="n">3261 B</td><td class="n">4277 B</td>
+              <td class="bar"><div class="track"><span class="grid" style="left:22.222%"></span><span class="grid" style="left:44.444%"></span><span class="grid" style="left:66.667%"></span><span class="grid" style="left:88.889%"></span><span class="seg base" style="width:72.467%"></span><span class="seg crc" style="left:calc(72.467% + 0.5mm);width:calc(22.578% - 0.5mm)"></span></div></td></tr>
+          </table>
+          <div class="axis"><span style="left:0%">0</span><span style="left:22.222%">1000</span><span style="left:44.444%">2000</span><span style="left:66.667%">3000</span><span style="left:88.889%">4000 B</span></div>
+          <div class="fp-notes">
+            <div><b>Clang 19 -Os:</b> 4.3–4.5 KB (tablosuz), 5.3–5.5 KB (tablolu)</div>
+            <div><b>Taşıma portu ek flash:</b> lwIP raw +304 B (çıplak metal) / +412 B (FreeRTOS, çekirdek kilidiyle) · soket portu (lwIP) +304 B</div>
+          </div>
+        </div>
+        <div>
+          <h4>RAM, yığın ve CPU <span class="sub">Cortex-M, 32 bit</span></h4>
+          <table class="kv" style="margin-top:1.4mm">
+            <tr><td class="k">Statik RAM</td><td class="v"><span class="em">0 B</span> (kütüphane)</td></tr>
+            <tr><td class="k">Nesne başına</td><td class="v">bağlantı <b>64 B</b> · akış <b>112 B</b></td></tr>
+            <tr><td class="k">Soket portu</td><td class="v"><b>1496 B</b> (1472 B datagram tamponu dahil)</td></tr>
+            <tr><td class="k">lwIP raw portu</td><td class="v">tampon tutmaz (pbuf)</td></tr>
+            <tr><td class="k">Yığın, en kötü zincir</td><td class="v"><span class="em">≤ 280 B</span> M3/M4F/M7/M33F · <span class="em">≤ 296 B</span> M0+<span class="note">Ölçüldü, GCC -fstack-usage; taşıma portu ve lwIP hariç.</span></td></tr>
+            <tr><td class="k">CPU<span class="est">TAHMİNİ</span></td><td class="v">CRC-32 tablolu ~10 çevrim/bayt (M4F), ~15 çevrim/bayt (M0+); örnek kopyası <code>memcpy</code>; çerçeve başına sabit iş birkaç yüz çevrim<span class="note">Ölçülmedi: derleyici çıktısının komut sayımından. lwIP / sürücü maliyeti dahil değil.</span></td></tr>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- Satır 3: hızlı başlangıç + ekran görüntüsü -->
+    <div class="row r3">
+      <div>
+        <h2 class="h mcu">Hızlı başlangıç <span class="aside">gerçek API · lwIP raw taşıması</span></h2>
+        <div class="code">
+<div><span class="k">sptf_link_config_t</span> lc = {<span class="k">0</span>};</div>
+<div><span class="f">sptf_lwip_raw_transport</span>(&amp;port, &amp;lc.transport);</div>
+<div><span class="f">sptf_link_init</span>(&amp;link, &amp;lc);</div>
+<div><span class="f">sptf_stream_init</span>(&amp;adc, &amp;link, &amp;adc_cfg);</div>
+<div><span class="c">/* DMA yarım / tam tamponunda: */</span></div>
+<div><span class="f">sptf_stream_write</span>(&amp;adc, half_buffer, <span class="k">256u</span>, <span class="k">SPTF_TS_AUTO</span>);</div>
+        </div>
+        <p class="code-cap"><b>Gerisi otomatik:</b> DESCRIPTOR tekrarı, datagram boyutuna göre bölme, <code>seq</code> / <code>first_sample</code> sayaçları. Başka taşıma için BSD soket portu ya da 2 fonksiyonluk kendi arayüzünüz (acquire / send).</p>
+      </div>
+      <figure class="shot2">
+        <img src="../gorseller/filtre_tasarimcisi.png" alt="Filtre Tasarımcısı ekran görüntüsü">
+        <figcaption><b>Filtre Tasarımcısı</b> · 4. derece Butterworth alçak geçiren; genlik, faz ve kutup-sıfır. Gerçek ekran görüntüsü.</figcaption>
+      </figure>
+    </div>
+
+    <!-- Satır 4: paket, belgeler, lisans -->
+    <div class="row r4">
+      <div>
+        <h2 class="h">Paket içeriği</h2>
+        <ul class="ul sm">
+          <li><b>PC uygulaması</b> — Python 3.14, PyQt6, pyqtgraph, NumPy, SciPy</li>
+          <li><b><code>embedded/sptf_udp</code></b> — include/, src/, port/lwip_raw, port/socket, test/, docs/Doxyfile</li>
+          <li><b>Örnekler</b> — stm32_lwip_raw; host (PC demo gönderici: 3 faz motor akımı 20 kHz + IMU 1 kHz + durum işaretleri)</li>
+          <li><b>13 örnek kayıt</b> — şebeke, IMU, 24 bit ses, I/Q, EKG, kayıplı akış, referanslı füzyon</li>
+        </ul>
+      </div>
+      <div>
+        <h2 class="h">Belgeler</h2>
+        <ul class="ul sm">
+          <li><span class="doc">SPTF_Protokol_v1.md</span><br>bayt düzeni</li>
+          <li><span class="doc">SPTF_UDP_Uygulama_Protokolu.md</span><br>üst seviye protokol</li>
+          <li><span class="doc">SPTF_UDP_Kullanim_Kilavuzu.md</span><br>kullanım kılavuzu</li>
+          <li>Doxygen API başvurusu (<span class="doc">docs/Doxyfile</span>)</li>
+        </ul>
+      </div>
+      <div>
+        <h2 class="h">Lisans ve revizyon</h2>
+        <p class="lic"><b>GNU LGPL 2.1</b> · GitHub:<br><span class="doc">LoopOverlord1453/signal-processing-studio</span></p>
+        <table class="rev">
+          <tr><th>Tarih</th><th>Rev</th><th>Değişiklik</th></tr>
+          <tr><td class="mono">2026-10-12</td><td>1</td><td>İlk yayın</td></tr>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <div class="disclaimer"><b>Bilgi notu.</b> Belgedeki değerler belirtilen ölçüm koşullarında elde edilmiştir; tahmini değerler <span class="est" style="margin-left:0">TAHMİNİ</span> ile işaretlidir. Ayrıntılar için ürün belgelerine başvurun.</div>
+
+  <footer class="pfoot">
+    <span>Signal Processing Toolbox · Data brief · Rev 1 · 12 Ekim 2026</span>
+    <span class="pg">2 / 2</span>
+  </footer>
+</section>
+
+</body>
+</html>

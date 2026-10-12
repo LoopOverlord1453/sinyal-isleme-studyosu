@@ -155,6 +155,12 @@ Durum kodları MATLAB `mpcActiveSetSolver` ile aynı anlamda (> 0 yineleme sayı
   değişen ağırlık ve sınır + çıkış gürültüsü; ölçek çarpanları + MD önizlemesi. İç veri (30 matris) en büyük göreli
   fark 5e-13; `sim` u, y en büyük mutlak fark 3.3e-13; mpcmove Uopt / Yopt / Xopt / Cost / durum ~1e-14,
   Iterations (sıcak başlangıçlı) 8/8 birebir; getEstimator ~1e-15, ss(mpcobj) ≤ 1e-13, cloffset ~1e-15.
+- **Yineleme sayıları (ölçüldü):** MATLAB kod üretim yolu kapalı çevrimleri (8 durum) 426/430 adımda birebir
+  (farklı 4 adımda çözüm yine aynı, u farkı ≤ 1.3e-12), mpcmove dizisi 8/8.
+- **Yineleme sınırı (`mpc_denetim_cases.json`):** MATLAB kuralı ölçüldü — QP adımı (kısıt ekleme / çıkarma,
+  sıcak başlangıçtaki negatif çarpanlı çıkarmalar dahil) sayısı ≤ MaxIterations; bildirilen yineleme = 1 + adım
+  (en çok MaxIterations + 1). 1 + 4 adımlık adım: MaxIterations 1–3 → 0, 4–6 → 5 (6/6 birebir); drone ekseni
+  MaxIterations = 3: u, y ~1e-13.
 
 ## 7. Bilinçli farklar ve sınırlar
 - Desteklenmeyen (açık ControlError): gecikmeli bitki (MATLAB absorbDelay), ayrık bitkinin farklı Ts'e yeniden
@@ -163,6 +169,14 @@ Durum kodları MATLAB `mpcActiveSetSolver` ile aynı anlamda (> 0 yineleme sayı
   (mpcmoveopt). Sürekli zamanlı özel bozucu modelleri ZOH ile ayrıklaştırılır.
 - Çözümsüz MPC QP'sinde MATLAB KWIK bazen −2 döndürür; bu çözücü −1 (her ikisi de `QPCode = 'infeasible'`, MV
   tutulur). Yineleme sayıları KWIK'inkinden farklı olabilir (seçim kuralı yayımlanmamış).
+- **Yineleme sınırına takılan adımlarda MATLAB ile eşleşme mümkün değildir:** sınır aynı kuralla uygulanır ama
+  KWIK'in kısıt seçim yolu yayımlanmadığından sınıra takılan adımın hangisi olduğu ve (UseSuboptimalSolution
+  açıkken) alt-en iyi nokta yol bağımlıdır; sonrasında MV dizileri ayrışabilir (ör. drone, MaxIterations = 2).
+  Sınıra hiç takılmayan tasarımlarda çözüm birebir aynıdır.
+- `mpcmove` / `mpcstate` NaN / ±∞ ölçüm, referans, MD ve durum değerlerini MATLAB gibi reddeder (ControlError);
+  `sim` sinyallerinde sütun sayısı tam olmalıdır (ny > 1 iken skaler referans hata, MATLAB InvalidSetpointSize).
+- Bilinen sınır (C kodu): float'ta QP'nin doğruluğu Hessian koşuluna bağlıdır; `mpc_c.numeric_warnings`
+  koşul × FLT_EPSILON > 1e-3 ya da Hessian düzeltmesi (BadH) durumunda uyarır — böyle tasarımlarda double kullanın.
 - `cloffset` ölçek çarpanları 1 değilken MATLAB boyutlu / boyutsuz matrisleri karıştırır; burada tutarlı
   mühendislik birimleri kullanılır (ölçek 1 iken birebir).
 - `ss(obj, 't')` MV hedefi girişi tek (zamanla değişmeyen) hedef için.

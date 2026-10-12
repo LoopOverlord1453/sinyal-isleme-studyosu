@@ -1,0 +1,511 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "https://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" lang="tr">
+<head>
+<meta http-equiv="Content-Type" content="text/xhtml;charset=UTF-8"/>
+<meta http-equiv="X-UA-Compatible" content="IE=11"/>
+<meta name="generator" content="Doxygen 1.13.2"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>SPTF-UDP: Taşıma portları</title>
+<link href="tabs.css" rel="stylesheet" type="text/css"/>
+<script type="text/javascript" src="jquery.js"></script>
+<script type="text/javascript" src="dynsections.js"></script>
+<script type="text/javascript" src="clipboard.js"></script>
+<link href="navtree.css" rel="stylesheet" type="text/css"/>
+<script type="text/javascript" src="navtreedata.js"></script>
+<script type="text/javascript" src="navtree.js"></script>
+<script type="text/javascript" src="resize.js"></script>
+<script type="text/javascript" src="cookie.js"></script>
+<link href="search/search.css" rel="stylesheet" type="text/css"/>
+<script type="text/javascript" src="search/searchdata.js"></script>
+<script type="text/javascript" src="search/search.js"></script>
+<script type="text/javascript">
+/* @license magnet:?xt=urn:btih:d3d9a9a6595521f9666a5e94cc830dab83b65699&amp;dn=expat.txt MIT */
+  $(function() { init_search(); });
+/* @license-end */
+</script>
+<link href="doxygen.css" rel="stylesheet" type="text/css" />
+</head>
+<body>
+<div id="top"><!-- do not remove this div, it is closed by doxygen! -->
+<div id="titlearea">
+<table cellspacing="0" cellpadding="0">
+ <tbody>
+ <tr id="projectrow">
+  <td id="projectalign">
+   <div id="projectname">SPTF-UDP<span id="projectnumber">&#160;1.0.0</span>
+   </div>
+   <div id="projectbrief">Signal Processing Toolbox için gömülü UDP gönderici kütüphanesi</div>
+  </td>
+    <td>        <div id="MSearchBox" class="MSearchBoxInactive">
+        <span class="left">
+          <span id="MSearchSelect"                onmouseover="return searchBox.OnSearchSelectShow()"                onmouseout="return searchBox.OnSearchSelectHide()">&#160;</span>
+          <input type="text" id="MSearchField" value="" placeholder="Ara" accesskey="S"
+               onfocus="searchBox.OnSearchFieldFocus(true)" 
+               onblur="searchBox.OnSearchFieldFocus(false)" 
+               onkeyup="searchBox.OnSearchFieldChange(event)"/>
+          </span><span class="right">
+            <a id="MSearchClose" href="javascript:searchBox.CloseResultsWindow()"><img id="MSearchCloseImg" border="0" src="search/close.svg" alt=""/></a>
+          </span>
+        </div>
+</td>
+ </tr>
+ </tbody>
+</table>
+</div>
+<!-- end header part -->
+<!-- Oluşturan Doxygen 1.13.2 -->
+<script type="text/javascript">
+/* @license magnet:?xt=urn:btih:d3d9a9a6595521f9666a5e94cc830dab83b65699&amp;dn=expat.txt MIT */
+var searchBox = new SearchBox("searchBox", "search/",'.html');
+/* @license-end */
+</script>
+<script type="text/javascript">
+/* @license magnet:?xt=urn:btih:d3d9a9a6595521f9666a5e94cc830dab83b65699&amp;dn=expat.txt MIT */
+$(function() { codefold.init(0); });
+/* @license-end */
+</script>
+</div><!-- top -->
+<div id="side-nav" class="ui-resizable side-nav-resizable">
+  <div id="nav-tree">
+    <div id="nav-tree-contents">
+      <div id="nav-sync" class="sync"></div>
+    </div>
+  </div>
+  <div id="splitbar" style="-moz-user-select:none;" 
+       class="ui-resizable-handle">
+  </div>
+</div>
+<script type="text/javascript">
+/* @license magnet:?xt=urn:btih:d3d9a9a6595521f9666a5e94cc830dab83b65699&amp;dn=expat.txt MIT */
+$(function(){initNavTree('group__sptf__port.html',''); initResizable(true); });
+/* @license-end */
+</script>
+<div id="doc-content">
+<!-- window showing the filter options -->
+<div id="MSearchSelectWindow"
+     onmouseover="return searchBox.OnSearchSelectShow()"
+     onmouseout="return searchBox.OnSearchSelectHide()"
+     onkeydown="return searchBox.OnSearchSelectKey(event)">
+</div>
+
+<!-- iframe showing the search results (closed by default) -->
+<div id="MSearchResultsWindow">
+<div id="MSearchResults">
+<div class="SRPage">
+<div id="SRIndex">
+<div id="SRResults"></div>
+<div class="SRStatus" id="Loading">Yüklüyor...</div>
+<div class="SRStatus" id="Searching">Arıyor...</div>
+<div class="SRStatus" id="NoMatches">Eşleşme Yok</div>
+</div>
+</div>
+</div>
+</div>
+
+<div class="header">
+  <div class="summary">
+<a href="#files">Dosyalar</a> &#124;
+<a href="#nested-classes">Veri Yapıları</a> &#124;
+<a href="#define-members">Makrolar</a> &#124;
+<a href="#func-members">Fonksiyonlar</a>  </div>
+  <div class="headertitle"><div class="title">Taşıma portları</div></div>
+</div><!--header-->
+<div class="contents">
+
+<p><a class="el" href="structsptf__transport__t.html" title="Taşıma katmanı arayüzü (port). Kütüphane ağ yığınını yalnız bu iki fonksiyonla kullanır.">sptf_transport_t</a> gerçeklemeleri.  
+<a href="#details">Ayrıntılar...</a></p>
+<table class="memberdecls">
+<tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="files" name="files"></a>
+Dosyalar</h2></td></tr>
+<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">dosya &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="sptf__port__lwip__raw_8c.html">sptf_port_lwip_raw.c</a></td></tr>
+<tr class="memdesc:sptf__port__lwip__raw_8c"><td class="mdescLeft">&#160;</td><td class="mdescRight">lwIP raw API taşıma portu. <br /></td></tr>
+<tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">dosya &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="sptf__port__lwip__raw_8h.html">sptf_port_lwip_raw.h</a></td></tr>
+<tr class="memdesc:sptf__port__lwip__raw_8h"><td class="mdescLeft">&#160;</td><td class="mdescRight">lwIP raw API taşıma portu (sıfır kopya: çerçeve doğrudan pbuf'a yazılır). <br /></td></tr>
+<tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">dosya &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="sptf__port__socket_8c.html">sptf_port_socket.c</a></td></tr>
+<tr class="memdesc:sptf__port__socket_8c"><td class="mdescLeft">&#160;</td><td class="mdescRight">BSD soket taşıma portu (lwIP socket / POSIX / Winsock 2). <br /></td></tr>
+<tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">dosya &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="sptf__port__socket_8h.html">sptf_port_socket.h</a></td></tr>
+<tr class="memdesc:sptf__port__socket_8h"><td class="mdescLeft">&#160;</td><td class="mdescRight">BSD soket taşıma portu: lwIP socket API (FreeRTOS vb.), POSIX (Linux, Zephyr, embedded Linux) ve Windows (Winsock 2). <br /></td></tr>
+<tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
+</table><table class="memberdecls">
+<tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="nested-classes" name="nested-classes"></a>
+Veri Yapıları</h2></td></tr>
+<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">struct &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structsptf__lwip__raw__t.html">sptf_lwip_raw_t</a></td></tr>
+<tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">lwIP raw portu bağlamı. Alanları doğrudan değiştirmeyin.  <a href="structsptf__lwip__raw__t.html#details">Ayrıntılar...</a><br /></td></tr>
+<tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">struct &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structsptf__socket__t.html">sptf_socket_t</a></td></tr>
+<tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">Soket portu bağlamı. Alanları doğrudan değiştirmeyin.  <a href="structsptf__socket__t.html#details">Ayrıntılar...</a><br /></td></tr>
+<tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
+</table><table class="memberdecls">
+<tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="define-members" name="define-members"></a>
+Makrolar</h2></td></tr>
+<tr class="memitem:ga94a9c04249db8e3bfb146f1277b3c45c" id="r_ga94a9c04249db8e3bfb146f1277b3c45c"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ga94a9c04249db8e3bfb146f1277b3c45c">SPTF_SOCKET_BUFFER_SIZE</a>&#160;&#160;&#160;<a class="el" href="group__sptf__config.html#gacd9057a83d0d99c8006e7efa0feb0fb1">SPTF_CFG_MAX_DATAGRAM</a></td></tr>
+<tr class="memdesc:ga94a9c04249db8e3bfb146f1277b3c45c"><td class="mdescLeft">&#160;</td><td class="mdescRight">Port içindeki datagram tamponu (bayt); <a class="el" href="structsptf__link__config__t.html#ae75ae5377de5b69334bc731fee767b9c">sptf_link_config_t::max_datagram</a>'dan küçük olamaz.  <br /></td></tr>
+<tr class="separator:ga94a9c04249db8e3bfb146f1277b3c45c"><td class="memSeparator" colspan="2">&#160;</td></tr>
+</table><table class="memberdecls">
+<tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="func-members" name="func-members"></a>
+Fonksiyonlar</h2></td></tr>
+<tr class="memitem:gac47fac34d0f402c73c19c4f7b4955144" id="r_gac47fac34d0f402c73c19c4f7b4955144"><td class="memItemLeft" align="right" valign="top"><a class="el" href="group__sptf__types.html#ga07cbec476e18a5e7bda27c7b2f40b3ae">sptf_status_t</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#gac47fac34d0f402c73c19c4f7b4955144">sptf_lwip_raw_open</a> (<a class="el" href="structsptf__lwip__raw__t.html">sptf_lwip_raw_t</a> *port, const ip_addr_t *dst_ip, u16_t dst_port, u16_t local_port)</td></tr>
+<tr class="memdesc:gac47fac34d0f402c73c19c4f7b4955144"><td class="mdescLeft">&#160;</td><td class="mdescRight">UDP denetim bloğunu oluşturur ve hedefi ayarlar.  <br /></td></tr>
+<tr class="separator:gac47fac34d0f402c73c19c4f7b4955144"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ga4db571397f1af6ad848fb7914ab328bc" id="r_ga4db571397f1af6ad848fb7914ab328bc"><td class="memItemLeft" align="right" valign="top"><a class="el" href="group__sptf__types.html#ga07cbec476e18a5e7bda27c7b2f40b3ae">sptf_status_t</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ga4db571397f1af6ad848fb7914ab328bc">sptf_lwip_raw_set_destination</a> (<a class="el" href="structsptf__lwip__raw__t.html">sptf_lwip_raw_t</a> *port, const ip_addr_t *dst_ip, u16_t dst_port)</td></tr>
+<tr class="memdesc:ga4db571397f1af6ad848fb7914ab328bc"><td class="mdescLeft">&#160;</td><td class="mdescRight">Hedef adresi / portu değiştirir (ör. PC'nin IP'si DHCP ile değişti).  <br /></td></tr>
+<tr class="separator:ga4db571397f1af6ad848fb7914ab328bc"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ga681acf23a0052e645ba9aa5ba83693fe" id="r_ga681acf23a0052e645ba9aa5ba83693fe"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ga681acf23a0052e645ba9aa5ba83693fe">sptf_lwip_raw_close</a> (<a class="el" href="structsptf__lwip__raw__t.html">sptf_lwip_raw_t</a> *port)</td></tr>
+<tr class="memdesc:ga681acf23a0052e645ba9aa5ba83693fe"><td class="mdescLeft">&#160;</td><td class="mdescRight">Denetim bloğunu kapatır; bekleyen pbuf varsa serbest bırakır.  <br /></td></tr>
+<tr class="separator:ga681acf23a0052e645ba9aa5ba83693fe"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ga99be8885a9a9316d01aa6aed01c3b2fa" id="r_ga99be8885a9a9316d01aa6aed01c3b2fa"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ga99be8885a9a9316d01aa6aed01c3b2fa">sptf_lwip_raw_transport</a> (<a class="el" href="structsptf__lwip__raw__t.html">sptf_lwip_raw_t</a> *port, <a class="el" href="structsptf__transport__t.html">sptf_transport_t</a> *out)</td></tr>
+<tr class="memdesc:ga99be8885a9a9316d01aa6aed01c3b2fa"><td class="mdescLeft">&#160;</td><td class="mdescRight"><a class="el" href="structsptf__transport__t.html" title="Taşıma katmanı arayüzü (port). Kütüphane ağ yığınını yalnız bu iki fonksiyonla kullanır.">sptf_transport_t</a> yapısını bu portla doldurur (<a class="el" href="structsptf__link__config__t.html#a97e1c557d928258393eddef31344aa29">sptf_link_config_t::transport</a> için).  <br /></td></tr>
+<tr class="separator:ga99be8885a9a9316d01aa6aed01c3b2fa"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ga57705bb7bac227f42b59a9e050e75d52" id="r_ga57705bb7bac227f42b59a9e050e75d52"><td class="memItemLeft" align="right" valign="top"><a class="el" href="group__sptf__types.html#ga07cbec476e18a5e7bda27c7b2f40b3ae">sptf_status_t</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ga57705bb7bac227f42b59a9e050e75d52">sptf_socket_open</a> (<a class="el" href="structsptf__socket__t.html">sptf_socket_t</a> *port, const uint8_t dst_ipv4[4], uint16_t dst_port)</td></tr>
+<tr class="memdesc:ga57705bb7bac227f42b59a9e050e75d52"><td class="mdescLeft">&#160;</td><td class="mdescRight">UDP soketini açar ve hedefi ayarlar. Windows'ta Winsock'u da başlatır.  <br /></td></tr>
+<tr class="separator:ga57705bb7bac227f42b59a9e050e75d52"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ga12cb5b93207eec76d37061cad08f2eea" id="r_ga12cb5b93207eec76d37061cad08f2eea"><td class="memItemLeft" align="right" valign="top"><a class="el" href="group__sptf__types.html#ga07cbec476e18a5e7bda27c7b2f40b3ae">sptf_status_t</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ga12cb5b93207eec76d37061cad08f2eea">sptf_socket_set_destination</a> (<a class="el" href="structsptf__socket__t.html">sptf_socket_t</a> *port, const uint8_t dst_ipv4[4], uint16_t dst_port)</td></tr>
+<tr class="memdesc:ga12cb5b93207eec76d37061cad08f2eea"><td class="mdescLeft">&#160;</td><td class="mdescRight">Hedef adresi / portu değiştirir.  <br /></td></tr>
+<tr class="separator:ga12cb5b93207eec76d37061cad08f2eea"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:gaa4911599aa9167038a5b22265c6608fb" id="r_gaa4911599aa9167038a5b22265c6608fb"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#gaa4911599aa9167038a5b22265c6608fb">sptf_socket_close</a> (<a class="el" href="structsptf__socket__t.html">sptf_socket_t</a> *port)</td></tr>
+<tr class="memdesc:gaa4911599aa9167038a5b22265c6608fb"><td class="mdescLeft">&#160;</td><td class="mdescRight">Soketi kapatır (Windows'ta Winsock'u da bırakır).  <br /></td></tr>
+<tr class="separator:gaa4911599aa9167038a5b22265c6608fb"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ga993bb2660b334677241a818ba74ec043" id="r_ga993bb2660b334677241a818ba74ec043"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ga993bb2660b334677241a818ba74ec043">sptf_socket_transport</a> (<a class="el" href="structsptf__socket__t.html">sptf_socket_t</a> *port, <a class="el" href="structsptf__transport__t.html">sptf_transport_t</a> *out)</td></tr>
+<tr class="memdesc:ga993bb2660b334677241a818ba74ec043"><td class="mdescLeft">&#160;</td><td class="mdescRight"><a class="el" href="structsptf__transport__t.html" title="Taşıma katmanı arayüzü (port). Kütüphane ağ yığınını yalnız bu iki fonksiyonla kullanır.">sptf_transport_t</a> yapısını bu portla doldurur.  <br /></td></tr>
+<tr class="separator:ga993bb2660b334677241a818ba74ec043"><td class="memSeparator" colspan="2">&#160;</td></tr>
+</table>
+<a name="details" id="details"></a><h2 class="groupheader">Ayrıntılı tanımlama</h2>
+<p><a class="el" href="structsptf__transport__t.html" title="Taşıma katmanı arayüzü (port). Kütüphane ağ yığınını yalnız bu iki fonksiyonla kullanır.">sptf_transport_t</a> gerçeklemeleri. </p>
+<h2 class="groupheader">Makro Dokümantasyonu</h2>
+<a id="ga94a9c04249db8e3bfb146f1277b3c45c" name="ga94a9c04249db8e3bfb146f1277b3c45c"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ga94a9c04249db8e3bfb146f1277b3c45c">&#9670;&#160;</a></span>SPTF_SOCKET_BUFFER_SIZE</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">#define SPTF_SOCKET_BUFFER_SIZE&#160;&#160;&#160;<a class="el" href="group__sptf__config.html#gacd9057a83d0d99c8006e7efa0feb0fb1">SPTF_CFG_MAX_DATAGRAM</a></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Port içindeki datagram tamponu (bayt); <a class="el" href="structsptf__link__config__t.html#ae75ae5377de5b69334bc731fee767b9c">sptf_link_config_t::max_datagram</a>'dan küçük olamaz. </p>
+
+<p class="definition"><a class="el" href="sptf__port__socket_8h_source.html">sptf_port_socket.h</a> dosyasının <a class="el" href="sptf__port__socket_8h_source.html#l00047">47</a> numaralı satırında tanımlanmıştır.</p>
+
+</div>
+</div>
+<h2 class="groupheader">Fonksiyon Dokümantasyonu</h2>
+<a id="gac47fac34d0f402c73c19c4f7b4955144" name="gac47fac34d0f402c73c19c4f7b4955144"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#gac47fac34d0f402c73c19c4f7b4955144">&#9670;&#160;</a></span>sptf_lwip_raw_open()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname"><a class="el" href="group__sptf__types.html#ga07cbec476e18a5e7bda27c7b2f40b3ae">sptf_status_t</a> sptf_lwip_raw_open </td>
+          <td>(</td>
+          <td class="paramtype"><a class="el" href="structsptf__lwip__raw__t.html">sptf_lwip_raw_t</a> *</td>          <td class="paramname"><span class="paramname"><em>port</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const ip_addr_t *</td>          <td class="paramname"><span class="paramname"><em>dst_ip</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">u16_t</td>          <td class="paramname"><span class="paramname"><em>dst_port</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">u16_t</td>          <td class="paramname"><span class="paramname"><em>local_port</em></span>&#160;)</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>UDP denetim bloğunu oluşturur ve hedefi ayarlar. </p>
+<dl class="params"><dt>Parametreler</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[out]</td><td class="paramname">port</td><td>Port bağlamı (statik ya da kalıcı bellekte). </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">dst_ip</td><td>Hedef PC adresi. </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">dst_port</td><td>Hedef port (genelde <a class="el" href="group__sptf__types.html#ga49d9e34801953d9b5290458e700823b8" title="Arayüzün varsayılan dinleme portu.">SPTF_UDP_PORT</a>). </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">local_port</td><td>Yerel kaynak portu (0 → lwIP seçer). </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="retval"><dt>Döndürdüğü değerler</dt><dd>
+  <table class="retval">
+    <tr><td class="paramname">SPTF_OK</td><td>Başarılı. </td></tr>
+    <tr><td class="paramname">SPTF_ERR_ARG</td><td>NULL argüman. </td></tr>
+    <tr><td class="paramname">SPTF_ERR_NOMEM</td><td><code>udp_new()</code> başarısız (MEMP_NUM_UDP_PCB artırın). </td></tr>
+    <tr><td class="paramname">SPTF_ERR_IO</td><td><code>udp_bind()</code> başarısız (port kullanımda). </td></tr>
+  </table>
+  </dd>
+</dl>
+
+<p class="definition"><a class="el" href="sptf__port__lwip__raw_8c_source.html">sptf_port_lwip_raw.c</a> dosyasının <a class="el" href="sptf__port__lwip__raw_8c_source.html#l00115">115</a> numaralı satırında tanımlanmıştır.</p>
+
+</div>
+</div>
+<a id="ga4db571397f1af6ad848fb7914ab328bc" name="ga4db571397f1af6ad848fb7914ab328bc"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ga4db571397f1af6ad848fb7914ab328bc">&#9670;&#160;</a></span>sptf_lwip_raw_set_destination()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname"><a class="el" href="group__sptf__types.html#ga07cbec476e18a5e7bda27c7b2f40b3ae">sptf_status_t</a> sptf_lwip_raw_set_destination </td>
+          <td>(</td>
+          <td class="paramtype"><a class="el" href="structsptf__lwip__raw__t.html">sptf_lwip_raw_t</a> *</td>          <td class="paramname"><span class="paramname"><em>port</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const ip_addr_t *</td>          <td class="paramname"><span class="paramname"><em>dst_ip</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">u16_t</td>          <td class="paramname"><span class="paramname"><em>dst_port</em></span>&#160;)</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Hedef adresi / portu değiştirir (ör. PC'nin IP'si DHCP ile değişti). </p>
+<dl class="params"><dt>Parametreler</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in,out]</td><td class="paramname">port</td><td>Açık port. </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">dst_ip</td><td>Yeni hedef adres. </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">dst_port</td><td>Yeni hedef port. </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="retval"><dt>Döndürdüğü değerler</dt><dd>
+  <table class="retval">
+    <tr><td class="paramname">SPTF_OK,SPTF_ERR_ARG</td><td></td></tr>
+  </table>
+  </dd>
+</dl>
+
+<p class="definition"><a class="el" href="sptf__port__lwip__raw_8c_source.html">sptf_port_lwip_raw.c</a> dosyasının <a class="el" href="sptf__port__lwip__raw_8c_source.html#l00145">145</a> numaralı satırında tanımlanmıştır.</p>
+
+</div>
+</div>
+<a id="ga681acf23a0052e645ba9aa5ba83693fe" name="ga681acf23a0052e645ba9aa5ba83693fe"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ga681acf23a0052e645ba9aa5ba83693fe">&#9670;&#160;</a></span>sptf_lwip_raw_close()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">void sptf_lwip_raw_close </td>
+          <td>(</td>
+          <td class="paramtype"><a class="el" href="structsptf__lwip__raw__t.html">sptf_lwip_raw_t</a> *</td>          <td class="paramname"><span class="paramname"><em>port</em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Denetim bloğunu kapatır; bekleyen pbuf varsa serbest bırakır. </p>
+<dl class="params"><dt>Parametreler</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in,out]</td><td class="paramname">port</td><td>Port. </td></tr>
+  </table>
+  </dd>
+</dl>
+
+<p class="definition"><a class="el" href="sptf__port__lwip__raw_8c_source.html">sptf_port_lwip_raw.c</a> dosyasının <a class="el" href="sptf__port__lwip__raw_8c_source.html#l00158">158</a> numaralı satırında tanımlanmıştır.</p>
+
+</div>
+</div>
+<a id="ga99be8885a9a9316d01aa6aed01c3b2fa" name="ga99be8885a9a9316d01aa6aed01c3b2fa"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ga99be8885a9a9316d01aa6aed01c3b2fa">&#9670;&#160;</a></span>sptf_lwip_raw_transport()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">void sptf_lwip_raw_transport </td>
+          <td>(</td>
+          <td class="paramtype"><a class="el" href="structsptf__lwip__raw__t.html">sptf_lwip_raw_t</a> *</td>          <td class="paramname"><span class="paramname"><em>port</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype"><a class="el" href="structsptf__transport__t.html">sptf_transport_t</a> *</td>          <td class="paramname"><span class="paramname"><em>out</em></span>&#160;)</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p><a class="el" href="structsptf__transport__t.html" title="Taşıma katmanı arayüzü (port). Kütüphane ağ yığınını yalnız bu iki fonksiyonla kullanır.">sptf_transport_t</a> yapısını bu portla doldurur (<a class="el" href="structsptf__link__config__t.html#a97e1c557d928258393eddef31344aa29">sptf_link_config_t::transport</a> için). </p>
+<dl class="params"><dt>Parametreler</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in]</td><td class="paramname">port</td><td>Açık port. </td></tr>
+    <tr><td class="paramdir">[out]</td><td class="paramname">out</td><td>Doldurulacak taşıma yapısı. </td></tr>
+  </table>
+  </dd>
+</dl>
+
+<p class="definition"><a class="el" href="sptf__port__lwip__raw_8c_source.html">sptf_port_lwip_raw.c</a> dosyasının <a class="el" href="sptf__port__lwip__raw_8c_source.html#l00177">177</a> numaralı satırında tanımlanmıştır.</p>
+
+</div>
+</div>
+<a id="ga57705bb7bac227f42b59a9e050e75d52" name="ga57705bb7bac227f42b59a9e050e75d52"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ga57705bb7bac227f42b59a9e050e75d52">&#9670;&#160;</a></span>sptf_socket_open()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname"><a class="el" href="group__sptf__types.html#ga07cbec476e18a5e7bda27c7b2f40b3ae">sptf_status_t</a> sptf_socket_open </td>
+          <td>(</td>
+          <td class="paramtype"><a class="el" href="structsptf__socket__t.html">sptf_socket_t</a> *</td>          <td class="paramname"><span class="paramname"><em>port</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const uint8_t</td>          <td class="paramname"><span class="paramname"><em>dst_ipv4</em></span>[4], </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">uint16_t</td>          <td class="paramname"><span class="paramname"><em>dst_port</em></span>&#160;)</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>UDP soketini açar ve hedefi ayarlar. Windows'ta Winsock'u da başlatır. </p>
+<dl class="params"><dt>Parametreler</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[out]</td><td class="paramname">port</td><td>Port bağlamı. </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">dst_ipv4</td><td>Hedef PC adresi, 4 bayt, ağ sırasıyla (ör. <code>{192, 168, 1, 10}</code>). </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">dst_port</td><td>Hedef port (genelde <a class="el" href="group__sptf__types.html#ga49d9e34801953d9b5290458e700823b8" title="Arayüzün varsayılan dinleme portu.">SPTF_UDP_PORT</a>). </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="retval"><dt>Döndürdüğü değerler</dt><dd>
+  <table class="retval">
+    <tr><td class="paramname">SPTF_OK</td><td>Başarılı. </td></tr>
+    <tr><td class="paramname">SPTF_ERR_ARG</td><td>NULL argüman. </td></tr>
+    <tr><td class="paramname">SPTF_ERR_IO</td><td>Soket açılamadı. </td></tr>
+  </table>
+  </dd>
+</dl>
+
+<p class="definition"><a class="el" href="sptf__port__socket_8c_source.html">sptf_port_socket.c</a> dosyasının <a class="el" href="sptf__port__socket_8c_source.html#l00093">93</a> numaralı satırında tanımlanmıştır.</p>
+
+</div>
+</div>
+<a id="ga12cb5b93207eec76d37061cad08f2eea" name="ga12cb5b93207eec76d37061cad08f2eea"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ga12cb5b93207eec76d37061cad08f2eea">&#9670;&#160;</a></span>sptf_socket_set_destination()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname"><a class="el" href="group__sptf__types.html#ga07cbec476e18a5e7bda27c7b2f40b3ae">sptf_status_t</a> sptf_socket_set_destination </td>
+          <td>(</td>
+          <td class="paramtype"><a class="el" href="structsptf__socket__t.html">sptf_socket_t</a> *</td>          <td class="paramname"><span class="paramname"><em>port</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const uint8_t</td>          <td class="paramname"><span class="paramname"><em>dst_ipv4</em></span>[4], </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">uint16_t</td>          <td class="paramname"><span class="paramname"><em>dst_port</em></span>&#160;)</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Hedef adresi / portu değiştirir. </p>
+<dl class="params"><dt>Parametreler</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in,out]</td><td class="paramname">port</td><td>Açık port. </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">dst_ipv4</td><td>Yeni hedef adres (4 bayt). </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">dst_port</td><td>Yeni hedef port. </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="retval"><dt>Döndürdüğü değerler</dt><dd>
+  <table class="retval">
+    <tr><td class="paramname">SPTF_OK,SPTF_ERR_ARG</td><td></td></tr>
+  </table>
+  </dd>
+</dl>
+
+<p class="definition"><a class="el" href="sptf__port__socket_8c_source.html">sptf_port_socket.c</a> dosyasının <a class="el" href="sptf__port__socket_8c_source.html#l00123">123</a> numaralı satırında tanımlanmıştır.</p>
+
+</div>
+</div>
+<a id="gaa4911599aa9167038a5b22265c6608fb" name="gaa4911599aa9167038a5b22265c6608fb"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#gaa4911599aa9167038a5b22265c6608fb">&#9670;&#160;</a></span>sptf_socket_close()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">void sptf_socket_close </td>
+          <td>(</td>
+          <td class="paramtype"><a class="el" href="structsptf__socket__t.html">sptf_socket_t</a> *</td>          <td class="paramname"><span class="paramname"><em>port</em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Soketi kapatır (Windows'ta Winsock'u da bırakır). </p>
+<dl class="params"><dt>Parametreler</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in,out]</td><td class="paramname">port</td><td>Port. </td></tr>
+  </table>
+  </dd>
+</dl>
+
+<p class="definition"><a class="el" href="sptf__port__socket_8c_source.html">sptf_port_socket.c</a> dosyasının <a class="el" href="sptf__port__socket_8c_source.html#l00133">133</a> numaralı satırında tanımlanmıştır.</p>
+
+</div>
+</div>
+<a id="ga993bb2660b334677241a818ba74ec043" name="ga993bb2660b334677241a818ba74ec043"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ga993bb2660b334677241a818ba74ec043">&#9670;&#160;</a></span>sptf_socket_transport()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">void sptf_socket_transport </td>
+          <td>(</td>
+          <td class="paramtype"><a class="el" href="structsptf__socket__t.html">sptf_socket_t</a> *</td>          <td class="paramname"><span class="paramname"><em>port</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype"><a class="el" href="structsptf__transport__t.html">sptf_transport_t</a> *</td>          <td class="paramname"><span class="paramname"><em>out</em></span>&#160;)</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p><a class="el" href="structsptf__transport__t.html" title="Taşıma katmanı arayüzü (port). Kütüphane ağ yığınını yalnız bu iki fonksiyonla kullanır.">sptf_transport_t</a> yapısını bu portla doldurur. </p>
+<dl class="params"><dt>Parametreler</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in]</td><td class="paramname">port</td><td>Açık port. </td></tr>
+    <tr><td class="paramdir">[out]</td><td class="paramname">out</td><td>Doldurulacak taşıma yapısı. </td></tr>
+  </table>
+  </dd>
+</dl>
+
+<p class="definition"><a class="el" href="sptf__port__socket_8c_source.html">sptf_port_socket.c</a> dosyasının <a class="el" href="sptf__port__socket_8c_source.html#l00145">145</a> numaralı satırında tanımlanmıştır.</p>
+
+</div>
+</div>
+</div><!-- contents -->
+</div><!-- doc-content -->
+<!-- start footer part -->
+<div id="nav-path" class="navpath"><!-- id is needed for treeview function! -->
+  <ul>
+    <li class="footer">Oluşturan <a href="https://www.doxygen.org/index.html"><img class="footer" src="doxygen.svg" width="104" height="31" alt="doxygen"/></a> 1.13.2 </li>
+  </ul>
+</div>
+</body>
+</html>

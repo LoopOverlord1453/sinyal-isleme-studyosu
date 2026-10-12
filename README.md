@@ -120,6 +120,21 @@ yüzden arayüzde ayrıca yapılandırma gerekmez.
 
 Tam tanım: [docs/SPTF_Protokol_v1.md](docs/SPTF_Protokol_v1.md)
 
+### Gömülü taraf: SPTF-UDP kütüphanesi
+
+Kartınız için hazır C99 gönderici kütüphanesi [`embedded/sptf_udp`](embedded/sptf_udp) klasöründedir.
+lwIP (çıplak metal / FreeRTOS) ve BSD soket portlarıyla gelir; dinamik bellek kullanmaz, Cortex-M'de
+~3.3–4.4 KB flash tutar. DESCRIPTOR tekrarı, datagram boyutuna göre bölme, kayıp sayımı ve olay işaretleri
+(grafikte etiketli dikey çizgi) otomatiktir. Taşıma yalnızca UDP'dir.
+
+| Belge | İçerik |
+|---|---|
+| [SPTF_UDP_Kullanim_Kilavuzu.md](docs/SPTF_UDP_Kullanim_Kilavuzu.md) | Entegrasyon, yapılandırma, sorun giderme |
+| [SPTF_UDP_Uygulama_Protokolu.md](docs/SPTF_UDP_Uygulama_Protokolu.md) | Üst seviye protokol (normatif) |
+| [DataBrief/SPT_DataBrief.pdf](docs/DataBrief/SPT_DataBrief.pdf) | Ürün özeti (data brief) |
+
+Kartsız denemek için PC'den gönderen demo: `embedded/sptf_udp/examples/host/sptf_host_demo.c`.
+
 ## Proje yapısı
 
 ```
@@ -131,6 +146,7 @@ spt/dsp/               Filtreler, spektrum, sinyal üreteci, sensör füzyonu
 spt/control/           Doğrusal sistemler, tasarım, sistem tanımlama, MPC, blok diyagram, İHA modelleri
 spt/codegen/           Mikrodenetleyici C kodu üretimi
 spt/gui/               Arayüz: görünümler, paneller, tema
+embedded/sptf_udp/     Gömülü SPTF-UDP gönderici kütüphanesi (C99, lwIP / BSD soket)
 tests/                 Birim ve doğrulama testleri
 docs/                  Protokol dokümanı ve aşama notları
 samples_signal_data/   Örnek kayıtlar

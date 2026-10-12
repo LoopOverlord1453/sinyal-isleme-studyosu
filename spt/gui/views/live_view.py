@@ -54,6 +54,8 @@ MAX_LEGEND = 8
 # 1 px 30–90 ms / kare). Canlı grafikler bu yüzden 1 px ve yumuşatmasız çizilir.
 LIVE_LINE_WIDTH = 1
 MARKER_MIN_PX = 6      # örnekler arası en az bu kadar piksel varsa her örnek nokta olarak gösterilir
+MAX_EVENT_LINES = 100  # akış başına gösterilen en fazla SPTF MARKER çizgisi (eskiler silinir)
+EVENT_LABEL_CHARS = 28
 
 
 def format_seconds(seconds: float) -> str:
@@ -104,6 +106,7 @@ class LiveView(QWidget):
         self._unit = ""
         self._time_curves: dict[tuple[str, int, int], pg.PlotDataItem] = {}
         self._markers_on: dict[tuple[str, int, int], bool] = {}
+        self._event_lines: dict[str, list[pg.InfiniteLine]] = {}  # akış → SPTF MARKER çizgileri
         self._spec_curves: dict[tuple[str, int], pg.PlotDataItem] = {}
         self._filt_curves: dict[tuple[str, int, int], pg.PlotDataItem] = {}
         self._filt_spec: dict[tuple[str, int], pg.PlotDataItem] = {}
@@ -364,7 +367,29 @@ class LiveView(QWidget):
         self._update_chips()
         self._rebuild_legend()
 
+    def add_event_marker(self, key: str, sample_index: int, code: int, text: str, pos) -> None:
+        """Cihazdan gelen SPTF MARKER: akışın `pos` tampon indeksindeki örneğine etiketli, kesikli dikey çizgi."""
+        handle = self._streams.get(key)
+        if handle is None or pos is None:
+            return
+        tok = self._theme.tokens
+        caption = text or f"#{code}"
+        if len(caption) > EVENT_LABEL_CHARS:
+            caption = caption[:EVENT_LABEL_CHARS - 1] + "…"
+        line = pg.InfiniteLine(pos=handle.t0 + pos / handle.fs, angle=90, movable=False,
+                               pen=pg.mkPen(tok.text_secondary, width=1, style=Qt.PenStyle.DashLine),
+                               label=caption, labelOpts={"position": 0.94, "color": tok.text, "fill": tok.surface})
+        line.setToolTip(f"İşaret · kod {code} · örnek {sample_index}\n{text}")
+        line.setZValue(5)
+        self.time_plot.addItem(line)
+        lines = self._event_lines.setdefault(key, [])
+        lines.append(line)
+        while len(lines) > MAX_EVENT_LINES:
+            self.time_plot.removeItem(lines.pop(0))
+
     def remove_stream(self, key: str) -> None:
+        for line in self._event_lines.pop(key, []):
+            self.time_plot.removeItem(line)
         if self._streams.pop(key, None) is None:
             return
         self.time_tips.clear()  # ipuçları kaldırılan akışın eğrilerine bağlıydı

@@ -92,3 +92,101 @@ end
 [x, ef] = mpcActiveSetSolver(H, f, [eye(3); 1 1 1], ones(4,1), [1 1 1], 1, [true; true; false; false], kopt);
 out.ok_warm_x = x; out.ok_warm_ef = ef;
 """
+
+import numpy as np  # noqa: E402
+import pytest  # noqa: E402
+
+from spt.control.errors import ControlError  # noqa: E402
+from spt.control.mpc import mpcActiveSetSolver, mpcmove, mpcstate, sim  # noqa: E402
+from tests.test_control_mpc import case2, case5  # noqa: E402
+from tools.matlab_oracle import OracleUnavailable, fixture  # noqa: E402
+
+
+@pytest.fixture(scope="module")
+def ref():
+    try:
+        return fixture("mpc_denetim_cases", DENETIM_SCRIPT)
+    except OracleUnavailable as e:  # pragma: no cover
+        pytest.skip(str(e))
+
+
+def test_yineleme_siniri_kurali_matlab(ref):
+    """Bulgu 1: QP adımı (ekleme / çıkarma) sayısı ≤ MaxIterations; bildirilen yineleme = 1 + adım. Soğuk
+    başlangıçta 1 + 4 adımlık adım: MaxIterations 1..3 → durum 0 (MV tutulur), 4..6 → 5 (MATLAB ile birebir)."""
+    for mi in range(1, 7):
+        o = case2()
+        o.Optimizer.SolverOptions.MaxIterations = mi            # MATLAB R2025b yazımı
+        u, info = mpcmove(o, mpcstate(o), 0, 1)
+        assert info["Iterations"] == ref["cold_it"][mi - 1], mi
+        assert u[0] == pytest.approx(ref["cold_u"][mi - 1], abs=1e-12)
+        assert info["QPCode"] == ref["cold_code"][mi - 1]
+
+
+@pytest.mark.parametrize("so", [0, 1])
+def test_drone_yineleme_siniri_3_matlab(ref, so):
+    """Drone ekseni, MaxIterations = 3 (sıcak başlangıç çıkarmaları sınıra sayılır): u, y MATLAB ile ~1e-13."""
+    o = case5()
+    o.Optimizer.SolverOptions.MaxIterations = 3
+    o.Optimizer.UseSuboptimalSolution = bool(so)
+    s = sim(o, 60, [2, 0])
+    r = ref[f"dr3_{so}"]
+    assert np.abs(s.u - np.asarray(r["u"]).reshape(s.u.shape)).max() < 1e-9
+    assert np.abs(s.y - np.asarray(r["y"]).reshape(s.y.shape)).max() < 1e-9
+    assert np.sum(s.status == np.asarray(r["st"]).ravel()) >= 55   # sınırdaki adımlarda bildirilen sayı yol bağımlı
+    assert s.status.max() <= 4 and np.asarray(r["st"]).max() <= 4
+
+
+@pytest.mark.parametrize("so", [0, 1])
+def test_drone_yineleme_siniri_2_kurali(ref, so):
+    """MaxIterations = 2: bildirilen yineleme ≤ 3 (MATLAB'de de) ve sınır durumları (0) oluşur. Sınıra takılan
+    adımlarda KWIK'in yolu farklı olabildiğinden u dizisinin birebir eşleşmesi beklenmez (TASARIM.md §7)."""
+    o = case5()
+    o.Optimizer.MaxIterations = 2
+    o.Optimizer.UseSuboptimalSolution = bool(so)
+    s = sim(o, 60, [2, 0])
+    mst = np.asarray(ref[f"dr2_{so}"]["st"]).ravel()
+    assert s.status.max() <= 3 and mst.max() == 3 and np.sum(s.status == 0) >= 3 and np.sum(mst == 0) >= 3
+    assert np.array_equal(s.status[:3], mst[:3])
+
+
+def test_gecersiz_olcum_ve_referans_hatasi(ref):
+    """Bulgu 2 ve 9: NaN / ±∞ ölçüm MATLAB'de hata (kestirici NaN'a gitmez); ny = 2 iken skaler referans hata."""
+    assert ref["e_nan"] == ref["e_inf"] == "MPC:computation:InvalidMeasurement"
+    assert ref["e_rnan"] == "MPC:computation:InvalidSetpoint" and ref["e_simr"] == "MPC:computation:InvalidSetpointSize"
+    o = case2()
+    st = mpcstate(o)
+    x0 = st.Plant.copy()
+    for bad in (np.nan, np.inf):
+        with pytest.raises(ControlError, match="sonlu"):
+            mpcmove(o, st, bad, 1)
+    assert np.array_equal(st.Plant, x0)                           # durum bozulmadı
+    with pytest.raises(ControlError):
+        mpcmove(o, st, 0, np.nan)
+    from spt.control.mpc import MPC
+    o6 = MPC(([[0.9]], [[1]], [[1], [1]], [[0], [0]], 0.1), 0.1, 10, 2)
+    with pytest.raises(ControlError, match="2 sütunlu"):
+        sim(o6, 5, 1)
+
+
+def test_solveroptions_ve_activeset_butunluk(ref):
+    """Bulgu 7 ve 8: MATLAB R2025b Optimizer.SolverOptions alanları; mpcActiveSetSolver bütünlük hataları."""
+    assert ref["so_props"] == ["MaxIterations", "ConstraintTolerance", "UseWarmStart"]
+    o = case2()
+    assert o.Optimizer.SolverOptions.MaxIterations == ref["so_maxit_default"] == "default"
+    o.Optimizer.SolverOptions = {"ConstraintTolerance": 1e-7, "UseWarmStart": False}
+    assert o.Optimizer.ConstraintTolerance == 1e-7 and o.data.tol == 1e-7 and not o.data.use_warm_start
+    H, f = np.eye(3), np.ones(3)
+    assert ref["e_rank"] == "MPC:ActiveSetSolver:AeqRank"
+    with pytest.raises(ControlError, match="rank"):
+        mpcActiveSetSolver(H, f, [[1, 0, 0]], [1], [[1, 1, 0], [2, 2, 0]], [1, 2], [False])
+    assert ref["e_over"] == "MPC:ActiveSetSolver:OverSpecEquaCons"
+    with pytest.raises(ControlError, match="fazla"):
+        mpcActiveSetSolver(H, f, None, None, np.vstack([np.eye(3), np.ones(3)]), np.ones(4), None)
+    assert ref["e_warm"] == ref["e_warm2"] == "MPC:ActiveSetSolver:InvalidWarmStart"
+    A4 = np.vstack([np.eye(3), np.ones(3)])
+    with pytest.raises(ControlError, match="aşıyor"):
+        mpcActiveSetSolver(H, f, A4, np.ones(4), None, None, np.ones(4, bool))
+    with pytest.raises(ControlError, match="aşıyor"):
+        mpcActiveSetSolver(H, f, A4, np.ones(4), [[1, 1, 1]], [1], [True, True, True, False])
+    x, ef, _, _ = mpcActiveSetSolver(H, f, A4, np.ones(4), [[1, 1, 1]], [1], [True, True, False, False])
+    assert ef > 0 and np.allclose(x, np.asarray(ref["ok_warm_x"]), atol=1e-12)

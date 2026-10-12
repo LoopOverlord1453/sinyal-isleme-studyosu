@@ -96,3 +96,47 @@ def test_parse_is_safe_against_python_code():
         parse_model("(" * 500 + "s" + ")" * 500)
     with pytest.raises(ControlError):
         parse_model("s" * 20000)
+
+
+def test_matlab_model_functions_in_expressions():
+    """MATLAB kullanıcısının yazacağı model işlemleri: c2d (zoh), d2c, feedback, series, parallel, minreal, pid —
+    sonuçlar kütüphane fonksiyonlarıyla birebir; yanlış kullanımda konumlu Türkçe hata."""
+    from spt.control.connect import feedback
+    from spt.control.discretize import c2d
+    from spt.control.freqresp import freqresp
+    from spt.control.classical import pid
+
+    w = [0.1, 1.0, 10.0]
+    G = tf([1.0], [1.0, 2.0, 1.0])
+    assert np.allclose(freqresp(parse_model("c2d(1/(s^2+2*s+1), 0.05)"), w), freqresp(c2d(G, 0.05, "zoh"), w),
+                       rtol=0, atol=1e-14)
+    C = pid(2.0, 1.0, 0.5, 0.01)
+    L = parse_model("feedback(pid(2, 1, 0.5, 0.01)/(s^2+2*s+1), 1)")
+    assert np.allclose(freqresp(L, w), freqresp(feedback(C * G, 1.0), w), rtol=1e-12, atol=0)
+    assert np.allclose(freqresp(parse_model("d2c(c2d(1/(s+1), 0.1))"), w), freqresp(tf([1.0], [1.0, 1.0]), w),
+                       rtol=1e-10)
+    m = parse_model("minreal((s+1)/((s+1)*(s+2)))")
+    assert m.ninputs == 1 and np.allclose(freqresp(m, w), freqresp(tf([1.0], [1.0, 2.0]), w), rtol=1e-12)
+    for bad in ("c2d(1/(s+1))", "feedback(1/(s+1), 1, 3)", "pid(1/(s+1))", "foo(1)"):
+        with pytest.raises(ControlError):
+            parse_model(bad)
+
+
+@pytest.mark.parametrize("text", ["series(1/(s+1), 2i)", "feedback(1/(s+1), 1+3i)", "parallel(1/(s+1), 1+1i)",
+                                  "c2d(1/(s+1), 0.1+5i)", "pid(1+2i)", "pid(1, 2i)", "tf([1 2i],[1 1])"])
+def test_parse_rejects_complex_arguments(text):
+    with pytest.raises(ControlError, match="gerçel"):
+        parse_model(text)
+
+
+def test_parse_large_model_matrix_is_fast():
+    import time
+    txt = "[" + ";".join(" ".join(f"1/(s+{i + j + 1})" for j in range(25)) for i in range(25)) + "]"
+    t0 = time.perf_counter()
+    G = parse_model(txt)
+    assert time.perf_counter() - t0 < 5.0 and G.shape == (25, 25)
+    _same(G[3, 7], tf([1], [1, 11]))
+    H = parse_model("[ss(-1,1,1,0) ss(-2,1,1,0); 0 exp(-0.5*s)/(s+3)]")
+    assert H.shape == (2, 2)
+    ref = tf([[[1], [1]], [[0], [1]]], [[[1, 1], [1, 2]], [[1], [1, 3]]], io_delay=[[0, 0], [0, 0.5]])
+    _same(H, ref)

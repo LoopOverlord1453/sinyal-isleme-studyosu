@@ -1289,7 +1289,8 @@ class DiagramScene(QGraphicsScene):
             b.update()
 
     def unique_name(self, base: str) -> str:
-        base = base.strip() or "Blok"
+        # blok adında '/' (alt sistem yol ayıracı), satır sonu ve sekme olamaz: varsayılan adlar da buna uysun
+        base = re.sub(r"\s*[/\n\t\r]+\s*", "-", base).strip(" -") or "Blok"
         if base not in self.blocks:
             return base
         m = re.match(r"^(.*?)(\d+)$", base)

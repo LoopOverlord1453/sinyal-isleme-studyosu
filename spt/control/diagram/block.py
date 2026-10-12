@@ -540,6 +540,13 @@ class Block:
         (tüm giriş portları art arda) ve çıkışlar (tüm çıkış portları art arda). None → sayısal merkezi fark."""
         return None
 
+    def route(self) -> list[list[tuple[int, int]]] | None:
+        """Sanal yönlendirme bloğu ise (Mux, Demux, Seçici …) her çıkış portu için çıkış elemanlarının hangi
+        (giriş portu, eleman) çiftinden geldiği; değilse None. Motor bu blokları Simulink'teki sanal bloklar gibi
+        yürütme sırasından çıkarır: alıcı blokların girişleri eleman düzeyinde gerçek kaynağa izlenir, böylece
+        yalnız yönlendirmeden geçen sahte cebirsel döngüler oluşmaz (çıkışları yine kayıt için hesaplanır)."""
+        return None
+
     def trim_output(self, t: float, x: np.ndarray, xd: np.ndarray, u: list[np.ndarray]) -> list[np.ndarray] | None:
         """Çalışma noktası (kararlı hâl) değerlendirmesinde farklı çıkış gerekiyorsa (ör. hız sınırlayıcı: y = u)."""
         return None

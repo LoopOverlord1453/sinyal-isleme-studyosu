@@ -338,10 +338,15 @@ class ThemeManager(QObject):
     def apply(self) -> None:
         t = self.tokens
         _load_bundled_fonts()
-        self.app.setStyle(QStyleFactory.create("Fusion"))
-        self.app.setFont(ui_font(13))
-        self.app.setPalette(_palette(t))
-        self.app.setStyleSheet(Template(QSS).substitute({**asdict(t), **_write_svg_assets(t)}))
+        qss = Template(QSS).substitute({**asdict(t), **_write_svg_assets(t)})
+        # Aynı tema zaten uygulanmışsa stil / yazı tipi / palet yeniden kurulmaz: Qt aksi hâlde canlı tüm
+        # pencereleri yeniden cilalar (ana pencere başına saniyeler)
+        if self.app.property("spt_theme") != repr(t) or self.app.styleSheet() != qss:
+            self.app.setStyle(QStyleFactory.create("Fusion"))
+            self.app.setFont(ui_font(13))
+            self.app.setPalette(_palette(t))
+            self.app.setStyleSheet(qss)
+            self.app.setProperty("spt_theme", repr(t))
         hints = self.app.styleHints()
         if hasattr(hints, "setColorScheme"):
             hints.setColorScheme(Qt.ColorScheme.Dark)

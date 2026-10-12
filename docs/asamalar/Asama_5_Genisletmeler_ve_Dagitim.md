@@ -3,15 +3,16 @@
 **Durum:** ⏳ Bekliyor (Aşama 4'e bağlı)
 
 ## Amaç
-Aracı günlük kullanıma hazır hale getirmek: TCP desteği, proje dosyaları, ayarlar,
+Aracı günlük kullanıma hazır hale getirmek: proje dosyaları, ayarlar,
 ileri seviye analizler ve tek tıkla kurulabilir paket.
 
 ## Adımlar
 
-### 5.1 TCP bağlantısı
-- [ ] Arayüz TCP 50505'te sunucu olur; çerçeveler bayt akışında art arda gelir
-- [ ] Senkron kaybında `"SPTF"` arama + uzunluk + CRC ile kurtarma
-- [ ] Kaynaklar panelinde protokol seçimi (şu an TCP seçeneği kapalı)
+### 5.1 TCP bağlantısı — kapsam dışı
+Karar (2026-10-12): ürün yalnız UDP destekler; TCP planı kaldırıldı. Kaynaklar panelindeki protokol seçimi
+kaldırıldı. Cihaz tarafı için SPTF-UDP gönderici kütüphanesi eklendi:
+[`embedded/sptf_udp`](../../embedded/sptf_udp), üst seviye protokol
+[SPTF_UDP_Uygulama_Protokolu.md](../SPTF_UDP_Uygulama_Protokolu.md).
 
 ### 5.2 Proje dosyası
 - [ ] Yeni Proje / Proje Aç / Projeyi Kaydet
@@ -44,6 +45,5 @@ ileri seviye analizler ve tek tıkla kurulabilir paket.
 Yeni Proje · Proje Aç · Projeyi Kaydet · Tercihler · Kullanım Kılavuzu
 
 ## Kabul kriterleri
-1. TCP bağlantısı koptuğunda veya araya bozuk veri girdiğinde akış kendiliğinden toparlanır.
-2. Kaydedilen proje açıldığında yerleşim, filtreler ve işlem zinciri aynen geri gelir.
-3. Paketlenmiş `.exe`, Python kurulu olmayan temiz bir Windows'ta çalışır.
+1. Kaydedilen proje açıldığında yerleşim, filtreler ve işlem zinciri aynen geri gelir.
+2. Paketlenmiş `.exe`, Python kurulu olmayan temiz bir Windows'ta çalışır.

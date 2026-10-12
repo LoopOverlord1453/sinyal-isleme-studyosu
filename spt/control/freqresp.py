@@ -10,8 +10,8 @@ MATLAB'den ölçülen tanımlar ve farklar:
   düşük frekansta +360° katkı; gecikme fazı (−ωτ) ayrıca ve tam eklenir (MATLAB'den ölçüldü).
 - allmargin / margin: kazanç geçişleri |G| = 1, faz geçişleri ∠G = −180° (mod 360°); ω = 0 ve ω = ∞ (faz sınırı
   −180° ise) dahil (MATLAB gibi). Faz payı [−180°, 180°) aralığına sarılır (MATLAB: 1/(s+1) → −180° @ ω = 0).
-  Gecikme payı: (Pm mod 360°)/ω (en küçük pozitif gecikme); sürekli zamanda kapalı çevrim kararsızsa Pm/ω (negatif
-  olabilir; ayrıkta MATLAB yine mod 360 kullanır);
+  Gecikme payı: (Pm mod 360°)/ω (en küçük pozitif gecikme); çevrimde gecikme varken kapalı çevrim kararsızsa Pm/ω
+  (negatif olabilir) — MATLAB'den ölçüldü (sürekli ve ayrık);
   ω = 0'da ∞ (Pm = 0 ise 0); sürekli zamanda |G(∞)| ≥ 1 ise ω = ∞'da 0 eklenir; ayrık zamanda bir örneklik ek
   gecikme kapalı çevrimi kararsız yapıyorsa ω = π/Ts'de 1 eklenir (MATLAB R2025b'den ölçüldü). Ayrık zamanda gecikme
   payı örnek sayısıdır.
@@ -22,6 +22,8 @@ MATLAB'den ölçülen tanımlar ve farklar:
   Sürekli gecikmede sonsuz sayıda faz geçişi vardır: ω ≤ 200·max(|p|, |z|, 1/τ, ω_c) aralığındakiler (en çok 100)
   listelenir (MATLAB'in aralığı yayımlanmamış ve düzensiz). Gecikmeli sürekli kapalı çevrimin kararlılığı
   (Stable) argüman ilkesiyle (D(s) + kN(s)e^{−sτ}'nin sağ yarı düzlem sıfırları) belirlenir.
+  Ayrıca: |G| yuvarlama düzeyindeyken (ör. Tustin'in z = −1 sıfırları) faz gürültüsü geçiş sayılmaz; statik kazançta
+  MATLAB'in dejenere çıktıları izlenir (tf(−1) → GM 1 @ 1 rad/s, PM NaN).
 - norm(sys, inf) ve getPeakGain: kararsız modelde de frekans cevabının tepe değeri (MATLAB R2025b gibi; sanal eksende
   kutup varsa ∞). Bruinsma–Steinbuch Hamiltonyen yinelemesi + yerel inceltme; tolerans varsayılanı 1e-10 (MATLAB'in
   varsayılanı 1e-2'dir). norm(sys, 2): kararsızsa ya da sürekli zamanda D ≠ 0 ise ∞; ayrık zamanda Ts ile
@@ -231,9 +233,9 @@ def _dc_entry(z: np.ndarray, p: np.ndarray, k: float, discrete: bool) -> float:
     if k == 0.0:
         return 0.0
     c = 1.0 if discrete else 0.0
-    tol = 1e-12
-    zi = np.abs(z - c) <= tol * max(1.0, abs(c))
-    pi_ = np.abs(p - c) <= tol * max(1.0, abs(c))
+    tol = _origin_tol(np.concatenate([np.asarray(z, complex), np.asarray(p, complex)]), c)
+    zi = np.abs(z - c) <= tol
+    pi_ = np.abs(p - c) <= tol
     q = int(pi_.sum() - zi.sum())
     val = k * np.prod(c - z[~zi]) / np.prod(c - p[~pi_])
     val = float(np.real(val))
@@ -368,6 +370,34 @@ def _real_roots(poly: np.ndarray, lo: float, hi: float) -> list[float]:
     return sorted(out)
 
 
+def _scan_roots(f, lo: float, hi: float, n: int = 6000) -> list[float]:
+    """f'nin (lo, hi) aralığındaki logaritmik ızgarada işaret değişimleri, Brent ile inceltilmiş.
+
+    Ayrık sistemde geçiş ωTs küçükken cos θ polinomunun kökleri 1 çevresine kümelenir; yuvarlama onları sanal ya da
+    [−1, 1] dışına iter ve polinom çözümü geçişi kaçırır (ör. Ts = 1 ms, ωc = 1 rad/s). Bu tarama o durum için yedek
+    adaydır; adaylar çağıranda Newton ve artık denetimiyle doğrulanır."""
+    from scipy.optimize import brentq
+    if not (hi > lo > 0):
+        return []
+    ws = np.geomspace(lo, hi, n)
+    vals = np.empty(n)
+    for i, w in enumerate(ws):
+        try:
+            vals[i] = f(float(w))
+        except (ValueError, ZeroDivisionError, OverflowError):
+            vals[i] = np.nan
+    out = []
+    for i in range(n - 1):
+        fa, fb = vals[i], vals[i + 1]
+        if np.isfinite(fa) and np.isfinite(fb) and fa * fb < 0:
+            try:
+                out.append(float(brentq(f, float(ws[i]), float(ws[i + 1]), xtol=1e-15 * float(ws[i + 1]),
+                                        rtol=4 * np.finfo(float).eps)))
+            except (ValueError, RuntimeError):
+                pass
+    return out
+
+
 def _newton(f, df, x0: float, lo: float, hi: float, tol: float = 1e-15) -> float:
     x = x0
     for _ in range(60):
@@ -438,6 +468,7 @@ def _gain_crossovers(R: _Rat) -> list[float]:
                 F, hit = _deflate(F, e)
         cs = [c for c in _real_roots(F, -1.0, 1.0) if abs(abs(c) - 1.0) > 1e-10]
         cand = [math.acos(c) / R.Ts for c in cs]
+        cand += _scan_roots(R.logmag, 1e-9 / R.Ts, math.pi / R.Ts * (1 - 1e-12))  # kümelenmiş kök yedeği
         ends = [0.0, math.pi / R.Ts]
     else:
         F = _padd(R.k * R.k * _mag2_poly_cont(R.z), -_mag2_poly_cont(R.p))
@@ -471,10 +502,20 @@ def _uniq(ws: list[float], scale: float = 1.0) -> list[float]:
     return out
 
 
+def _origin_tol(roots: np.ndarray, c: float) -> float:
+    """c'deki (sürekli s = 0, ayrık z = 1) kökü tanıma toleransı. Kümelenmiş kökler (ör. küçük Ts'li Tustin)
+    yuvarlamayla c'den ~1e-10 sapar: diğer köklerin c'ye en küçük uzaklığının 1e-6 katına kadarı c'de sayılır."""
+    if roots.size == 0:
+        return 1e-12
+    d = np.abs(roots - c)
+    big = d[d > 1e-6 * float(np.max(d))]
+    return max(1e-12, 1e-6 * float(np.min(big))) if big.size else 1e-12
+
+
 def _phase_limit0(R: _Rat) -> tuple[float, float]:
     """ω → 0⁺ limitinde (faz derece mod 360, |G|)."""
     c = 1.0 if R.disc else 0.0
-    tol = 1e-12
+    tol = _origin_tol(np.concatenate([R.z, R.p]), c)
     a = 180.0 if R.k < 0 else 0.0
     q = 0
     rest = R.k
@@ -494,6 +535,25 @@ def _phase_limit0(R: _Rat) -> tuple[float, float]:
             rest /= (c - pp)
     mag = math.inf if q > 0 else (0.0 if q < 0 else abs(complex(rest)))
     return a % 360.0, mag
+
+
+def _gain_scale(R: _Rat) -> float:
+    """|G|'nin kaba en büyüğü (logaritmik ızgara; integratörlerin ω → 0 tekilliği dışarıda: alt sınır, orijin
+    dışındaki en yavaş dinamiğin 1e-3 katı)."""
+    c = 1.0 if R.disc else 0.0
+    r = np.concatenate([R.z, R.p])
+    r = r[np.abs(r - c) > _origin_tol(r, c)] if r.size else r
+    if R.disc:
+        r = r[np.abs(r) > 0]
+        r = np.log(r.astype(complex)) / R.Ts if r.size else r
+    m = np.abs(r)
+    m = m[m > 0]
+    hi = math.pi / R.Ts if R.disc else 1e3 * _scale_w(R)
+    lo = 1e-3 * float(np.min(m)) if m.size else 1e-3
+    ws = np.geomspace(max(min(lo, 0.5 * hi), 1e-300), hi, 400)
+    v = [abs(R.value(float(w))) for w in ws]
+    v = [x for x in v if math.isfinite(x)]
+    return max(v) if v else 1.0
 
 
 def _phase_crossovers(R: _Rat) -> list[tuple[float, float]]:
@@ -518,6 +578,9 @@ def _phase_crossovers(R: _Rat) -> list[tuple[float, float]]:
             out.append((math.inf, 0.0 if rel > 0 else abs(R.k)))
     else:
         out += _phase_cross_delay(R)
+    # |G| yuvarlama düzeyindeyse (ör. Tustin'in z = −1 sıfırları civarı) faz gürültüdür: geçiş sayılmaz
+    gs = _gain_scale(R)
+    out = [(w, m) for w, m in out if not (0.0 < w < math.inf and m <= 10 * np.finfo(float).eps * gs)]
     res: list[tuple[float, float]] = []
     sc = _scale_w(R)
     for w, m in sorted(out, key=lambda z: z[0]):
@@ -572,6 +635,9 @@ def _phase_cross_poly(R: _Rat) -> list[tuple[float, float]]:
                     Q, hit = _deflate(Q, e)
         cs = [c for c in _real_roots(Q, -1.0, 1.0) if abs(abs(c) - 1.0) > 1e-10] if np.any(Q) else []
         cand = [math.acos(c) / R.Ts for c in cs]
+        if np.any(Q):  # kümelenmiş kök yedeği: Im G'nin işaret değişimleri (Re G < 0 olanlar aşağıda seçilir)
+            cand += _scan_roots(lambda v: float(np.imag(R.value(v)) / max(abs(R.value(v)), 1e-300)),
+                                1e-9 / R.Ts, math.pi / R.Ts * (1 - 1e-12))
         lo, hi = 0.0, math.pi / R.Ts
     else:
         nr, ni = _poly_eval_jw(num)
@@ -760,21 +826,31 @@ def _allmargin_siso(sys: LTI) -> dict:
         else:
             pm.append(_wrap180(math.degrees(R.phase(w)) + 180.0))
         pmf.append(w)
+    static = R.z.size == 0 and R.p.size == 0 and R.tau == 0
+    if static and R.k == -1.0:
+        # MATLAB R2025b'den ölçülen dejenere durum: tf(−1) → GM 1 @ 1 rad/s, PM NaN, DM 0 @ NaN
+        return dict(GainMargin=np.array([1.0]), GMFrequency=np.array([1.0]), PhaseMargin=np.array([math.nan]),
+                    PMFrequency=np.array([math.nan]), DelayMargin=np.array([0.0]), DMFrequency=np.array([math.nan]),
+                    Stable=False)
     dm, dmf = [], []
     T = R.Ts if R.disc else 1.0
+    # MATLAB'den ölçüldü: kapalı çevrim kararsız VE çevrimde gecikme varsa Pm/ω (negatif olabilir: mevcut gecikme
+    # azaltılabilir) — ör. 0.5z⁻³/(z−0.9) → −0.1204 örnek, 20e^{−0.5s}/(s+10) → −0.0163 s; aksi halde (Pm mod 360°)/ω
+    # (gecikmesiz kararsız çevrimler dahil: 0.3(z+0.5)/((z−1)(z−0.6)(z−0.2)) → +7.81).
+    raw = (not stable) and R.tau > 0
     for P, w in zip(pm, pmf):
         if w == 0:
             dm.append(0.0 if P == 0 else math.inf)
         else:
-            a = (P % 360.0) if (stable or R.disc) else P
+            a = P if raw else (P % 360.0)
             dm.append(math.radians(a) / (w * T))
         dmf.append(w)
-    if not R.disc and R.k != 0 and R.z.size == R.p.size and abs(R.k) >= 1.0 - 1e-12:
+    if static and abs(R.k) >= 1.0 - 1e-12 and not R.disc:
         dm.append(0.0)
         dmf.append(math.inf)
     if R.disc and stable and not _cl_stable(R, _extra_delay(sys)):
         dm.append(1.0)
-        dmf.append(math.pi / R.Ts)
+        dmf.append(math.inf if static else math.pi / R.Ts)
     return dict(GainMargin=np.asarray(gm), GMFrequency=np.asarray(gmf), PhaseMargin=np.asarray(pm),
                 PMFrequency=np.asarray(pmf), DelayMargin=np.asarray(dm), DMFrequency=np.asarray(dmf),
                 Stable=bool(stable))

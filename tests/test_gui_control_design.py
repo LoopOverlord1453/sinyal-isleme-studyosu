@@ -347,11 +347,10 @@ def test_mouse_drag_on_root_locus(app, tab):
     pole = [e for e in tab.comp.elements if e.kind == "real_pole"][0]
     assert pole.poles[0] == pytest.approx(-8.0, abs=0.05)
     assert pole.poles[0].imag == 0.0           # gerçel öğe gerçel eksende kalır
-    # tutamaç olmayan yerden (görünümün sağ üst köşesi) sürükleme görünümü kaydırır (olay kabul edilmez)
-    (x0, x1), (y0, y1) = rl.plot.getPlotItem().getViewBox().viewRange()
-    xa, ya = x1 - 0.05 * (x1 - x0), y1 - 0.05 * (y1 - y0)
-    acc = drag(rl.plot, xa, ya, xa - 0.1 * (x1 - x0), ya)
-    assert not acc[0]
+    # tutamaç olmayan yerde (görünümün sağ üst köşesi) tutamaç yok: sürükleme görünüm kutusunun kaydırmasına kalır
+    vb = rl.plot.getPlotItem().getViewBox()
+    (x0, x1), (y0, y1) = vb.viewRange()
+    assert rl._pick(x1 - 0.05 * (x1 - x0), y1 - 0.05 * (y1 - y0), vb.viewPixelSize()) is None
 
 
 def test_bode_drag_scales_gain(app, tab, ref):
@@ -660,3 +659,22 @@ def test_save_restore_state(app, theme, tab, tmp_path):
         t2.shutdown()
         t2.deleteLater()
         app.processEvents()
+
+
+def test_code_dialog_measure_after_close_and_theme_reapply(app, theme, monkeypatch):
+    """Ölçüm sürerken kod penceresi kapatılırsa (köprü silindi) arka plan iş parçacığı istisna atmaz; aynı temanın
+    yeniden uygulanması canlı pencereleri yeniden cilalamaz (stil nesnesi değişmez)."""
+    from PyQt6 import sip
+    from spt.gui.dialogs import control_code_dialog as ccd, mpc_code_dialog as mcd
+    from spt.gui.theme import ThemeManager
+
+    for mod, lib in ((ccd, ccd.cc), (mcd, mcd.mpc_c)):
+        monkeypatch.setattr(lib, "footprint", lambda *a, **k: {"flash": 1})
+        monkeypatch.setattr(lib, "cost", lambda *a, **k: {"cycles": 1})
+        bridge = mod._Bridge()
+        sip.delete(bridge)
+        args = (bridge, 1, object(), object(), []) if mod is ccd else (bridge, 1, object(), object(), "x", [])
+        mod._measure(*args)                       # RuntimeError (silinmiş köprü) yutulur
+    style = app.style()
+    ThemeManager(app).apply()
+    assert app.style() is style

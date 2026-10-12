@@ -24,7 +24,7 @@ from scipy import signal
 from spt.control.errors import ControlError
 from spt.control.sysid._util import fd_jacobian, is_stable, levenberg_marquardt, pmul, shift, stabilize
 from spt.control.sysid.data import IDData, check_complete
-from spt.control.sysid.models import IDPoly, Report, make_fit
+from spt.control.sysid.models import IDPoly, Report, attach_warnings, make_fit, noise_variance
 
 __all__ = ["arx", "armax", "oe", "bj", "polyest", "ar"]
 
@@ -167,7 +167,8 @@ def arx(data: IDData, orders, *, initial_condition: str = "estimate", regulariza
     Ntot = sum(data.lengths)
     fit = make_fit(y_list, e_list, npar + nx0, loss="trace")
     E = np.vstack(e_list)
-    lam = E.T @ E / (Ntot - npar - nx0)  # MATLAB: d = tüm parametreler + başlangıç durumları (çok çıkışta da)
+    # MATLAB: d = tüm parametreler + başlangıç durumları (çok çıkışta da); N ≤ d ise NaN + uyarı
+    lam, short_msg = noise_variance(E.T @ E, Ntot, npar + nx0)
     # Model
     A = [[None] * ny for _ in range(ny)]
     B = [[None] * nu for _ in range(ny)]
@@ -201,7 +202,7 @@ def arx(data: IDData, orders, *, initial_condition: str = "estimate", regulariza
             blocks.append(np.linalg.pinv(P.T @ P) if P.shape[1] else np.zeros((0, 0)))
     # MATLAB: kovaryans ölçeği EᵀE/(N − np − n·ne) (n: atılan satır; çok çıkışta NoiseVariance'tan farklı olarak n·ny
     # değil n — R2025b'de ölçüldü)
-    lamc = E.T @ E / (Ntot - npar - (n if start == "estimate" else 0) * data.ne)
+    lamc, _ = noise_variance(E.T @ E, Ntot, npar + (n if start == "estimate" else 0) * data.ne)
     if ny == 1:
         cov = lamc[0, 0] * blocks[0]
     else:
@@ -218,6 +219,7 @@ def arx(data: IDData, orders, *, initial_condition: str = "estimate", regulariza
                           npar, nx0, None, data.name, Ntot, data.Ts,
                           {"orders": (na.tolist(), nb.tolist(), nk.tolist())},
                           f"ARX ile tahmin edildi (en küçük kareler), uyum %{fit.FitPercent.round(2).tolist()}")
+    attach_warnings(model, data, [short_msg])
     return model
 
 
@@ -488,7 +490,8 @@ def _finish(st: _PolyStructure, pem: _PEM, res, data: IDData, method: str, ic: s
         s = s_split.reshape(len(exps), rep.nsx)
     fit = make_fit(y_list, e_list, npar + nx0)
     E = np.vstack(e_list)
-    lam = float(E[:, 0] @ E[:, 0]) / (Ntot - npar - nx0)
+    lam_m, short_msg = noise_variance(E.T @ E, Ntot, npar + nx0)
+    lam = float(lam_m[0, 0])
     fit.LossFcn = V_est
     model = st.to_model(th, data.Ts, lam, _names_kw(data))
     # Kovaryans: λ·(J_θᵀJ_θ)⁻¹, J_θ = ∂e/∂θ (tahmin edilen başlangıç durumu sabit) — MATLAB ARMAX / BJ ile 1e-8.
@@ -504,6 +507,7 @@ def _finish(st: _PolyStructure, pem: _PEM, res, data: IDData, method: str, ic: s
     model.report = Report(method, fit, ic, res.iterations, res.why, npar, nx0, x0, data.name, Ntot, data.Ts, opts,
                           f"{method} ile tahmin edildi (öngörü hatası yöntemi), uyum %"
                           f"{fit.FitPercent.round(2).tolist()}")
+    attach_warnings(model, data, [short_msg])
     return model
 
 
@@ -528,6 +532,9 @@ def _run_pem(data, st, inits, ic, method, max_iter, opts):
         used_ic = "backcast"  # MATLAB: çok deneyde 'estimate' yerine 'backcast' (uyarıyla)
     if used_ic == "backcast" and len(exps) == 1 and st.nc + int(st.nf.sum()) == 0:
         used_ic = "estimate"  # MATLAB: C ve F yoksa geri süzme tanımsız → 'estimate'
+    if used_ic == "estimate" and N <= st.np + st.nx(None, False) * len(exps):
+        raise ControlError("Veri, parametre ve başlangıç durumu sayısına göre çok kısa (başlangıç koşulunu 'zero' "
+                           "seçin, dereceyi düşürün ya da daha uzun veri kullanın)")
     best = None
     for th0 in inits:
         pem = _PEMBackcast(st, exps) if used_ic == "backcast" else _PEM(st, exps, used_ic)
@@ -815,8 +822,10 @@ def ar(data: IDData, n: int, approach: str = "ls") -> IDPoly:
     Ntot = sum(len(y) for y in ys)
     fit = make_fit([y.reshape(-1, 1) for y in ys], e_list, n + n * len(ys))
     E = np.vstack(e_list)
-    lam = float(E[:, 0] @ E[:, 0]) / (Ntot - n - n * len(ys))
+    lam_m, short_msg = noise_variance(E.T @ E, Ntot, n + n * len(ys))
+    lam = float(lam_m[0, 0])
     model = IDPoly(A, None, Ts=data.Ts, noise_variance=lam, output_names=data.output_names)
     model.report = Report("AR", fit, "estimate", 0, "Doğrudan çözüm", n, n * len(ys), None, data.name, Ntot,
                           data.Ts, {"approach": approach}, f"AR ({approach}) ile tahmin edildi")
+    attach_warnings(model, data, [short_msg])
     return model

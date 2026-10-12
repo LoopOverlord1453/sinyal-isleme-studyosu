@@ -23,7 +23,8 @@ from scipy import linalg, signal
 from spt.control.errors import ControlError
 from spt.control.sysid._util import levenberg_marquardt, shift
 from spt.control.sysid.data import IDData, check_complete
-from spt.control.sysid.models import IDTF, IDProc, Report, c2d_exact, make_fit, parse_proc_type, tf_to_ss
+from spt.control.sysid.models import (IDTF, IDProc, Report, attach_warnings, c2d_exact, make_fit, noise_variance,
+                                      parse_proc_type, tf_to_ss)
 
 __all__ = ["tfest", "procest"]
 
@@ -42,6 +43,12 @@ def _ct_to_dtf(num, den, delay, Ts, hold="zoh"):
     b = np.atleast_1d(np.real(b[0]))
     a = np.real(a)
     return b, a, int(s.delay[0])
+
+
+FOH_DELAY_MSG = ("Girişin örnekler arası davranışı FOH (Q ≠ 1 yeniden örnekleme, MATLAB gibi girişi FOH yapar); FOH "
+                 "girişte kesirli (örnek aralığının katı olmayan) gecikmeli sürekli model desteklenmiyor. Yeniden "
+                 "örneklemeyi kapatın, gecikmeyi örnek aralığının tam katı olarak sabitleyin ya da gecikmesiz model "
+                 "türü seçin.")
 
 
 def _core(a):
@@ -221,7 +228,8 @@ def _report_and_cov(pr, res, data, npar, method, ic, opts):
     nx0 = pr._nx * len(pr.exps)
     fit = make_fit(y_list, e_list, npar + nx0)
     V = float(r @ r) / off
-    lam_d = V * off / (off - npar - nx0)
+    lam_m, short_msg = noise_variance(V * off, off, npar + nx0)
+    lam_d = float(lam_m[0, 0])
     lam = lam_d * data.Ts  # MATLAB: sürekli modelde NoiseVariance = Ts·λ (gürültü yoğunluğu)
     J = pr.jac(res.x)[:, :npar]
     try:  # λ·(J_θᵀJ_θ)⁻¹ (başlangıç durumu sabit; MATLAB'in OE renkli artık düzeltmesi yapılmaz — bkz. linear)
@@ -232,6 +240,8 @@ def _report_and_cov(pr, res, data, npar, method, ic, opts):
     x0 = [s[k].copy() for k in range(len(pr.exps))] if s is not None else None
     rep = Report(method, fit, ic, res.iterations, res.why, npar, nx0, x0, data.name, off, data.Ts, opts,
                  f"{method} ile tahmin edildi (çıkış hatası, sürekli zaman), uyum %{fit.FitPercent.round(2).tolist()}")
+    if short_msg:
+        rep.warnings.append(short_msg)
     return lam, cov, rep
 
 
@@ -342,6 +352,10 @@ def tfest(data: IDData, np_, nz=None, iodelay=None, *, Ts: float = 0.0, initial_
     if np.any(nzl > npl):
         raise ControlError("Sürekli zamanda sıfır sayısı kutup sayısını aşamaz")
     est_delay = np.isnan(dl)
+    if any(h == "foh" for h in data.intersample):
+        frac = np.abs(np.where(est_delay, 0.5, dl / data.Ts) - np.round(np.where(est_delay, 0.5, dl / data.Ts)))
+        if np.any(est_delay) or np.any(frac > 1e-9):
+            raise ControlError(FOH_DELAY_MSG)
     Tsd = data.Ts
     hold = data.intersample
 
@@ -410,6 +424,7 @@ def tfest(data: IDData, np_, nz=None, iodelay=None, *, Ts: float = 0.0, initial_
                  noise_variance=lam, input_names=data.input_names, output_names=data.output_names)
     model.covariance = cov
     model.report = rep
+    attach_warnings(model, data)
     return model
 
 
@@ -513,6 +528,8 @@ def procest(data: IDData, type_="P1D", *, initial_condition: str = "auto", init=
     if len(types) != nu:
         raise ControlError("Süreç türü sayısı giriş sayısına eşit olmalı")
     structs = [parse_proc_type(t) for t in types]
+    if any(st["delay"] for st in structs) and any(h == "foh" for h in data.intersample):
+        raise ControlError(FOH_DELAY_MSG)
     names = [IDProc.active_names(st) for st in structs]
     Tsd = data.Ts
     hold = data.intersample
@@ -571,6 +588,7 @@ def procest(data: IDData, type_="P1D", *, initial_condition: str = "auto", init=
                    output_names=data.output_names)
     model.covariance = cov
     model.report = rep
+    attach_warnings(model, data)
     return model
 
 

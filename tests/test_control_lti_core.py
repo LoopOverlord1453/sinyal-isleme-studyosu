@@ -676,3 +676,30 @@ def test_errors_are_turkish_control_errors():
         ss(tf([1, 0, 0], [1, 1]))
     with pytest.raises(ControlError):
         tf([1], [1, 1]) ** 0.5
+
+
+def test_tzero_high_order_no_spurious_infinite_zero():
+    """16. derece tf'nin gerçeklemesinde sonsuz sıfır yuvarlamayla −1.6e12 gibi sonlu görünmemeli (MATLAB: 10 sıfır)."""
+    import warnings
+    from spt.control.analysis import tzero
+    zz = -np.logspace(-1.5, 1.5, 10)
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        z = tzero(convert.to_ss(convert.to_tf(zpk(zz, -np.logspace(-2, 1.75, 16), 1))))
+    assert z.size == 10
+    _match_roots(z, zz, 1e-8)
+
+
+def test_feedback_keeps_delay_outside_loop():
+    """Sürekli zamanda geri beslenmeyen girişteki gecikme halka dışındadır: korunur (MATLAB F1)."""
+    G = ss([[-1, 0], [0, -2]], np.eye(2), np.eye(2), np.zeros((2, 2)), input_delay=[0, 0.5])
+    T = feedback(G, 1.0, -1, feedin=[0], feedout=[0])
+    assert np.allclose(T.input_delay, [0, 0.5])
+    ref = np.array([[0.48899755501222497, -0.07334963325183375], [0, 0], [0, 0],
+                    [0.4725454073667494, -0.145600877341812],
+                    [0.4, -0.2], [0, 0], [0, 0], [0.2551479170353085, -0.3672867278197558],
+                    [0.15384615384615385, -0.23076923076923078], [0, 0], [0, 0],
+                    [-0.21930850434436597, -0.16978473678547829]])
+    _close(freqresp(T, [0.3, 1, 3]).ravel(order="F"), ref[:, 0] + 1j * ref[:, 1], 1e-12)
+    with pytest.raises(ControlError):                 # halkadaki gecikme: iç gecikme gerekir
+        feedback(G, 1.0, -1, feedin=[1], feedout=[1])

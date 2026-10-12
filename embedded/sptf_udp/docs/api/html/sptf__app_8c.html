@@ -1,0 +1,394 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "https://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" lang="tr">
+<head>
+<meta http-equiv="Content-Type" content="text/xhtml;charset=UTF-8"/>
+<meta http-equiv="X-UA-Compatible" content="IE=11"/>
+<meta name="generator" content="Doxygen 1.13.2"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>SPTF-UDP: examples/stm32_lwip_raw/sptf_app.c Dosya Referansı</title>
+<link href="tabs.css" rel="stylesheet" type="text/css"/>
+<script type="text/javascript" src="jquery.js"></script>
+<script type="text/javascript" src="dynsections.js"></script>
+<script type="text/javascript" src="clipboard.js"></script>
+<link href="navtree.css" rel="stylesheet" type="text/css"/>
+<script type="text/javascript" src="navtreedata.js"></script>
+<script type="text/javascript" src="navtree.js"></script>
+<script type="text/javascript" src="resize.js"></script>
+<script type="text/javascript" src="cookie.js"></script>
+<link href="search/search.css" rel="stylesheet" type="text/css"/>
+<script type="text/javascript" src="search/searchdata.js"></script>
+<script type="text/javascript" src="search/search.js"></script>
+<script type="text/javascript">
+/* @license magnet:?xt=urn:btih:d3d9a9a6595521f9666a5e94cc830dab83b65699&amp;dn=expat.txt MIT */
+  $(function() { init_search(); });
+/* @license-end */
+</script>
+<link href="doxygen.css" rel="stylesheet" type="text/css" />
+</head>
+<body>
+<div id="top"><!-- do not remove this div, it is closed by doxygen! -->
+<div id="titlearea">
+<table cellspacing="0" cellpadding="0">
+ <tbody>
+ <tr id="projectrow">
+  <td id="projectalign">
+   <div id="projectname">SPTF-UDP<span id="projectnumber">&#160;1.0.0</span>
+   </div>
+   <div id="projectbrief">Signal Processing Toolbox için gömülü UDP gönderici kütüphanesi</div>
+  </td>
+    <td>        <div id="MSearchBox" class="MSearchBoxInactive">
+        <span class="left">
+          <span id="MSearchSelect"                onmouseover="return searchBox.OnSearchSelectShow()"                onmouseout="return searchBox.OnSearchSelectHide()">&#160;</span>
+          <input type="text" id="MSearchField" value="" placeholder="Ara" accesskey="S"
+               onfocus="searchBox.OnSearchFieldFocus(true)" 
+               onblur="searchBox.OnSearchFieldFocus(false)" 
+               onkeyup="searchBox.OnSearchFieldChange(event)"/>
+          </span><span class="right">
+            <a id="MSearchClose" href="javascript:searchBox.CloseResultsWindow()"><img id="MSearchCloseImg" border="0" src="search/close.svg" alt=""/></a>
+          </span>
+        </div>
+</td>
+ </tr>
+ </tbody>
+</table>
+</div>
+<!-- end header part -->
+<!-- Oluşturan Doxygen 1.13.2 -->
+<script type="text/javascript">
+/* @license magnet:?xt=urn:btih:d3d9a9a6595521f9666a5e94cc830dab83b65699&amp;dn=expat.txt MIT */
+var searchBox = new SearchBox("searchBox", "search/",'.html');
+/* @license-end */
+</script>
+<script type="text/javascript">
+/* @license magnet:?xt=urn:btih:d3d9a9a6595521f9666a5e94cc830dab83b65699&amp;dn=expat.txt MIT */
+$(function() { codefold.init(0); });
+/* @license-end */
+</script>
+</div><!-- top -->
+<div id="side-nav" class="ui-resizable side-nav-resizable">
+  <div id="nav-tree">
+    <div id="nav-tree-contents">
+      <div id="nav-sync" class="sync"></div>
+    </div>
+  </div>
+  <div id="splitbar" style="-moz-user-select:none;" 
+       class="ui-resizable-handle">
+  </div>
+</div>
+<script type="text/javascript">
+/* @license magnet:?xt=urn:btih:d3d9a9a6595521f9666a5e94cc830dab83b65699&amp;dn=expat.txt MIT */
+$(function(){initNavTree('sptf__app_8c.html',''); initResizable(true); });
+/* @license-end */
+</script>
+<div id="doc-content">
+<!-- window showing the filter options -->
+<div id="MSearchSelectWindow"
+     onmouseover="return searchBox.OnSearchSelectShow()"
+     onmouseout="return searchBox.OnSearchSelectHide()"
+     onkeydown="return searchBox.OnSearchSelectKey(event)">
+</div>
+
+<!-- iframe showing the search results (closed by default) -->
+<div id="MSearchResultsWindow">
+<div id="MSearchResults">
+<div class="SRPage">
+<div id="SRIndex">
+<div id="SRResults"></div>
+<div class="SRStatus" id="Loading">Yüklüyor...</div>
+<div class="SRStatus" id="Searching">Arıyor...</div>
+<div class="SRStatus" id="NoMatches">Eşleşme Yok</div>
+</div>
+</div>
+</div>
+</div>
+
+<div class="header">
+  <div class="summary">
+<a href="#define-members">Makrolar</a> &#124;
+<a href="#func-members">Fonksiyonlar</a> &#124;
+<a href="#var-members">Değişkenler</a>  </div>
+  <div class="headertitle"><div class="title">sptf_app.c Dosya Referansı<div class="ingroups"><a class="el" href="group__sptf__examples.html">Örnekler</a></div></div></div>
+</div><!--header-->
+<div class="contents">
+
+<p>STM32 + lwIP raw örneği: 2 kanal ADC (DMA çift tampon) → "Motor akımları" akışı.  
+<a href="#details">Ayrıntılar...</a></p>
+<div class="textblock"><code>#include &quot;<a class="el" href="sptf__app_8h_source.html">sptf_app.h</a>&quot;</code><br />
+<code>#include &quot;main.h&quot;</code><br />
+<code>#include &quot;lwip/ip_addr.h&quot;</code><br />
+<code>#include &quot;<a class="el" href="sptf_8h_source.html">sptf.h</a>&quot;</code><br />
+<code>#include &quot;<a class="el" href="sptf__port__lwip__raw_8h_source.html">sptf_port_lwip_raw.h</a>&quot;</code><br />
+</div>
+<p><a href="sptf__app_8c_source.html">Bu dosyanın kaynak koduna git.</a></p>
+<table class="memberdecls">
+<tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="define-members" name="define-members"></a>
+Makrolar</h2></td></tr>
+<tr class="memitem:a1ecae8ab8412e235917fc9e3e0e72003" id="r_a1ecae8ab8412e235917fc9e3e0e72003"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a1ecae8ab8412e235917fc9e3e0e72003">SPTF_APP_PC_IP</a>&#160;&#160;&#160;192, 168, 1, 10</td></tr>
+<tr class="memdesc:a1ecae8ab8412e235917fc9e3e0e72003"><td class="mdescLeft">&#160;</td><td class="mdescRight">Arayüzün çalıştığı PC'nin IPv4 adresi (4 bayt, virgülle).  <br /></td></tr>
+<tr class="separator:a1ecae8ab8412e235917fc9e3e0e72003"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a23d638437a5fa22c2296af017e9bbfb5" id="r_a23d638437a5fa22c2296af017e9bbfb5"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a23d638437a5fa22c2296af017e9bbfb5">SPTF_APP_SAMPLE_RATE_HZ</a>&#160;&#160;&#160;20000.0</td></tr>
+<tr class="memdesc:a23d638437a5fa22c2296af017e9bbfb5"><td class="mdescLeft">&#160;</td><td class="mdescRight">ADC tetik frekansı (kanal başına örnekleme hızı).  <br /></td></tr>
+<tr class="separator:a23d638437a5fa22c2296af017e9bbfb5"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a0d29128326fb72e0c7391286bcf258f8" id="r_a0d29128326fb72e0c7391286bcf258f8"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a0d29128326fb72e0c7391286bcf258f8">SPTF_APP_BLOCK</a>&#160;&#160;&#160;256u</td></tr>
+<tr class="memdesc:a0d29128326fb72e0c7391286bcf258f8"><td class="mdescLeft">&#160;</td><td class="mdescRight">Yarım tampondaki örnek anı sayısı. 2 kanal × uint16 için 356'nın altı tek datagrama sığar.  <br /></td></tr>
+<tr class="separator:a0d29128326fb72e0c7391286bcf258f8"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a2c5584721806531f92dc018d08962c22" id="r_a2c5584721806531f92dc018d08962c22"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a2c5584721806531f92dc018d08962c22">SPTF_APP_DMA_SECTION</a></td></tr>
+<tr class="memdesc:a2c5584721806531f92dc018d08962c22"><td class="mdescLeft">&#160;</td><td class="mdescRight">ADC tamponunun bölüm özniteliği (ör. <code>__attribute__((section(".RAM_D2")))</code>).  <br /></td></tr>
+<tr class="separator:a2c5584721806531f92dc018d08962c22"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aa636de9df1d933ede7d550ca03d3b60b" id="r_aa636de9df1d933ede7d550ca03d3b60b"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#aa636de9df1d933ede7d550ca03d3b60b">APP_IP_ADDR4</a>(ip, ...)</td></tr>
+<tr class="memdesc:aa636de9df1d933ede7d550ca03d3b60b"><td class="mdescLeft">&#160;</td><td class="mdescRight">Virgüllü IP makrosunu <code>IP_ADDR4</code>'e dört ayrı argüman olarak geçirir (C99 değişken argümanlı makro).  <br /></td></tr>
+<tr class="separator:aa636de9df1d933ede7d550ca03d3b60b"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a51e6d7a0b9fef57c15e12fa80b7b7656" id="r_a51e6d7a0b9fef57c15e12fa80b7b7656"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a51e6d7a0b9fef57c15e12fa80b7b7656">APP_CHANNELS</a>&#160;&#160;&#160;2u</td></tr>
+<tr class="separator:a51e6d7a0b9fef57c15e12fa80b7b7656"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a793da4922fe222ce57ca2920be9ff83d" id="r_a793da4922fe222ce57ca2920be9ff83d"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a793da4922fe222ce57ca2920be9ff83d">APP_HALF</a>&#160;&#160;&#160;(<a class="el" href="#a0d29128326fb72e0c7391286bcf258f8">SPTF_APP_BLOCK</a> * <a class="el" href="#a51e6d7a0b9fef57c15e12fa80b7b7656">APP_CHANNELS</a>)</td></tr>
+<tr class="separator:a793da4922fe222ce57ca2920be9ff83d"><td class="memSeparator" colspan="2">&#160;</td></tr>
+</table><table class="memberdecls">
+<tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="func-members" name="func-members"></a>
+Fonksiyonlar</h2></td></tr>
+<tr class="memitem:ad7e3dafc08886b97b9c9e23267645b9e" id="r_ad7e3dafc08886b97b9c9e23267645b9e"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ad7e3dafc08886b97b9c9e23267645b9e">HAL_ADC_ConvHalfCpltCallback</a> (ADC_HandleTypeDef *hadc)</td></tr>
+<tr class="memdesc:ad7e3dafc08886b97b9c9e23267645b9e"><td class="mdescLeft">&#160;</td><td class="mdescRight">HAL: DMA ilk yarıyı doldurdu (kesme bağlamı: yalnız bayrak).  <br /></td></tr>
+<tr class="separator:ad7e3dafc08886b97b9c9e23267645b9e"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:af20a88180db1113be1e89266917d148b" id="r_af20a88180db1113be1e89266917d148b"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#af20a88180db1113be1e89266917d148b">HAL_ADC_ConvCpltCallback</a> (ADC_HandleTypeDef *hadc)</td></tr>
+<tr class="memdesc:af20a88180db1113be1e89266917d148b"><td class="mdescLeft">&#160;</td><td class="mdescRight">HAL: DMA ikinci yarıyı doldurdu (kesme bağlamı: yalnız bayrak).  <br /></td></tr>
+<tr class="separator:af20a88180db1113be1e89266917d148b"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ga57bfb9b0ef63a5636def319b7ceb0220" id="r_ga57bfb9b0ef63a5636def319b7ceb0220"><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__sptf__examples.html#ga57bfb9b0ef63a5636def319b7ceb0220">sptf_app_init</a> (void)</td></tr>
+<tr class="memdesc:ga57bfb9b0ef63a5636def319b7ceb0220"><td class="mdescLeft">&#160;</td><td class="mdescRight">Bağlantıyı, akışı ve ADC DMA'sını başlatır. <code>MX_LWIP_Init()</code>'ten sonra bir kez çağrılır.  <br /></td></tr>
+<tr class="separator:ga57bfb9b0ef63a5636def319b7ceb0220"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ga5e397f6027d36e3d5352e5a9770c9092" id="r_ga5e397f6027d36e3d5352e5a9770c9092"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__sptf__examples.html#ga5e397f6027d36e3d5352e5a9770c9092">sptf_app_process</a> (void)</td></tr>
+<tr class="memdesc:ga5e397f6027d36e3d5352e5a9770c9092"><td class="mdescLeft">&#160;</td><td class="mdescRight">Ana döngüden sürekli çağrılır: hazır yarım tamponu gönderir, ~100 ms'de bir DESCRIPTOR zamanlamasını yürütür.  <br /></td></tr>
+<tr class="separator:ga5e397f6027d36e3d5352e5a9770c9092"><td class="memSeparator" colspan="2">&#160;</td></tr>
+</table><table class="memberdecls">
+<tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="var-members" name="var-members"></a>
+Değişkenler</h2></td></tr>
+<tr class="memitem:a22b804736f5648d52f639b2647d4ed13" id="r_a22b804736f5648d52f639b2647d4ed13"><td class="memItemLeft" align="right" valign="top">ADC_HandleTypeDef&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a22b804736f5648d52f639b2647d4ed13">hadc1</a></td></tr>
+<tr class="separator:a22b804736f5648d52f639b2647d4ed13"><td class="memSeparator" colspan="2">&#160;</td></tr>
+</table>
+<a name="details" id="details"></a><h2 class="groupheader">Ayrıntılı tanımlama</h2>
+<div class="textblock"><p>STM32 + lwIP raw örneği: 2 kanal ADC (DMA çift tampon) → "Motor akımları" akışı. </p>
+<p>Akış: DMA yarım / tam kesmesi yalnız bayrak kurar (ISR'de ağ çağrısı yok). Ana döngü hazır yarıyı (gerekirse D-önbelleği geçersiz kılıp) <a class="el" href="group__sptf__link.html#ga741790c199358be62ccf967460dd891b" title="Örnek bloğunu gönderir; gerekirse datagram boyutuna göre birden fazla DATA çerçevesine böler.">sptf_stream_write</a> ile gönderir. DMA bir yarıyı, ana döngü onu göndermeden yeniden doldurursa taşma sayılır ve arayüzde görünen bir işaret (MARKER) gönderilir.</p>
+<p>Bellek: ADC tamponu DMA'nın erişebildiği RAM'de olmalıdır (STM32H7: D2 SRAM, <code>.RAM_D2</code> vb.; bağlayıcı betiğinize göre <a class="el" href="#a2c5584721806531f92dc018d08962c22" title="ADC tamponunun bölüm özniteliği (ör. __attribute__((section(&quot;.RAM_D2&quot;)))).">SPTF_APP_DMA_SECTION</a>). lwIP yığını (<code>LWIP_RAM_HEAP_POINTER</code>) Ethernet DMA'sı için önbelleksiz bölgede olmalıdır (CubeMX MPU ayarı). </p>
+
+<p class="definition"><a class="el" href="sptf__app_8c_source.html">sptf_app.c</a> dosyasında tanımlanmıştır.</p>
+</div><h2 class="groupheader">Makro Dokümantasyonu</h2>
+<a id="a1ecae8ab8412e235917fc9e3e0e72003" name="a1ecae8ab8412e235917fc9e3e0e72003"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a1ecae8ab8412e235917fc9e3e0e72003">&#9670;&#160;</a></span>SPTF_APP_PC_IP</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">#define SPTF_APP_PC_IP&#160;&#160;&#160;192, 168, 1, 10</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Arayüzün çalıştığı PC'nin IPv4 adresi (4 bayt, virgülle). </p>
+
+<p class="definition"><a class="el" href="sptf__app_8c_source.html">sptf_app.c</a> dosyasının <a class="el" href="sptf__app_8c_source.html#l00028">28</a> numaralı satırında tanımlanmıştır.</p>
+
+</div>
+</div>
+<a id="a23d638437a5fa22c2296af017e9bbfb5" name="a23d638437a5fa22c2296af017e9bbfb5"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a23d638437a5fa22c2296af017e9bbfb5">&#9670;&#160;</a></span>SPTF_APP_SAMPLE_RATE_HZ</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">#define SPTF_APP_SAMPLE_RATE_HZ&#160;&#160;&#160;20000.0</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>ADC tetik frekansı (kanal başına örnekleme hızı). </p>
+
+<p class="definition"><a class="el" href="sptf__app_8c_source.html">sptf_app.c</a> dosyasının <a class="el" href="sptf__app_8c_source.html#l00032">32</a> numaralı satırında tanımlanmıştır.</p>
+
+</div>
+</div>
+<a id="a0d29128326fb72e0c7391286bcf258f8" name="a0d29128326fb72e0c7391286bcf258f8"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a0d29128326fb72e0c7391286bcf258f8">&#9670;&#160;</a></span>SPTF_APP_BLOCK</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">#define SPTF_APP_BLOCK&#160;&#160;&#160;256u</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Yarım tampondaki örnek anı sayısı. 2 kanal × uint16 için 356'nın altı tek datagrama sığar. </p>
+
+<p class="definition"><a class="el" href="sptf__app_8c_source.html">sptf_app.c</a> dosyasının <a class="el" href="sptf__app_8c_source.html#l00036">36</a> numaralı satırında tanımlanmıştır.</p>
+
+</div>
+</div>
+<a id="a2c5584721806531f92dc018d08962c22" name="a2c5584721806531f92dc018d08962c22"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a2c5584721806531f92dc018d08962c22">&#9670;&#160;</a></span>SPTF_APP_DMA_SECTION</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">#define SPTF_APP_DMA_SECTION</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>ADC tamponunun bölüm özniteliği (ör. <code>__attribute__((section(".RAM_D2")))</code>). </p>
+
+<p class="definition"><a class="el" href="sptf__app_8c_source.html">sptf_app.c</a> dosyasının <a class="el" href="sptf__app_8c_source.html#l00040">40</a> numaralı satırında tanımlanmıştır.</p>
+
+</div>
+</div>
+<a id="aa636de9df1d933ede7d550ca03d3b60b" name="aa636de9df1d933ede7d550ca03d3b60b"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#aa636de9df1d933ede7d550ca03d3b60b">&#9670;&#160;</a></span>APP_IP_ADDR4</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">#define APP_IP_ADDR4</td>
+          <td>(</td>
+          <td class="paramtype"></td>          <td class="paramname"><span class="paramname"><em>ip</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype"></td>          <td class="paramname"><span class="paramname"><em></em></span>...&#160;)</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+<b>Değer:</b><div class="fragment"><div class="line">IP_ADDR4(ip, __VA_ARGS__)</div>
+</div><!-- fragment -->
+<p>Virgüllü IP makrosunu <code>IP_ADDR4</code>'e dört ayrı argüman olarak geçirir (C99 değişken argümanlı makro). </p>
+
+<p class="definition"><a class="el" href="sptf__app_8c_source.html">sptf_app.c</a> dosyasının <a class="el" href="sptf__app_8c_source.html#l00044">44</a> numaralı satırında tanımlanmıştır.</p>
+
+</div>
+</div>
+<a id="a51e6d7a0b9fef57c15e12fa80b7b7656" name="a51e6d7a0b9fef57c15e12fa80b7b7656"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a51e6d7a0b9fef57c15e12fa80b7b7656">&#9670;&#160;</a></span>APP_CHANNELS</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">#define APP_CHANNELS&#160;&#160;&#160;2u</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+<p>ADC tarama kanalı. </p>
+
+<p class="definition"><a class="el" href="sptf__app_8c_source.html">sptf_app.c</a> dosyasının <a class="el" href="sptf__app_8c_source.html#l00046">46</a> numaralı satırında tanımlanmıştır.</p>
+
+</div>
+</div>
+<a id="a793da4922fe222ce57ca2920be9ff83d" name="a793da4922fe222ce57ca2920be9ff83d"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a793da4922fe222ce57ca2920be9ff83d">&#9670;&#160;</a></span>APP_HALF</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">#define APP_HALF&#160;&#160;&#160;(<a class="el" href="#a0d29128326fb72e0c7391286bcf258f8">SPTF_APP_BLOCK</a> * <a class="el" href="#a51e6d7a0b9fef57c15e12fa80b7b7656">APP_CHANNELS</a>)</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+<p>Yarım tampondaki uint16 eleman. </p>
+
+<p class="definition"><a class="el" href="sptf__app_8c_source.html">sptf_app.c</a> dosyasının <a class="el" href="sptf__app_8c_source.html#l00047">47</a> numaralı satırında tanımlanmıştır.</p>
+
+</div>
+</div>
+<h2 class="groupheader">Fonksiyon Dokümantasyonu</h2>
+<a id="ad7e3dafc08886b97b9c9e23267645b9e" name="ad7e3dafc08886b97b9c9e23267645b9e"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ad7e3dafc08886b97b9c9e23267645b9e">&#9670;&#160;</a></span>HAL_ADC_ConvHalfCpltCallback()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">void HAL_ADC_ConvHalfCpltCallback </td>
+          <td>(</td>
+          <td class="paramtype">ADC_HandleTypeDef *</td>          <td class="paramname"><span class="paramname"><em>hadc</em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>HAL: DMA ilk yarıyı doldurdu (kesme bağlamı: yalnız bayrak). </p>
+<dl class="params"><dt>Parametreler</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in]</td><td class="paramname">hadc</td><td>Kesmeyi üreten ADC tanıtıcısı. </td></tr>
+  </table>
+  </dd>
+</dl>
+
+<p class="definition"><a class="el" href="sptf__app_8c_source.html">sptf_app.c</a> dosyasının <a class="el" href="sptf__app_8c_source.html#l00111">111</a> numaralı satırında tanımlanmıştır.</p>
+
+</div>
+</div>
+<a id="af20a88180db1113be1e89266917d148b" name="af20a88180db1113be1e89266917d148b"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#af20a88180db1113be1e89266917d148b">&#9670;&#160;</a></span>HAL_ADC_ConvCpltCallback()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">void HAL_ADC_ConvCpltCallback </td>
+          <td>(</td>
+          <td class="paramtype">ADC_HandleTypeDef *</td>          <td class="paramname"><span class="paramname"><em>hadc</em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>HAL: DMA ikinci yarıyı doldurdu (kesme bağlamı: yalnız bayrak). </p>
+<dl class="params"><dt>Parametreler</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in]</td><td class="paramname">hadc</td><td>Kesmeyi üreten ADC tanıtıcısı. </td></tr>
+  </table>
+  </dd>
+</dl>
+
+<p class="definition"><a class="el" href="sptf__app_8c_source.html">sptf_app.c</a> dosyasının <a class="el" href="sptf__app_8c_source.html#l00127">127</a> numaralı satırında tanımlanmıştır.</p>
+
+</div>
+</div>
+<h2 class="groupheader">Değişken Dokümantasyonu</h2>
+<a id="a22b804736f5648d52f639b2647d4ed13" name="a22b804736f5648d52f639b2647d4ed13"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a22b804736f5648d52f639b2647d4ed13">&#9670;&#160;</a></span>hadc1</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">ADC_HandleTypeDef hadc1</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel extern">extern</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+<p>CubeMX'in ürettiği ADC tanıtıcısı. </p>
+
+</div>
+</div>
+</div><!-- contents -->
+</div><!-- doc-content -->
+<!-- start footer part -->
+<div id="nav-path" class="navpath"><!-- id is needed for treeview function! -->
+  <ul>
+    <li class="navelem"><a class="el" href="dir_d28a4824dc47e487b107a5db32ef43c4.html">examples</a></li><li class="navelem"><a class="el" href="dir_d2e0850e3e33bbd492589d8d5dccdd18.html">stm32_lwip_raw</a></li><li class="navelem"><a class="el" href="sptf__app_8c.html">sptf_app.c</a></li>
+    <li class="footer">Oluşturan <a href="https://www.doxygen.org/index.html"><img class="footer" src="doxygen.svg" width="104" height="31" alt="doxygen"/></a> 1.13.2 </li>
+  </ul>
+</div>
+</body>
+</html>

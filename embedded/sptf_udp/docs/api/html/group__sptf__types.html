@@ -1,0 +1,756 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "https://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" lang="tr">
+<head>
+<meta http-equiv="Content-Type" content="text/xhtml;charset=UTF-8"/>
+<meta http-equiv="X-UA-Compatible" content="IE=11"/>
+<meta name="generator" content="Doxygen 1.13.2"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>SPTF-UDP: Tipler ve sabitler</title>
+<link href="tabs.css" rel="stylesheet" type="text/css"/>
+<script type="text/javascript" src="jquery.js"></script>
+<script type="text/javascript" src="dynsections.js"></script>
+<script type="text/javascript" src="clipboard.js"></script>
+<link href="navtree.css" rel="stylesheet" type="text/css"/>
+<script type="text/javascript" src="navtreedata.js"></script>
+<script type="text/javascript" src="navtree.js"></script>
+<script type="text/javascript" src="resize.js"></script>
+<script type="text/javascript" src="cookie.js"></script>
+<link href="search/search.css" rel="stylesheet" type="text/css"/>
+<script type="text/javascript" src="search/searchdata.js"></script>
+<script type="text/javascript" src="search/search.js"></script>
+<script type="text/javascript">
+/* @license magnet:?xt=urn:btih:d3d9a9a6595521f9666a5e94cc830dab83b65699&amp;dn=expat.txt MIT */
+  $(function() { init_search(); });
+/* @license-end */
+</script>
+<link href="doxygen.css" rel="stylesheet" type="text/css" />
+</head>
+<body>
+<div id="top"><!-- do not remove this div, it is closed by doxygen! -->
+<div id="titlearea">
+<table cellspacing="0" cellpadding="0">
+ <tbody>
+ <tr id="projectrow">
+  <td id="projectalign">
+   <div id="projectname">SPTF-UDP<span id="projectnumber">&#160;1.0.0</span>
+   </div>
+   <div id="projectbrief">Signal Processing Toolbox için gömülü UDP gönderici kütüphanesi</div>
+  </td>
+    <td>        <div id="MSearchBox" class="MSearchBoxInactive">
+        <span class="left">
+          <span id="MSearchSelect"                onmouseover="return searchBox.OnSearchSelectShow()"                onmouseout="return searchBox.OnSearchSelectHide()">&#160;</span>
+          <input type="text" id="MSearchField" value="" placeholder="Ara" accesskey="S"
+               onfocus="searchBox.OnSearchFieldFocus(true)" 
+               onblur="searchBox.OnSearchFieldFocus(false)" 
+               onkeyup="searchBox.OnSearchFieldChange(event)"/>
+          </span><span class="right">
+            <a id="MSearchClose" href="javascript:searchBox.CloseResultsWindow()"><img id="MSearchCloseImg" border="0" src="search/close.svg" alt=""/></a>
+          </span>
+        </div>
+</td>
+ </tr>
+ </tbody>
+</table>
+</div>
+<!-- end header part -->
+<!-- Oluşturan Doxygen 1.13.2 -->
+<script type="text/javascript">
+/* @license magnet:?xt=urn:btih:d3d9a9a6595521f9666a5e94cc830dab83b65699&amp;dn=expat.txt MIT */
+var searchBox = new SearchBox("searchBox", "search/",'.html');
+/* @license-end */
+</script>
+<script type="text/javascript">
+/* @license magnet:?xt=urn:btih:d3d9a9a6595521f9666a5e94cc830dab83b65699&amp;dn=expat.txt MIT */
+$(function() { codefold.init(0); });
+/* @license-end */
+</script>
+</div><!-- top -->
+<div id="side-nav" class="ui-resizable side-nav-resizable">
+  <div id="nav-tree">
+    <div id="nav-tree-contents">
+      <div id="nav-sync" class="sync"></div>
+    </div>
+  </div>
+  <div id="splitbar" style="-moz-user-select:none;" 
+       class="ui-resizable-handle">
+  </div>
+</div>
+<script type="text/javascript">
+/* @license magnet:?xt=urn:btih:d3d9a9a6595521f9666a5e94cc830dab83b65699&amp;dn=expat.txt MIT */
+$(function(){initNavTree('group__sptf__types.html',''); initResizable(true); });
+/* @license-end */
+</script>
+<div id="doc-content">
+<!-- window showing the filter options -->
+<div id="MSearchSelectWindow"
+     onmouseover="return searchBox.OnSearchSelectShow()"
+     onmouseout="return searchBox.OnSearchSelectHide()"
+     onkeydown="return searchBox.OnSearchSelectKey(event)">
+</div>
+
+<!-- iframe showing the search results (closed by default) -->
+<div id="MSearchResultsWindow">
+<div id="MSearchResults">
+<div class="SRPage">
+<div id="SRIndex">
+<div id="SRResults"></div>
+<div class="SRStatus" id="Loading">Yüklüyor...</div>
+<div class="SRStatus" id="Searching">Arıyor...</div>
+<div class="SRStatus" id="NoMatches">Eşleşme Yok</div>
+</div>
+</div>
+</div>
+</div>
+
+<div class="header">
+  <div class="summary">
+<a href="#nested-classes">Veri Yapıları</a> &#124;
+<a href="#define-members">Makrolar</a> &#124;
+<a href="#enum-members">Enümerasyonlar</a>  </div>
+  <div class="headertitle"><div class="title">Tipler ve sabitler</div></div>
+</div><!--header-->
+<div class="contents">
+
+<p>Protokol sabitleri, veri tipleri ve yapılandırma yapıları.  
+<a href="#details">Ayrıntılar...</a></p>
+<table class="memberdecls">
+<tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="nested-classes" name="nested-classes"></a>
+Veri Yapıları</h2></td></tr>
+<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">struct &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structsptf__channel__t.html">sptf_channel_t</a></td></tr>
+<tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">Kanal tanımı. Fiziksel değer = ham · <code class="param">scale</code> + <code class="param">offset</code> (karmaşıkta I ve Q'ya ayrı ayrı).  <a href="structsptf__channel__t.html#details">Ayrıntılar...</a><br /></td></tr>
+<tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">struct &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structsptf__stream__config__t.html">sptf_stream_config_t</a></td></tr>
+<tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">Akış yapılandırması.  <a href="structsptf__stream__config__t.html#details">Ayrıntılar...</a><br /></td></tr>
+<tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
+</table><table class="memberdecls">
+<tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="define-members" name="define-members"></a>
+Makrolar</h2></td></tr>
+<tr class="memitem:ga7d5f2139ced94dfd294c79a46fa232b9" id="r_ga7d5f2139ced94dfd294c79a46fa232b9"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ga7d5f2139ced94dfd294c79a46fa232b9">SPTF_LIB_VERSION_MAJOR</a>&#160;&#160;&#160;1u</td></tr>
+<tr class="memdesc:ga7d5f2139ced94dfd294c79a46fa232b9"><td class="mdescLeft">&#160;</td><td class="mdescRight">Kütüphane sürümü (anlamsal sürümleme: ana.alt.yama).  <br /></td></tr>
+<tr class="separator:ga7d5f2139ced94dfd294c79a46fa232b9"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:gacedff4072d37603de6b457425e98fec2" id="r_gacedff4072d37603de6b457425e98fec2"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#gacedff4072d37603de6b457425e98fec2">SPTF_LIB_VERSION_MINOR</a>&#160;&#160;&#160;0u</td></tr>
+<tr class="memdesc:gacedff4072d37603de6b457425e98fec2"><td class="mdescLeft">&#160;</td><td class="mdescRight">Alt sürüm.  <br /></td></tr>
+<tr class="separator:gacedff4072d37603de6b457425e98fec2"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ga37f4d82817c501704d73a07dc4599efe" id="r_ga37f4d82817c501704d73a07dc4599efe"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ga37f4d82817c501704d73a07dc4599efe">SPTF_LIB_VERSION_PATCH</a>&#160;&#160;&#160;0u</td></tr>
+<tr class="memdesc:ga37f4d82817c501704d73a07dc4599efe"><td class="mdescLeft">&#160;</td><td class="mdescRight">Yama sürümü.  <br /></td></tr>
+<tr class="separator:ga37f4d82817c501704d73a07dc4599efe"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:gae8e27ac667f02c684aec7faa8a077e8c" id="r_gae8e27ac667f02c684aec7faa8a077e8c"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#gae8e27ac667f02c684aec7faa8a077e8c">SPTF_PROTOCOL_VERSION</a>&#160;&#160;&#160;1u</td></tr>
+<tr class="memdesc:gae8e27ac667f02c684aec7faa8a077e8c"><td class="mdescLeft">&#160;</td><td class="mdescRight">Kablodaki <code>version</code> alanı (SPTF v1).  <br /></td></tr>
+<tr class="separator:gae8e27ac667f02c684aec7faa8a077e8c"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ga49d9e34801953d9b5290458e700823b8" id="r_ga49d9e34801953d9b5290458e700823b8"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ga49d9e34801953d9b5290458e700823b8">SPTF_UDP_PORT</a>&#160;&#160;&#160;50505u</td></tr>
+<tr class="memdesc:ga49d9e34801953d9b5290458e700823b8"><td class="mdescLeft">&#160;</td><td class="mdescRight">Arayüzün varsayılan dinleme portu.  <br /></td></tr>
+<tr class="separator:ga49d9e34801953d9b5290458e700823b8"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ga8288c366ad08577069ce4347eb6a46b7" id="r_ga8288c366ad08577069ce4347eb6a46b7"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ga8288c366ad08577069ce4347eb6a46b7">SPTF_MAX_UDP_PAYLOAD</a>&#160;&#160;&#160;65507u</td></tr>
+<tr class="memdesc:ga8288c366ad08577069ce4347eb6a46b7"><td class="mdescLeft">&#160;</td><td class="mdescRight">IPv4 üzerinde UDP yükü üst sınırı (bayt).  <br /></td></tr>
+<tr class="separator:ga8288c366ad08577069ce4347eb6a46b7"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:gaf25d59539c05ef0209aef25089bbfdae" id="r_gaf25d59539c05ef0209aef25089bbfdae"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#gaf25d59539c05ef0209aef25089bbfdae">SPTF_HEADER_SIZE</a>&#160;&#160;&#160;32u</td></tr>
+<tr class="memdesc:gaf25d59539c05ef0209aef25089bbfdae"><td class="mdescLeft">&#160;</td><td class="mdescRight">Ortak çerçeve başlığı (bayt).  <br /></td></tr>
+<tr class="separator:gaf25d59539c05ef0209aef25089bbfdae"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ga154457b204566b90af77dedecf4f93f1" id="r_ga154457b204566b90af77dedecf4f93f1"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ga154457b204566b90af77dedecf4f93f1">SPTF_DESC_BODY_SIZE</a>&#160;&#160;&#160;48u</td></tr>
+<tr class="memdesc:ga154457b204566b90af77dedecf4f93f1"><td class="mdescLeft">&#160;</td><td class="mdescRight">DESCRIPTOR sabit gövdesi (bayt).  <br /></td></tr>
+<tr class="separator:ga154457b204566b90af77dedecf4f93f1"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ga640e2650df53232dcd3bd1ccd2c83138" id="r_ga640e2650df53232dcd3bd1ccd2c83138"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ga640e2650df53232dcd3bd1ccd2c83138">SPTF_CHANNEL_SIZE</a>&#160;&#160;&#160;64u</td></tr>
+<tr class="memdesc:ga640e2650df53232dcd3bd1ccd2c83138"><td class="mdescLeft">&#160;</td><td class="mdescRight">Kanal başına ChannelInfo (bayt).  <br /></td></tr>
+<tr class="separator:ga640e2650df53232dcd3bd1ccd2c83138"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ga5baa921a9791fc0e9c11e13a89dd29e6" id="r_ga5baa921a9791fc0e9c11e13a89dd29e6"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ga5baa921a9791fc0e9c11e13a89dd29e6">SPTF_DATA_BODY_SIZE</a>&#160;&#160;&#160;16u</td></tr>
+<tr class="memdesc:ga5baa921a9791fc0e9c11e13a89dd29e6"><td class="mdescLeft">&#160;</td><td class="mdescRight">DATA alt başlığı (bayt).  <br /></td></tr>
+<tr class="separator:ga5baa921a9791fc0e9c11e13a89dd29e6"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:gab88eb65ec6d18890767dedd88c5998d0" id="r_gab88eb65ec6d18890767dedd88c5998d0"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#gab88eb65ec6d18890767dedd88c5998d0">SPTF_MARKER_BODY_SIZE</a>&#160;&#160;&#160;16u</td></tr>
+<tr class="memdesc:gab88eb65ec6d18890767dedd88c5998d0"><td class="mdescLeft">&#160;</td><td class="mdescRight">MARKER alt başlığı (bayt).  <br /></td></tr>
+<tr class="separator:gab88eb65ec6d18890767dedd88c5998d0"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ga0937bcfab20b3fe52da9397361de99c2" id="r_ga0937bcfab20b3fe52da9397361de99c2"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ga0937bcfab20b3fe52da9397361de99c2">SPTF_CRC_SIZE</a>&#160;&#160;&#160;4u</td></tr>
+<tr class="memdesc:ga0937bcfab20b3fe52da9397361de99c2"><td class="mdescLeft">&#160;</td><td class="mdescRight">Sondaki CRC-32 (bayt).  <br /></td></tr>
+<tr class="separator:ga0937bcfab20b3fe52da9397361de99c2"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ga10aafa02b0b4f76a0c512094476c142c" id="r_ga10aafa02b0b4f76a0c512094476c142c"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ga10aafa02b0b4f76a0c512094476c142c">SPTF_NAME_SIZE</a>&#160;&#160;&#160;32u</td></tr>
+<tr class="memdesc:ga10aafa02b0b4f76a0c512094476c142c"><td class="mdescLeft">&#160;</td><td class="mdescRight">Akış ve kanal adı alanı (bayt, UTF-8).  <br /></td></tr>
+<tr class="separator:ga10aafa02b0b4f76a0c512094476c142c"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:gaf3fc65877237438d78fe014aa5b36112" id="r_gaf3fc65877237438d78fe014aa5b36112"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#gaf3fc65877237438d78fe014aa5b36112">SPTF_UNIT_SIZE</a>&#160;&#160;&#160;16u</td></tr>
+<tr class="memdesc:gaf3fc65877237438d78fe014aa5b36112"><td class="mdescLeft">&#160;</td><td class="mdescRight">Birim alanı (bayt, UTF-8).  <br /></td></tr>
+<tr class="separator:gaf3fc65877237438d78fe014aa5b36112"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ga52b73db93f3a23e560f2df924cff11dd" id="r_ga52b73db93f3a23e560f2df924cff11dd"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ga52b73db93f3a23e560f2df924cff11dd">SPTF_MAX_CHANNELS</a>&#160;&#160;&#160;256u</td></tr>
+<tr class="memdesc:ga52b73db93f3a23e560f2df924cff11dd"><td class="mdescLeft">&#160;</td><td class="mdescRight">Akış başına en fazla kanal.  <br /></td></tr>
+<tr class="separator:ga52b73db93f3a23e560f2df924cff11dd"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:gaffebed9171531a5dd5727c7771e7ef1b" id="r_gaffebed9171531a5dd5727c7771e7ef1b"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#gaffebed9171531a5dd5727c7771e7ef1b">SPTF_MIN_SAMPLE_RATE</a>&#160;&#160;&#160;1.0e-3</td></tr>
+<tr class="memdesc:gaffebed9171531a5dd5727c7771e7ef1b"><td class="mdescLeft">&#160;</td><td class="mdescRight">En küçük örnekleme hızı (Hz).  <br /></td></tr>
+<tr class="separator:gaffebed9171531a5dd5727c7771e7ef1b"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ga7b3ce367b8c2832665dc65ae7505a656" id="r_ga7b3ce367b8c2832665dc65ae7505a656"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ga7b3ce367b8c2832665dc65ae7505a656">SPTF_MAX_SAMPLE_RATE</a>&#160;&#160;&#160;1.0e12</td></tr>
+<tr class="memdesc:ga7b3ce367b8c2832665dc65ae7505a656"><td class="mdescLeft">&#160;</td><td class="mdescRight">En büyük örnekleme hızı (Hz).  <br /></td></tr>
+<tr class="separator:ga7b3ce367b8c2832665dc65ae7505a656"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:gae5b55b7555d443757d0722a7e674a8f4" id="r_gae5b55b7555d443757d0722a7e674a8f4"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#gae5b55b7555d443757d0722a7e674a8f4">SPTF_TS_NONE</a>&#160;&#160;&#160;0u</td></tr>
+<tr class="memdesc:gae5b55b7555d443757d0722a7e674a8f4"><td class="mdescLeft">&#160;</td><td class="mdescRight"><code>timestamp_ns</code> bilinmiyor: alan 0 yazılır.  <br /></td></tr>
+<tr class="separator:gae5b55b7555d443757d0722a7e674a8f4"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ga57e4b66d81c9091339c8ac6d0e8b3ff5" id="r_ga57e4b66d81c9091339c8ac6d0e8b3ff5"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ga57e4b66d81c9091339c8ac6d0e8b3ff5">SPTF_TS_AUTO</a>&#160;&#160;&#160;UINT64_MAX</td></tr>
+<tr class="memdesc:ga57e4b66d81c9091339c8ac6d0e8b3ff5"><td class="mdescLeft">&#160;</td><td class="mdescRight"><code>timestamp_ns</code> saatten türetilsin: bloğun ilk örneği = şimdi − N · Ts (blok yeni tamamlandı).  <br /></td></tr>
+<tr class="separator:ga57e4b66d81c9091339c8ac6d0e8b3ff5"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ga5a29d02382d16283d91a3d47812c5f7d" id="r_ga5a29d02382d16283d91a3d47812c5f7d"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ga5a29d02382d16283d91a3d47812c5f7d">SPTF_MARKER_AT_NEXT</a>&#160;&#160;&#160;UINT64_MAX</td></tr>
+<tr class="memdesc:ga5a29d02382d16283d91a3d47812c5f7d"><td class="mdescLeft">&#160;</td><td class="mdescRight"><a class="el" href="group__sptf__link.html#ga8b321c79ef64c4612b414ea1fc44a2ae" title="Olay işareti gönderir (ör. &quot;ISR overrun&quot;, &quot;state = RUN&quot;). Arayüzde dikey çizgi + etiket olarak görünü...">sptf_stream_marker</a> için: işaret, akışın sıradaki örneğine konur.  <br /></td></tr>
+<tr class="separator:ga5a29d02382d16283d91a3d47812c5f7d"><td class="memSeparator" colspan="2">&#160;</td></tr>
+</table><table class="memberdecls">
+<tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="enum-members" name="enum-members"></a>
+Enümerasyonlar</h2></td></tr>
+<tr class="memitem:ga07cbec476e18a5e7bda27c7b2f40b3ae" id="r_ga07cbec476e18a5e7bda27c7b2f40b3ae"><td class="memItemLeft" align="right" valign="top">enum &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ga07cbec476e18a5e7bda27c7b2f40b3ae">sptf_status_t</a> { <br />
+&#160;&#160;<a class="el" href="#gga07cbec476e18a5e7bda27c7b2f40b3aea7f28dd94a7f6b286342ded4b76794420">SPTF_OK</a> = 0
+, <a class="el" href="#gga07cbec476e18a5e7bda27c7b2f40b3aea5c7799a951b2199803dc629d66eb3396">SPTF_ERR_ARG</a> = -1
+, <a class="el" href="#gga07cbec476e18a5e7bda27c7b2f40b3aea7fe4614569ba66f7f2ab47a48b66fc5b">SPTF_ERR_CONFIG</a> = -2
+, <a class="el" href="#gga07cbec476e18a5e7bda27c7b2f40b3aea81bb51fc687c947509b6e77caaa981a6">SPTF_ERR_SIZE</a> = -3
+, <br />
+&#160;&#160;<a class="el" href="#gga07cbec476e18a5e7bda27c7b2f40b3aea5ed64a6b7eae86811e555d9066a64ba4">SPTF_ERR_NOMEM</a> = -4
+, <a class="el" href="#gga07cbec476e18a5e7bda27c7b2f40b3aea44511ec8d5b8895dfbd6f766e524a248">SPTF_ERR_IO</a> = -5
+, <a class="el" href="#gga07cbec476e18a5e7bda27c7b2f40b3aeacc2be55dd2f0160423c0cff4687288c9">SPTF_ERR_BUSY</a> = -6
+, <a class="el" href="#gga07cbec476e18a5e7bda27c7b2f40b3aea21952a0554612e33be5c002e001872e1">SPTF_ERR_STATE</a> = -7
+<br />
+ }</td></tr>
+<tr class="memdesc:ga07cbec476e18a5e7bda27c7b2f40b3ae"><td class="mdescLeft">&#160;</td><td class="mdescRight">Fonksiyon dönüş kodları. Başarı 0, hatalar negatiftir.  <a href="#ga07cbec476e18a5e7bda27c7b2f40b3ae">Ayrıntılar...</a><br /></td></tr>
+<tr class="separator:ga07cbec476e18a5e7bda27c7b2f40b3ae"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ga40f90b1fa138c9a370705202238f260c" id="r_ga40f90b1fa138c9a370705202238f260c"><td class="memItemLeft" align="right" valign="top">enum &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ga40f90b1fa138c9a370705202238f260c">sptf_frame_type_t</a> { <a class="el" href="#gga40f90b1fa138c9a370705202238f260cad6bd82cb3c0b31d874e9158723b2f600">SPTF_FRAME_DESCRIPTOR</a> = 1
+, <a class="el" href="#gga40f90b1fa138c9a370705202238f260cadc847aab99e6e36d9b0920034ff2f8ff">SPTF_FRAME_DATA</a> = 2
+, <a class="el" href="#gga40f90b1fa138c9a370705202238f260caa8b2298997fe04620420684b4f4fcdef">SPTF_FRAME_MARKER</a> = 3
+ }</td></tr>
+<tr class="memdesc:ga40f90b1fa138c9a370705202238f260c"><td class="mdescLeft">&#160;</td><td class="mdescRight">Çerçeve türleri (<code>frame_type</code>).  <a href="#ga40f90b1fa138c9a370705202238f260c">Ayrıntılar...</a><br /></td></tr>
+<tr class="separator:ga40f90b1fa138c9a370705202238f260c"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:gaeeb5742ef83aa4b6d13072bfbd9d48c3" id="r_gaeeb5742ef83aa4b6d13072bfbd9d48c3"><td class="memItemLeft" align="right" valign="top">enum &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#gaeeb5742ef83aa4b6d13072bfbd9d48c3">sptf_sample_type_t</a> { <br />
+&#160;&#160;<a class="el" href="#ggaeeb5742ef83aa4b6d13072bfbd9d48c3a64a6b006c2b70128cc92061807da53b1">SPTF_INT8</a> = 0x01
+, <a class="el" href="#ggaeeb5742ef83aa4b6d13072bfbd9d48c3a23e7c6fa21d187e7d02f484731fa89e4">SPTF_UINT8</a> = 0x02
+, <a class="el" href="#ggaeeb5742ef83aa4b6d13072bfbd9d48c3a72d9ce96e124c023c2d21c40d6e8dc70">SPTF_INT16</a> = 0x03
+, <a class="el" href="#ggaeeb5742ef83aa4b6d13072bfbd9d48c3aadc6087486ea77d630f74e280577e623">SPTF_UINT16</a> = 0x04
+, <br />
+&#160;&#160;<a class="el" href="#ggaeeb5742ef83aa4b6d13072bfbd9d48c3af14fea1be989c75f1f6611e679fe38dd">SPTF_INT24</a> = 0x05
+, <a class="el" href="#ggaeeb5742ef83aa4b6d13072bfbd9d48c3a58558f39b0826d76ba364ae5bb0f7fcc">SPTF_UINT24</a> = 0x06
+, <a class="el" href="#ggaeeb5742ef83aa4b6d13072bfbd9d48c3a58b2b928161648b4434e22ed987a8c53">SPTF_INT32</a> = 0x07
+, <a class="el" href="#ggaeeb5742ef83aa4b6d13072bfbd9d48c3a44a36e053d751ed7bc6b700a0ee80e4b">SPTF_UINT32</a> = 0x08
+, <br />
+&#160;&#160;<a class="el" href="#ggaeeb5742ef83aa4b6d13072bfbd9d48c3a2e3e80d0acab4375cc0928906a8a9469">SPTF_INT64</a> = 0x09
+, <a class="el" href="#ggaeeb5742ef83aa4b6d13072bfbd9d48c3ad55f3ef91db4a8f600f652a4b31a6661">SPTF_UINT64</a> = 0x0A
+, <a class="el" href="#ggaeeb5742ef83aa4b6d13072bfbd9d48c3a4a195e1f3a939484a587ec80216346fd">SPTF_FLOAT16</a> = 0x10
+, <a class="el" href="#ggaeeb5742ef83aa4b6d13072bfbd9d48c3a92fbbc07fa134345c59f954692524f85">SPTF_FLOAT32</a> = 0x11
+, <br />
+&#160;&#160;<a class="el" href="#ggaeeb5742ef83aa4b6d13072bfbd9d48c3a29e951225109d9549c6e22b32161a0fa">SPTF_FLOAT64</a> = 0x12
+, <a class="el" href="#ggaeeb5742ef83aa4b6d13072bfbd9d48c3a5214e0c5c829ac4fb63e440d3278146f">SPTF_CINT16</a> = 0x20
+, <a class="el" href="#ggaeeb5742ef83aa4b6d13072bfbd9d48c3af3e2cf230f40a674c1582ea1fa87b6eb">SPTF_CINT32</a> = 0x21
+, <a class="el" href="#ggaeeb5742ef83aa4b6d13072bfbd9d48c3a0eb43216645893096741c3a50de61896">SPTF_CFLOAT32</a> = 0x22
+, <br />
+&#160;&#160;<a class="el" href="#ggaeeb5742ef83aa4b6d13072bfbd9d48c3af7b9e69192e486544326352455432bca">SPTF_CFLOAT64</a> = 0x23
+<br />
+ }</td></tr>
+<tr class="memdesc:gaeeb5742ef83aa4b6d13072bfbd9d48c3"><td class="mdescLeft">&#160;</td><td class="mdescRight">Örnek veri tipleri (<code>sample_type</code>). Tüm çok baytlı tipler kabloda küçük uçludur.  <a href="#gaeeb5742ef83aa4b6d13072bfbd9d48c3">Ayrıntılar...</a><br /></td></tr>
+<tr class="separator:gaeeb5742ef83aa4b6d13072bfbd9d48c3"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ga0d1afa15049e4b583971312bb1038241" id="r_ga0d1afa15049e4b583971312bb1038241"><td class="memItemLeft" align="right" valign="top">enum &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ga0d1afa15049e4b583971312bb1038241">sptf_layout_t</a> { <a class="el" href="#gga0d1afa15049e4b583971312bb1038241aab4ba39f4e581ed22087de1d402be36e">SPTF_LAYOUT_INTERLEAVED</a> = 0
+, <a class="el" href="#gga0d1afa15049e4b583971312bb1038241a387dd3eb81a440b6f16d36985998daba">SPTF_LAYOUT_PLANAR</a> = 1
+ }</td></tr>
+<tr class="memdesc:ga0d1afa15049e4b583971312bb1038241"><td class="mdescLeft">&#160;</td><td class="mdescRight">Çok kanallı örneklerin bellekteki ve kablodaki yerleşimi.  <a href="#ga0d1afa15049e4b583971312bb1038241">Ayrıntılar...</a><br /></td></tr>
+<tr class="separator:ga0d1afa15049e4b583971312bb1038241"><td class="memSeparator" colspan="2">&#160;</td></tr>
+</table>
+<a name="details" id="details"></a><h2 class="groupheader">Ayrıntılı tanımlama</h2>
+<p>Protokol sabitleri, veri tipleri ve yapılandırma yapıları. </p>
+<h2 class="groupheader">Makro Dokümantasyonu</h2>
+<a id="ga7d5f2139ced94dfd294c79a46fa232b9" name="ga7d5f2139ced94dfd294c79a46fa232b9"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ga7d5f2139ced94dfd294c79a46fa232b9">&#9670;&#160;</a></span>SPTF_LIB_VERSION_MAJOR</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">#define SPTF_LIB_VERSION_MAJOR&#160;&#160;&#160;1u</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Kütüphane sürümü (anlamsal sürümleme: ana.alt.yama). </p>
+
+<p class="definition"><a class="el" href="sptf_8h_source.html">sptf.h</a> dosyasının <a class="el" href="sptf_8h_source.html#l00043">43</a> numaralı satırında tanımlanmıştır.</p>
+
+</div>
+</div>
+<a id="gacedff4072d37603de6b457425e98fec2" name="gacedff4072d37603de6b457425e98fec2"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#gacedff4072d37603de6b457425e98fec2">&#9670;&#160;</a></span>SPTF_LIB_VERSION_MINOR</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">#define SPTF_LIB_VERSION_MINOR&#160;&#160;&#160;0u</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Alt sürüm. </p>
+
+<p class="definition"><a class="el" href="sptf_8h_source.html">sptf.h</a> dosyasının <a class="el" href="sptf_8h_source.html#l00044">44</a> numaralı satırında tanımlanmıştır.</p>
+
+</div>
+</div>
+<a id="ga37f4d82817c501704d73a07dc4599efe" name="ga37f4d82817c501704d73a07dc4599efe"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ga37f4d82817c501704d73a07dc4599efe">&#9670;&#160;</a></span>SPTF_LIB_VERSION_PATCH</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">#define SPTF_LIB_VERSION_PATCH&#160;&#160;&#160;0u</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Yama sürümü. </p>
+
+<p class="definition"><a class="el" href="sptf_8h_source.html">sptf.h</a> dosyasının <a class="el" href="sptf_8h_source.html#l00045">45</a> numaralı satırında tanımlanmıştır.</p>
+
+</div>
+</div>
+<a id="gae8e27ac667f02c684aec7faa8a077e8c" name="gae8e27ac667f02c684aec7faa8a077e8c"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#gae8e27ac667f02c684aec7faa8a077e8c">&#9670;&#160;</a></span>SPTF_PROTOCOL_VERSION</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">#define SPTF_PROTOCOL_VERSION&#160;&#160;&#160;1u</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Kablodaki <code>version</code> alanı (SPTF v1). </p>
+
+<p class="definition"><a class="el" href="sptf_8h_source.html">sptf.h</a> dosyasının <a class="el" href="sptf_8h_source.html#l00047">47</a> numaralı satırında tanımlanmıştır.</p>
+
+</div>
+</div>
+<a id="ga49d9e34801953d9b5290458e700823b8" name="ga49d9e34801953d9b5290458e700823b8"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ga49d9e34801953d9b5290458e700823b8">&#9670;&#160;</a></span>SPTF_UDP_PORT</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">#define SPTF_UDP_PORT&#160;&#160;&#160;50505u</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Arayüzün varsayılan dinleme portu. </p>
+
+<p class="definition"><a class="el" href="sptf_8h_source.html">sptf.h</a> dosyasının <a class="el" href="sptf_8h_source.html#l00048">48</a> numaralı satırında tanımlanmıştır.</p>
+
+</div>
+</div>
+<a id="ga8288c366ad08577069ce4347eb6a46b7" name="ga8288c366ad08577069ce4347eb6a46b7"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ga8288c366ad08577069ce4347eb6a46b7">&#9670;&#160;</a></span>SPTF_MAX_UDP_PAYLOAD</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">#define SPTF_MAX_UDP_PAYLOAD&#160;&#160;&#160;65507u</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>IPv4 üzerinde UDP yükü üst sınırı (bayt). </p>
+
+<p class="definition"><a class="el" href="sptf_8h_source.html">sptf.h</a> dosyasının <a class="el" href="sptf_8h_source.html#l00049">49</a> numaralı satırında tanımlanmıştır.</p>
+
+</div>
+</div>
+<a id="gaf25d59539c05ef0209aef25089bbfdae" name="gaf25d59539c05ef0209aef25089bbfdae"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#gaf25d59539c05ef0209aef25089bbfdae">&#9670;&#160;</a></span>SPTF_HEADER_SIZE</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">#define SPTF_HEADER_SIZE&#160;&#160;&#160;32u</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Ortak çerçeve başlığı (bayt). </p>
+
+<p class="definition"><a class="el" href="sptf_8h_source.html">sptf.h</a> dosyasının <a class="el" href="sptf_8h_source.html#l00051">51</a> numaralı satırında tanımlanmıştır.</p>
+
+</div>
+</div>
+<a id="ga154457b204566b90af77dedecf4f93f1" name="ga154457b204566b90af77dedecf4f93f1"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ga154457b204566b90af77dedecf4f93f1">&#9670;&#160;</a></span>SPTF_DESC_BODY_SIZE</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">#define SPTF_DESC_BODY_SIZE&#160;&#160;&#160;48u</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>DESCRIPTOR sabit gövdesi (bayt). </p>
+
+<p class="definition"><a class="el" href="sptf_8h_source.html">sptf.h</a> dosyasının <a class="el" href="sptf_8h_source.html#l00052">52</a> numaralı satırında tanımlanmıştır.</p>
+
+</div>
+</div>
+<a id="ga640e2650df53232dcd3bd1ccd2c83138" name="ga640e2650df53232dcd3bd1ccd2c83138"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ga640e2650df53232dcd3bd1ccd2c83138">&#9670;&#160;</a></span>SPTF_CHANNEL_SIZE</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">#define SPTF_CHANNEL_SIZE&#160;&#160;&#160;64u</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Kanal başına ChannelInfo (bayt). </p>
+
+<p class="definition"><a class="el" href="sptf_8h_source.html">sptf.h</a> dosyasının <a class="el" href="sptf_8h_source.html#l00053">53</a> numaralı satırında tanımlanmıştır.</p>
+
+</div>
+</div>
+<a id="ga5baa921a9791fc0e9c11e13a89dd29e6" name="ga5baa921a9791fc0e9c11e13a89dd29e6"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ga5baa921a9791fc0e9c11e13a89dd29e6">&#9670;&#160;</a></span>SPTF_DATA_BODY_SIZE</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">#define SPTF_DATA_BODY_SIZE&#160;&#160;&#160;16u</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>DATA alt başlığı (bayt). </p>
+
+<p class="definition"><a class="el" href="sptf_8h_source.html">sptf.h</a> dosyasının <a class="el" href="sptf_8h_source.html#l00054">54</a> numaralı satırında tanımlanmıştır.</p>
+
+</div>
+</div>
+<a id="gab88eb65ec6d18890767dedd88c5998d0" name="gab88eb65ec6d18890767dedd88c5998d0"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#gab88eb65ec6d18890767dedd88c5998d0">&#9670;&#160;</a></span>SPTF_MARKER_BODY_SIZE</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">#define SPTF_MARKER_BODY_SIZE&#160;&#160;&#160;16u</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>MARKER alt başlığı (bayt). </p>
+
+<p class="definition"><a class="el" href="sptf_8h_source.html">sptf.h</a> dosyasının <a class="el" href="sptf_8h_source.html#l00055">55</a> numaralı satırında tanımlanmıştır.</p>
+
+</div>
+</div>
+<a id="ga0937bcfab20b3fe52da9397361de99c2" name="ga0937bcfab20b3fe52da9397361de99c2"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ga0937bcfab20b3fe52da9397361de99c2">&#9670;&#160;</a></span>SPTF_CRC_SIZE</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">#define SPTF_CRC_SIZE&#160;&#160;&#160;4u</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Sondaki CRC-32 (bayt). </p>
+
+<p class="definition"><a class="el" href="sptf_8h_source.html">sptf.h</a> dosyasının <a class="el" href="sptf_8h_source.html#l00056">56</a> numaralı satırında tanımlanmıştır.</p>
+
+</div>
+</div>
+<a id="ga10aafa02b0b4f76a0c512094476c142c" name="ga10aafa02b0b4f76a0c512094476c142c"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ga10aafa02b0b4f76a0c512094476c142c">&#9670;&#160;</a></span>SPTF_NAME_SIZE</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">#define SPTF_NAME_SIZE&#160;&#160;&#160;32u</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Akış ve kanal adı alanı (bayt, UTF-8). </p>
+
+<p class="definition"><a class="el" href="sptf_8h_source.html">sptf.h</a> dosyasının <a class="el" href="sptf_8h_source.html#l00058">58</a> numaralı satırında tanımlanmıştır.</p>
+
+</div>
+</div>
+<a id="gaf3fc65877237438d78fe014aa5b36112" name="gaf3fc65877237438d78fe014aa5b36112"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#gaf3fc65877237438d78fe014aa5b36112">&#9670;&#160;</a></span>SPTF_UNIT_SIZE</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">#define SPTF_UNIT_SIZE&#160;&#160;&#160;16u</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Birim alanı (bayt, UTF-8). </p>
+
+<p class="definition"><a class="el" href="sptf_8h_source.html">sptf.h</a> dosyasının <a class="el" href="sptf_8h_source.html#l00059">59</a> numaralı satırında tanımlanmıştır.</p>
+
+</div>
+</div>
+<a id="ga52b73db93f3a23e560f2df924cff11dd" name="ga52b73db93f3a23e560f2df924cff11dd"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ga52b73db93f3a23e560f2df924cff11dd">&#9670;&#160;</a></span>SPTF_MAX_CHANNELS</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">#define SPTF_MAX_CHANNELS&#160;&#160;&#160;256u</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Akış başına en fazla kanal. </p>
+
+<p class="definition"><a class="el" href="sptf_8h_source.html">sptf.h</a> dosyasının <a class="el" href="sptf_8h_source.html#l00060">60</a> numaralı satırında tanımlanmıştır.</p>
+
+</div>
+</div>
+<a id="gaffebed9171531a5dd5727c7771e7ef1b" name="gaffebed9171531a5dd5727c7771e7ef1b"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#gaffebed9171531a5dd5727c7771e7ef1b">&#9670;&#160;</a></span>SPTF_MIN_SAMPLE_RATE</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">#define SPTF_MIN_SAMPLE_RATE&#160;&#160;&#160;1.0e-3</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>En küçük örnekleme hızı (Hz). </p>
+
+<p class="definition"><a class="el" href="sptf_8h_source.html">sptf.h</a> dosyasının <a class="el" href="sptf_8h_source.html#l00061">61</a> numaralı satırında tanımlanmıştır.</p>
+
+</div>
+</div>
+<a id="ga7b3ce367b8c2832665dc65ae7505a656" name="ga7b3ce367b8c2832665dc65ae7505a656"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ga7b3ce367b8c2832665dc65ae7505a656">&#9670;&#160;</a></span>SPTF_MAX_SAMPLE_RATE</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">#define SPTF_MAX_SAMPLE_RATE&#160;&#160;&#160;1.0e12</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>En büyük örnekleme hızı (Hz). </p>
+
+<p class="definition"><a class="el" href="sptf_8h_source.html">sptf.h</a> dosyasının <a class="el" href="sptf_8h_source.html#l00062">62</a> numaralı satırında tanımlanmıştır.</p>
+
+</div>
+</div>
+<a id="gae5b55b7555d443757d0722a7e674a8f4" name="gae5b55b7555d443757d0722a7e674a8f4"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#gae5b55b7555d443757d0722a7e674a8f4">&#9670;&#160;</a></span>SPTF_TS_NONE</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">#define SPTF_TS_NONE&#160;&#160;&#160;0u</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p><code>timestamp_ns</code> bilinmiyor: alan 0 yazılır. </p>
+
+<p class="definition"><a class="el" href="sptf_8h_source.html">sptf.h</a> dosyasının <a class="el" href="sptf_8h_source.html#l00065">65</a> numaralı satırında tanımlanmıştır.</p>
+
+</div>
+</div>
+<a id="ga57e4b66d81c9091339c8ac6d0e8b3ff5" name="ga57e4b66d81c9091339c8ac6d0e8b3ff5"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ga57e4b66d81c9091339c8ac6d0e8b3ff5">&#9670;&#160;</a></span>SPTF_TS_AUTO</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">#define SPTF_TS_AUTO&#160;&#160;&#160;UINT64_MAX</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p><code>timestamp_ns</code> saatten türetilsin: bloğun ilk örneği = şimdi − N · Ts (blok yeni tamamlandı). </p>
+
+<p class="definition"><a class="el" href="sptf_8h_source.html">sptf.h</a> dosyasının <a class="el" href="sptf_8h_source.html#l00067">67</a> numaralı satırında tanımlanmıştır.</p>
+
+</div>
+</div>
+<a id="ga5a29d02382d16283d91a3d47812c5f7d" name="ga5a29d02382d16283d91a3d47812c5f7d"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ga5a29d02382d16283d91a3d47812c5f7d">&#9670;&#160;</a></span>SPTF_MARKER_AT_NEXT</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">#define SPTF_MARKER_AT_NEXT&#160;&#160;&#160;UINT64_MAX</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p><a class="el" href="group__sptf__link.html#ga8b321c79ef64c4612b414ea1fc44a2ae" title="Olay işareti gönderir (ör. &quot;ISR overrun&quot;, &quot;state = RUN&quot;). Arayüzde dikey çizgi + etiket olarak görünü...">sptf_stream_marker</a> için: işaret, akışın sıradaki örneğine konur. </p>
+
+<p class="definition"><a class="el" href="sptf_8h_source.html">sptf.h</a> dosyasının <a class="el" href="sptf_8h_source.html#l00069">69</a> numaralı satırında tanımlanmıştır.</p>
+
+</div>
+</div>
+<h2 class="groupheader">Enümerasyon Tipi Dokümantasyonu</h2>
+<a id="ga07cbec476e18a5e7bda27c7b2f40b3ae" name="ga07cbec476e18a5e7bda27c7b2f40b3ae"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ga07cbec476e18a5e7bda27c7b2f40b3ae">&#9670;&#160;</a></span>sptf_status_t</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">enum <a class="el" href="#ga07cbec476e18a5e7bda27c7b2f40b3ae">sptf_status_t</a></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Fonksiyon dönüş kodları. Başarı 0, hatalar negatiftir. </p>
+<table class="fieldtable">
+<tr><th colspan="2">Enümeratör</th></tr><tr><td class="fieldname"><a id="gga07cbec476e18a5e7bda27c7b2f40b3aea7f28dd94a7f6b286342ded4b76794420" name="gga07cbec476e18a5e7bda27c7b2f40b3aea7f28dd94a7f6b286342ded4b76794420"></a>SPTF_OK&#160;</td><td class="fielddoc"><p>Başarılı. </p>
+</td></tr>
+<tr><td class="fieldname"><a id="gga07cbec476e18a5e7bda27c7b2f40b3aea5c7799a951b2199803dc629d66eb3396" name="gga07cbec476e18a5e7bda27c7b2f40b3aea5c7799a951b2199803dc629d66eb3396"></a>SPTF_ERR_ARG&#160;</td><td class="fielddoc"><p>NULL işaretçi ya da aralık dışı argüman. </p>
+</td></tr>
+<tr><td class="fieldname"><a id="gga07cbec476e18a5e7bda27c7b2f40b3aea7fe4614569ba66f7f2ab47a48b66fc5b" name="gga07cbec476e18a5e7bda27c7b2f40b3aea7fe4614569ba66f7f2ab47a48b66fc5b"></a>SPTF_ERR_CONFIG&#160;</td><td class="fielddoc"><p>Geçersiz akış / bağlantı yapılandırması. </p>
+</td></tr>
+<tr><td class="fieldname"><a id="gga07cbec476e18a5e7bda27c7b2f40b3aea81bb51fc687c947509b6e77caaa981a6" name="gga07cbec476e18a5e7bda27c7b2f40b3aea81bb51fc687c947509b6e77caaa981a6"></a>SPTF_ERR_SIZE&#160;</td><td class="fielddoc"><p>Çerçeve datagrama ya da tampona sığmıyor. </p>
+</td></tr>
+<tr><td class="fieldname"><a id="gga07cbec476e18a5e7bda27c7b2f40b3aea5ed64a6b7eae86811e555d9066a64ba4" name="gga07cbec476e18a5e7bda27c7b2f40b3aea5ed64a6b7eae86811e555d9066a64ba4"></a>SPTF_ERR_NOMEM&#160;</td><td class="fielddoc"><p>Taşıma katmanı tampon veremedi (ör. lwIP pbuf havuzu boş). </p>
+</td></tr>
+<tr><td class="fieldname"><a id="gga07cbec476e18a5e7bda27c7b2f40b3aea44511ec8d5b8895dfbd6f766e524a248" name="gga07cbec476e18a5e7bda27c7b2f40b3aea44511ec8d5b8895dfbd6f766e524a248"></a>SPTF_ERR_IO&#160;</td><td class="fielddoc"><p>Taşıma katmanı gönderemedi (ağ / sürücü hatası). </p>
+</td></tr>
+<tr><td class="fieldname"><a id="gga07cbec476e18a5e7bda27c7b2f40b3aeacc2be55dd2f0160423c0cff4687288c9" name="gga07cbec476e18a5e7bda27c7b2f40b3aeacc2be55dd2f0160423c0cff4687288c9"></a>SPTF_ERR_BUSY&#160;</td><td class="fielddoc"><p>Taşıma şu an meşgul, daha sonra yeniden denenebilir (EWOULDBLOCK). </p>
+</td></tr>
+<tr><td class="fieldname"><a id="gga07cbec476e18a5e7bda27c7b2f40b3aea21952a0554612e33be5c002e001872e1" name="gga07cbec476e18a5e7bda27c7b2f40b3aea21952a0554612e33be5c002e001872e1"></a>SPTF_ERR_STATE&#160;</td><td class="fielddoc"><p>Nesne başlatılmamış ya da bağlantıya ekli değil. </p>
+</td></tr>
+</table>
+
+<p class="definition"><a class="el" href="sptf_8h_source.html">sptf.h</a> dosyasının <a class="el" href="sptf_8h_source.html#l00072">72</a> numaralı satırında tanımlanmıştır.</p>
+
+</div>
+</div>
+<a id="ga40f90b1fa138c9a370705202238f260c" name="ga40f90b1fa138c9a370705202238f260c"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ga40f90b1fa138c9a370705202238f260c">&#9670;&#160;</a></span>sptf_frame_type_t</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">enum <a class="el" href="#ga40f90b1fa138c9a370705202238f260c">sptf_frame_type_t</a></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Çerçeve türleri (<code>frame_type</code>). </p>
+<table class="fieldtable">
+<tr><th colspan="2">Enümeratör</th></tr><tr><td class="fieldname"><a id="gga40f90b1fa138c9a370705202238f260cad6bd82cb3c0b31d874e9158723b2f600" name="gga40f90b1fa138c9a370705202238f260cad6bd82cb3c0b31d874e9158723b2f600"></a>SPTF_FRAME_DESCRIPTOR&#160;</td><td class="fielddoc"><p>Akış tanımı: hız, tip, kanallar. </p>
+</td></tr>
+<tr><td class="fieldname"><a id="gga40f90b1fa138c9a370705202238f260cadc847aab99e6e36d9b0920034ff2f8ff" name="gga40f90b1fa138c9a370705202238f260cadc847aab99e6e36d9b0920034ff2f8ff"></a>SPTF_FRAME_DATA&#160;</td><td class="fielddoc"><p>Örnek verisi. </p>
+</td></tr>
+<tr><td class="fieldname"><a id="gga40f90b1fa138c9a370705202238f260caa8b2298997fe04620420684b4f4fcdef" name="gga40f90b1fa138c9a370705202238f260caa8b2298997fe04620420684b4f4fcdef"></a>SPTF_FRAME_MARKER&#160;</td><td class="fielddoc"><p>Olay işareti (grafikte dikey çizgi + etiket). </p>
+</td></tr>
+</table>
+
+<p class="definition"><a class="el" href="sptf_8h_source.html">sptf.h</a> dosyasının <a class="el" href="sptf_8h_source.html#l00085">85</a> numaralı satırında tanımlanmıştır.</p>
+
+</div>
+</div>
+<a id="gaeeb5742ef83aa4b6d13072bfbd9d48c3" name="gaeeb5742ef83aa4b6d13072bfbd9d48c3"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#gaeeb5742ef83aa4b6d13072bfbd9d48c3">&#9670;&#160;</a></span>sptf_sample_type_t</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">enum <a class="el" href="#gaeeb5742ef83aa4b6d13072bfbd9d48c3">sptf_sample_type_t</a></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Örnek veri tipleri (<code>sample_type</code>). Tüm çok baytlı tipler kabloda küçük uçludur. </p>
+<table class="fieldtable">
+<tr><th colspan="2">Enümeratör</th></tr><tr><td class="fieldname"><a id="ggaeeb5742ef83aa4b6d13072bfbd9d48c3a64a6b006c2b70128cc92061807da53b1" name="ggaeeb5742ef83aa4b6d13072bfbd9d48c3a64a6b006c2b70128cc92061807da53b1"></a>SPTF_INT8&#160;</td><td class="fielddoc"><p>1 bayt, işaretli. </p>
+</td></tr>
+<tr><td class="fieldname"><a id="ggaeeb5742ef83aa4b6d13072bfbd9d48c3a23e7c6fa21d187e7d02f484731fa89e4" name="ggaeeb5742ef83aa4b6d13072bfbd9d48c3a23e7c6fa21d187e7d02f484731fa89e4"></a>SPTF_UINT8&#160;</td><td class="fielddoc"><p>1 bayt, işaretsiz. </p>
+</td></tr>
+<tr><td class="fieldname"><a id="ggaeeb5742ef83aa4b6d13072bfbd9d48c3a72d9ce96e124c023c2d21c40d6e8dc70" name="ggaeeb5742ef83aa4b6d13072bfbd9d48c3a72d9ce96e124c023c2d21c40d6e8dc70"></a>SPTF_INT16&#160;</td><td class="fielddoc"><p>2 bayt, işaretli. </p>
+</td></tr>
+<tr><td class="fieldname"><a id="ggaeeb5742ef83aa4b6d13072bfbd9d48c3aadc6087486ea77d630f74e280577e623" name="ggaeeb5742ef83aa4b6d13072bfbd9d48c3aadc6087486ea77d630f74e280577e623"></a>SPTF_UINT16&#160;</td><td class="fielddoc"><p>2 bayt, işaretsiz. </p>
+</td></tr>
+<tr><td class="fieldname"><a id="ggaeeb5742ef83aa4b6d13072bfbd9d48c3af14fea1be989c75f1f6611e679fe38dd" name="ggaeeb5742ef83aa4b6d13072bfbd9d48c3af14fea1be989c75f1f6611e679fe38dd"></a>SPTF_INT24&#160;</td><td class="fielddoc"><p>3 bayt paketli, küçük uçlu (çağıran paketler). </p>
+</td></tr>
+<tr><td class="fieldname"><a id="ggaeeb5742ef83aa4b6d13072bfbd9d48c3a58558f39b0826d76ba364ae5bb0f7fcc" name="ggaeeb5742ef83aa4b6d13072bfbd9d48c3a58558f39b0826d76ba364ae5bb0f7fcc"></a>SPTF_UINT24&#160;</td><td class="fielddoc"><p>3 bayt paketli, küçük uçlu (çağıran paketler). </p>
+</td></tr>
+<tr><td class="fieldname"><a id="ggaeeb5742ef83aa4b6d13072bfbd9d48c3a58b2b928161648b4434e22ed987a8c53" name="ggaeeb5742ef83aa4b6d13072bfbd9d48c3a58b2b928161648b4434e22ed987a8c53"></a>SPTF_INT32&#160;</td><td class="fielddoc"><p>4 bayt, işaretli. </p>
+</td></tr>
+<tr><td class="fieldname"><a id="ggaeeb5742ef83aa4b6d13072bfbd9d48c3a44a36e053d751ed7bc6b700a0ee80e4b" name="ggaeeb5742ef83aa4b6d13072bfbd9d48c3a44a36e053d751ed7bc6b700a0ee80e4b"></a>SPTF_UINT32&#160;</td><td class="fielddoc"><p>4 bayt, işaretsiz. </p>
+</td></tr>
+<tr><td class="fieldname"><a id="ggaeeb5742ef83aa4b6d13072bfbd9d48c3a2e3e80d0acab4375cc0928906a8a9469" name="ggaeeb5742ef83aa4b6d13072bfbd9d48c3a2e3e80d0acab4375cc0928906a8a9469"></a>SPTF_INT64&#160;</td><td class="fielddoc"><p>8 bayt, işaretli. </p>
+</td></tr>
+<tr><td class="fieldname"><a id="ggaeeb5742ef83aa4b6d13072bfbd9d48c3ad55f3ef91db4a8f600f652a4b31a6661" name="ggaeeb5742ef83aa4b6d13072bfbd9d48c3ad55f3ef91db4a8f600f652a4b31a6661"></a>SPTF_UINT64&#160;</td><td class="fielddoc"><p>8 bayt, işaretsiz. </p>
+</td></tr>
+<tr><td class="fieldname"><a id="ggaeeb5742ef83aa4b6d13072bfbd9d48c3a4a195e1f3a939484a587ec80216346fd" name="ggaeeb5742ef83aa4b6d13072bfbd9d48c3a4a195e1f3a939484a587ec80216346fd"></a>SPTF_FLOAT16&#160;</td><td class="fielddoc"><p>IEEE 754 binary16. </p>
+</td></tr>
+<tr><td class="fieldname"><a id="ggaeeb5742ef83aa4b6d13072bfbd9d48c3a92fbbc07fa134345c59f954692524f85" name="ggaeeb5742ef83aa4b6d13072bfbd9d48c3a92fbbc07fa134345c59f954692524f85"></a>SPTF_FLOAT32&#160;</td><td class="fielddoc"><p>IEEE 754 binary32. </p>
+</td></tr>
+<tr><td class="fieldname"><a id="ggaeeb5742ef83aa4b6d13072bfbd9d48c3a29e951225109d9549c6e22b32161a0fa" name="ggaeeb5742ef83aa4b6d13072bfbd9d48c3a29e951225109d9549c6e22b32161a0fa"></a>SPTF_FLOAT64&#160;</td><td class="fielddoc"><p>IEEE 754 binary64. </p>
+</td></tr>
+<tr><td class="fieldname"><a id="ggaeeb5742ef83aa4b6d13072bfbd9d48c3a5214e0c5c829ac4fb63e440d3278146f" name="ggaeeb5742ef83aa4b6d13072bfbd9d48c3a5214e0c5c829ac4fb63e440d3278146f"></a>SPTF_CINT16&#160;</td><td class="fielddoc"><p>Karmaşık: I (int16), Q (int16). </p>
+</td></tr>
+<tr><td class="fieldname"><a id="ggaeeb5742ef83aa4b6d13072bfbd9d48c3af3e2cf230f40a674c1582ea1fa87b6eb" name="ggaeeb5742ef83aa4b6d13072bfbd9d48c3af3e2cf230f40a674c1582ea1fa87b6eb"></a>SPTF_CINT32&#160;</td><td class="fielddoc"><p>Karmaşık: I (int32), Q (int32). </p>
+</td></tr>
+<tr><td class="fieldname"><a id="ggaeeb5742ef83aa4b6d13072bfbd9d48c3a0eb43216645893096741c3a50de61896" name="ggaeeb5742ef83aa4b6d13072bfbd9d48c3a0eb43216645893096741c3a50de61896"></a>SPTF_CFLOAT32&#160;</td><td class="fielddoc"><p>Karmaşık: I (float32), Q (float32). </p>
+</td></tr>
+<tr><td class="fieldname"><a id="ggaeeb5742ef83aa4b6d13072bfbd9d48c3af7b9e69192e486544326352455432bca" name="ggaeeb5742ef83aa4b6d13072bfbd9d48c3af7b9e69192e486544326352455432bca"></a>SPTF_CFLOAT64&#160;</td><td class="fielddoc"><p>Karmaşık: I (float64), Q (float64). </p>
+</td></tr>
+</table>
+
+<p class="definition"><a class="el" href="sptf_8h_source.html">sptf.h</a> dosyasının <a class="el" href="sptf_8h_source.html#l00093">93</a> numaralı satırında tanımlanmıştır.</p>
+
+</div>
+</div>
+<a id="ga0d1afa15049e4b583971312bb1038241" name="ga0d1afa15049e4b583971312bb1038241"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ga0d1afa15049e4b583971312bb1038241">&#9670;&#160;</a></span>sptf_layout_t</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">enum <a class="el" href="#ga0d1afa15049e4b583971312bb1038241">sptf_layout_t</a></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Çok kanallı örneklerin bellekteki ve kablodaki yerleşimi. </p>
+<table class="fieldtable">
+<tr><th colspan="2">Enümeratör</th></tr><tr><td class="fieldname"><a id="gga0d1afa15049e4b583971312bb1038241aab4ba39f4e581ed22087de1d402be36e" name="gga0d1afa15049e4b583971312bb1038241aab4ba39f4e581ed22087de1d402be36e"></a>SPTF_LAYOUT_INTERLEAVED&#160;</td><td class="fielddoc"><p><code>s0c0 s0c1 … s1c0 s1c1 …</code> (ADC tarama + DMA çıktısı). Önerilen. </p>
+</td></tr>
+<tr><td class="fieldname"><a id="gga0d1afa15049e4b583971312bb1038241a387dd3eb81a440b6f16d36985998daba" name="gga0d1afa15049e4b583971312bb1038241a387dd3eb81a440b6f16d36985998daba"></a>SPTF_LAYOUT_PLANAR&#160;</td><td class="fielddoc"><p><code>s0c0 s1c0 … s0c1 s1c1 …</code> (kanal blokları). </p>
+</td></tr>
+</table>
+
+<p class="definition"><a class="el" href="sptf_8h_source.html">sptf.h</a> dosyasının <a class="el" href="sptf_8h_source.html#l00115">115</a> numaralı satırında tanımlanmıştır.</p>
+
+</div>
+</div>
+</div><!-- contents -->
+</div><!-- doc-content -->
+<!-- start footer part -->
+<div id="nav-path" class="navpath"><!-- id is needed for treeview function! -->
+  <ul>
+    <li class="footer">Oluşturan <a href="https://www.doxygen.org/index.html"><img class="footer" src="doxygen.svg" width="104" height="31" alt="doxygen"/></a> 1.13.2 </li>
+  </ul>
+</div>
+</body>
+</html>
