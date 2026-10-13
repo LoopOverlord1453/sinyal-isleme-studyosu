@@ -80,7 +80,12 @@ class StatsPanel(QWidget):
             self.table.item(row, 4).setToolTip(
                 f"Kayıp örnek: {st.lost_samples}\nYinelenen çerçeve: {st.duplicates}\n"
                 f"Yeniden başlama (reset): {st.restarts}")
-            if st.idle_s >= IDLE_AFTER_S:
+            conflict = getattr(st, "conflict", "")
+            badge.setToolTip("Aynı akış kimliği iki kaynaktan geliyor (ayrıntı: Bağlantı paneli / Günlük)"
+                             if conflict else "")
+            if conflict:
+                badge.set_state("Çakışma", "critical")
+            elif st.idle_s >= IDLE_AFTER_S:
                 badge.set_state("Bekliyor", "idle")
             elif now - rate.last_loss <= LOSS_HOLD_S:
                 badge.set_state("Kayıplı", "warning")

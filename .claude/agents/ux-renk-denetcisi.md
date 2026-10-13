@@ -8,9 +8,13 @@ Sen veri görselleştirme ve mühendislik yazılımı arayüzleri konusunda dene
 gömülü yazılım mühendisi: hızlı, doğru, kafa karıştırmayan bir analiz aracı ister.
 
 ## Kontrol listesi
-- **Renk:** `spt/gui/theme.py` (TERRAFLUX koyu tema, `SERIES_DARK`, `RAW_TRACE_DARK`). Paletleri ölçerek doğrula —
-  göz kararı değil. OKLab ΔE (×100) ile normal görüş ve protan / deutan / tritan simülasyonunda komşu çiftler;
-  hedef ΔE ≥ 8 (6–8 yalnızca ikincil kodlamayla), normal görüşte ≥ 15; yüzeye (#121110) kontrast ≥ 3:1.
+- **Renk:** `spt/gui/theme.py` — iki tema: açık (varsayılan, `TERRAFLUX_LIGHT`, `SERIES_LIGHT`, `RAW_TRACE_LIGHT`,
+  kart yüzeyi #fffdfa) ve koyu (`TERRAFLUX_DARK`, `SERIES_DARK`, `RAW_TRACE_DARK`, #121110). Modül paletleri
+  (`control_plots.PALETTE`, `fusion_view`, `sysid_tab`, `diagram_scope`, `orientation3d`) `ThemedColors` ile tema
+  başına ayrıdır. Her temayı kendi yüzeyinde ölçerek doğrula — göz kararı değil. OKLab ΔE (×100) ile normal görüş
+  ve protan / deutan / tritan simülasyonunda komşu çiftler; hedef ΔE ≥ 8 (6–8 yalnızca ikincil kodlamayla), normal
+  görüşte ≥ 15; yüzeye kontrast ≥ 3:1. Ölçümlerin otomatik hâli: `tests/test_theme.py`. Tema seçimi için ayar
+  dosyasında `appearance/theme = light | dark`.
   Özellikle: ham (gri) ↔ her kanal rengi, referans (beyaz kesikli) ↔ algoritmalar, tasarım ↔ kuantize eğri,
   maske dolgusu. Renk dışında ayırt edici (lejant, çizgi stili, etiket) var mı?
 - **Ekran:** ekransız arayüzü 1600×960, 1366×768 ve 1920×1080'de kur, her görünümün ekran görüntüsünü al;

@@ -641,11 +641,8 @@ int main(void)
     ("stm32_hal_dma", DacSpec(8, 3.3, word_bits=8), "exact"),
     ("stm32_hal_dma", DacSpec(12, 3.3, channels=2), "exact"),
     ("generic_isr", DacSpec(12, 3.3), "exact"),
+    ("generic_isr", DacSpec(12, 3.3, channels=2), "exact"),
     ("dds", DacSpec(16, 1.0, out_min=-1, out_max=1, coding="twos_complement"), "dds"),
-    ("esp32", DacSpec(8, 3.3, word_bits=8), "exact"),
-    ("esp32", DacSpec(8, 3.3, word_bits=8, channels=2), "exact"),
-    ("arduino", DacSpec(12, 3.3), "exact"),
-    ("arduino", DacSpec(10, 3.3, channels=2), "exact"),
 ])
 def test_c_core_compiles_for_every_target(cc, scratch, target, dac, mode):
     spec = sg.fit_to_dac(WaveSpec("sine", freq=1000.0), dac)
@@ -653,7 +650,7 @@ def test_c_core_compiles_for_every_target(cc, scratch, target, dac, mode):
     files = dac_c.generate(spec, dac, tab, target, "wave")
     names = [f.name for f in files]
     assert names[:2] == ["wave.h", "wave.c"] and names[-1] == "KULLANIM.md"
-    assert names[2] == ("wave_ornek.ino" if target == "arduino" else "wave_ornek.c")
+    assert names[2] == "wave_ornek.c"
     _write(files, scratch)
     srcs = ["wave.c"] + (["wave_ornek.c"] if target in ("generic_isr", "dds") else [])
     r = subprocess.run([cc, *CFLAGS, "-c", *srcs], cwd=scratch, capture_output=True, text=True, timeout=120)
@@ -709,8 +706,10 @@ def test_generate_content_and_validation():
     assert "HAL_DAC_Start_DMA" in files["Sine_1k.c"] and "USE_HAL_DRIVER" in files["Sine_1k.c"]
     assert "PSC = 0" in md and "ARR = 1749" in md and "Circular" in md and "Update Event" in md
     assert "96 bayt" in md and "Butterworth" in md
-    with pytest.raises(SignalError, match="ESP32"):
-        dac_c.generate(spec, dac, tab, "esp32")
+    assert set(dac_c.TARGETS) == {"stm32_hal_dma", "generic_isr", "dds"}   # yalnız STM32 (+ taşınabilir C)
+    for removed in ("esp32", "arduino"):
+        with pytest.raises(SignalError, match="Bilinmeyen hedef"):
+            dac_c.generate(spec, dac, tab, removed)
     with pytest.raises(SignalError, match="DDS"):  # kullanıcı diliyle: “Tablo kipi”ni DDS seçin
         dac_c.generate(spec, dac, tab, "dds")
     with pytest.raises(SignalError):
@@ -733,9 +732,11 @@ def test_memory_report():
     assert dma["cpu_cycles_per_sample_estimate"] == 0 and dma["ram_bytes"] == 0
     dds = sg.make_table(spec, DAC12, 48_000.0, 256, mode="dds")
     assert dac_c.memory_report(dds, DAC12, "dds", interpolate=True)["table_flash_bytes"] == 512
-    esp = DacSpec(8, 3.3, word_bits=8)
-    et = sg.make_table(sg.fit_to_dac(spec, esp), esp, 48_000.0)
-    assert dac_c.memory_report(et, esp, "esp32")["dma_buffer_ram_bytes"] >= et.memory_bytes
+    for target in dac_c.TARGETS:   # STM32 DMA tabloyu yerinde okur: ek tampon yok, CPU tahmini her hedefte var
+        rep = dac_c.memory_report(tab, DAC12, target)
+        assert rep["dma_buffer_ram_bytes"] == 0 and rep["cpu_load_pct_estimate"] is not None
+    with pytest.raises(SignalError, match="Bilinmeyen hedef"):
+        dac_c.memory_report(tab, DAC12, "arduino")
 
 
 # ============================================================================ denetim regresyonları
@@ -789,13 +790,14 @@ def test_error_messages_speak_the_users_language():
     exact = sg.make_table(spec, dac, 48_000.0)
     dds = sg.make_table(spec, dac, 48_000.0, mode="dds")
     d10 = DacSpec(10, 3.3)
+    dsig = DacSpec(12, 3.3, coding="twos_complement")
     cases = [
         lambda: sg.make_table(WaveSpec("samples"), dac, 48_000.0),
         lambda: sg.make_table(WaveSpec("ecg", bpm=30.0), dac, 48_000.0, 4096),
         lambda: sg.make_table(spec, dac, 48_000.0, 1 << 30),
         lambda: dac_c.generate(spec, dac, exact, "dds"),
         lambda: dac_c.generate(spec, dac, dds, "stm32_hal_dma"),
-        lambda: dac_c.generate(spec, dac, exact, "esp32"),
+        lambda: dac_c.generate(spec, dsig, sg.make_table(spec, dsig, 48_000.0), "stm32_hal_dma"),
         lambda: dac_c.generate(spec, d10, sg.make_table(spec, d10, 48_000.0), "stm32_hal_dma"),
     ]
     for case in cases:

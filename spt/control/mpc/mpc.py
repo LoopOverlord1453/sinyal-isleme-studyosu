@@ -1,6 +1,7 @@
 """Doğrusal MPC — MATLAB Model Predictive Control Toolbox ``mpc`` nesnesi anlamlarıyla.
 
-Ayrıntılı tasarım notları (QP formülasyonu, ölçekleme, ECR, kestirici): ``spt/control/mpc/TASARIM.md``.
+Ayrıntılı tasarım notları (QP formülasyonu, ölçekleme, ECR, kestirici):
+``docs/SPT-TSR-001_MPC_Tasarim_Notlari.docx``.
 
 Özet (MATLAB R2025b kaynağından ölçülen / doğrulanan tanımlar):
 
@@ -384,7 +385,7 @@ def _sminreal_mask(A, B, C):
 @dataclass
 class MPCData:
     """MPC'nin derlenmiş iç verisi (MATLAB ``getCodeGenerationData`` alan adlarıyla). Tümü **boyutsuz** (ölçekli);
-    indisler 0 tabanlı. C kodu üretimi bu yapıyı kullanır (bkz. TASARIM.md "Çevrimiçi hesap")."""
+    indisler 0 tabanlı. C kodu üretimi bu yapıyı kullanır (bkz. SPT-TSR-001 "Çevrimiçi hesap")."""
     Ts: float
     p: int
     moves: np.ndarray

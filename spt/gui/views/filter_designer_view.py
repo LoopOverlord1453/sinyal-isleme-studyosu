@@ -52,8 +52,9 @@ from spt.dsp.filters import (
     uses_ripple,
 )
 from spt.gui.actions import ActionRegistry
+from spt.gui.icons import primary_icon
 from spt.gui.theme import ThemeManager
-from spt.gui.widgets.common import Card, PageHeader, chip, combo, form_layout, hbox, icon_button, label
+from spt.gui.widgets.common import Card, LegendBar, PageHeader, chip, combo, form_layout, hbox, icon_button, label
 from spt.gui.widgets.inspector import DataTips, PlotAnalysis, Trace, curve_stats, fmt, visible_slice
 from spt.gui.widgets.plot import Crosshair, make_plot, pen, set_si_prefix
 
@@ -360,7 +361,7 @@ class FilterDesignerView(QWidget):
 
         self.apply_button = QPushButton("Sinyale Uygula")
         self.apply_button.setObjectName("Primary")
-        self.apply_button.setIcon(actions["flt.apply"].icon())
+        self.apply_button.setIcon(primary_icon(actions.spec("flt.apply").icon))
         self.apply_button.setToolTip("Tasarımı işlem zincirine ekler (düzenlenen aşama varsa onu günceller) ve "
                                      "canlı akışa uygular")
         self.apply_button.clicked.connect(actions["flt.apply"].trigger)
@@ -589,7 +590,7 @@ class FilterDesignerView(QWidget):
         self.log_button.toggled.connect(self.set_log_freq)
         fit = icon_button("ph.arrows-out", "Görünümü sıfırla", object_name="FlatIcon", size=16)
         fit.clicked.connect(self._fit_mag)
-        self.mag_legend = label("", "Readout")
+        self.mag_legend = LegendBar(lambda: [self.mag_plot])
         self.mag_readout = label("", "Readout")
         self.mag_card.add_left(self.mag_legend, optional=True)
         self.mag_card.add_right(self.mag_readout, optional=True)
@@ -632,8 +633,9 @@ class FilterDesignerView(QWidget):
 
         self.pz_card = Card("Kutup-Sıfır")
         c0, c1 = self._theme.series_color(0), self._theme.series_color(1)
-        self.pz_card.add_left(label(f'<span style="color:{c0}">✕</span>&nbsp;Kutup&nbsp;&nbsp;'
-                                    f'<span style="color:{c1}">○</span>&nbsp;Sıfır', "Readout"), optional=True)
+        self.pz_legend = LegendBar(lambda: [self.pz_plot])
+        self.pz_legend.set_items([(c0, "Kutup"), (c1, "Sıfır")])
+        self.pz_card.add_left(self.pz_legend, optional=True)
         self.pz_readout = label("", "Readout")
         self.pz_card.add_right(self.pz_readout, optional=True)
         self.pz_plot = make_plot(self._theme, "Reel", "Sanal")
@@ -769,8 +771,8 @@ class FilterDesignerView(QWidget):
             self._mag_curve.setData([], [])
             self._quant_curve.setData([], [])
             self.quant_label.hide()
-            self.mag_legend.setText("Medyan filtre doğrusal değildir: frekans cevabı yoktur" if d is not None
-                                    else "Tasarım hatası — ayrıntı Tasarım panelinde")
+            self.mag_legend.set_items([], "Medyan filtre doğrusal değildir: frekans cevabı yoktur" if d is not None
+                                      else "Tasarım hatası — ayrıntı Tasarım panelinde")
             self._draw_analysis()
             self._draw_pz()
             return
@@ -796,7 +798,7 @@ class FilterDesignerView(QWidget):
     def _draw_mask(self, d: Design, f: np.ndarray) -> None:
         mask = mask_for(d.spec)
         if mask is None:
-            self.mag_legend.setText(f'<span style="color:{self._theme.series_color(0)}">▬</span>&nbsp;Tasarım')
+            self.mag_legend.set_items([(self._theme.series_color(0), "Tasarım")])
             return
         t = self._theme.tokens
         fill = QColor(t.critical)
@@ -818,8 +820,8 @@ class FilterDesignerView(QWidget):
         for item in self._mask_items:
             item.setZValue(-5)
             self.mag_plot.addItem(item)
-        self.mag_legend.setText(f'<span style="color:{self._theme.series_color(0)}">▬</span>&nbsp;Tasarım&nbsp;&nbsp;'
-                                f'<span style="color:{t.text_muted}">┅</span>&nbsp;Maske (taralı: yasak bölge)')
+        self.mag_legend.set_items([(self._theme.series_color(0), "Tasarım"),
+                                   (t.text_muted, "Maske (taralı: yasak bölge)", Qt.PenStyle.DashLine)])
 
     def _draw_markers(self, d: Design) -> None:
         s = d.spec
@@ -865,6 +867,7 @@ class FilterDesignerView(QWidget):
         _, _, q, self._quant_design, rq, rep = cache
         self._quant_curve.setData(rq.freqs[keep], rq.magnitude_db[keep])
         name = dict((k, v) for v, k in QUANT_CHOICES)[fmt]
+        self.mag_legend.add(self._theme.series_color(1), f"Kuantize · {name}", Qt.PenStyle.DashLine)
         parts = [f'<span style="color:{self._theme.series_color(1)}">┅</span>&nbsp;<b>{name}</b>',
                  f"geçirme bandı sapması {rep.pass_dev_db:.4g} dB",
                  f"en büyük sapma {rep.dev_db:.4g} dB"]

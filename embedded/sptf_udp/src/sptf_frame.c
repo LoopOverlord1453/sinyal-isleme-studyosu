@@ -1,501 +1,676 @@
 /* SPDX-License-Identifier: LGPL-2.1-only */
 /**
  * @file    sptf_frame.c
- * @brief   SPTF v1 çerçeve kodlayıcıları ve CRC-32/ISO-HDLC.
+ * @brief   SPTF v1 çerçeve kodlayıcıları (taşımadan bağımsız).
  *
- * Tüm çok baytlı alanlar bayt bayt küçük uçlu yazılır: hedefin bayt sırasından, hizalamasından ve derleyicinin
- * yapı dolgusundan bağımsızdır. `double` alanlar IEEE 754 binary64 bit deseniyle kopyalanır.
+ * Bütün alanlar tampona bayt bayt, küçük uçlu yazılır; tamponun hizalaması ve
+ * hedefin bayt sırası varsayılmaz. Örnek verisi kablo düzeninde verildiği için
+ * olduğu gibi kopyalanır.
  *
- * @ingroup sptf_frame
+ * Copyright (C) 2026, Kubilay Közleme <burhankozleme@gmail.com>
  */
+
+#include "sptf_frame.h"
+
+#include <float.h>
+#include <stddef.h>
 #include <string.h>
 
-#include "sptf_internal.h"
+#include "sptf_crc32.h"
 
-/* C99 derleme zamanı denetimi: double, 8 baytlık IEEE 754 binary64 olmalı (AVR'de -mdouble=64 gerekir). */
-typedef char sptf_priv_double_is_64bit[(sizeof(double) == 8u) ? 1 : -1];
-
-/* ------------------------------------------------------------------------------------------ bayt yazıcılar */
-
-/** @brief 16 bit değeri küçük uçlu yazar. */
-static void put_u16(uint8_t *p, uint16_t v)
-{
-    p[0] = (uint8_t)(v & 0xFFu);
-    p[1] = (uint8_t)((uint32_t)v >> 8u);
-}
-
-/** @brief 32 bit değeri küçük uçlu yazar. */
-static void put_u32(uint8_t *p, uint32_t v)
-{
-    p[0] = (uint8_t)(v & 0xFFu);
-    p[1] = (uint8_t)((v >> 8u) & 0xFFu);
-    p[2] = (uint8_t)((v >> 16u) & 0xFFu);
-    p[3] = (uint8_t)(v >> 24u);
-}
-
-/** @brief 64 bit değeri küçük uçlu yazar. */
-static void put_u64(uint8_t *p, uint64_t v)
-{
-    put_u32(p, (uint32_t)(v & 0xFFFFFFFFu));
-    put_u32(&p[4], (uint32_t)(v >> 32u));
-}
-
-/** @brief binary64 değeri küçük uçlu yazar (bit deseni korunur). */
-static void put_f64(uint8_t *p, double v)
-{
-    uint64_t bits = 0u;
-    (void)memcpy((uint8_t *)&bits, (const uint8_t *)&v, sizeof(bits));
-    put_u64(p, bits);
-}
-
-size_t sptf_priv_strnlen(const char *s, size_t limit)
-{
-    size_t n = 0u;
-    if (s != NULL)
-    {
-        while ((n < limit) && (s[n] != '\0'))
-        {
-            n++;
-        }
-    }
-    return n;
-}
-
-/** @brief Metni sabit uzunluklu alana yazar, kalanını 0 ile doldurur (uzunluk önceden doğrulanmış olmalı). */
-static void put_text(uint8_t *p, size_t field, const char *s)
-{
-    const size_t n = sptf_priv_strnlen(s, field);
-    if (n > 0u)
-    {
-        (void)memcpy(p, (const uint8_t *)s, n);
-    }
-    if (n < field)
-    {
-        (void)memset(&p[n], 0, field - n);
-    }
-}
-
-/** @brief binary64 değeri sonlu mu (üs alanı tümü 1 değil: ±sonsuz ve NaN değil). Kayan nokta karşılaştırması yok. */
-static bool is_finite(double v)
-{
-    uint64_t bits = 0u;
-    (void)memcpy((uint8_t *)&bits, (const uint8_t *)&v, sizeof(bits));
-    return ((bits >> 52u) & 0x7FFu) != 0x7FFu;
-}
-
-/** @brief Metin alana sığıyor mu (UTF-8 bayt sayısı ≤ alan; `\0` gerekmez). */
-static bool text_fits(const char *s, size_t field)
-{
-    return sptf_priv_strnlen(s, field + 1u) <= field;
-}
-
-/* ----------------------------------------------------------------------------------------------- CRC-32 */
-#if (SPTF_CFG_CRC != 0)
-
-uint32_t sptf_crc32_update(uint32_t crc, const uint8_t *data, size_t len)
-{
-#if (SPTF_CFG_CRC_TABLE != 0)
-    /* CRC-32/ISO-HDLC tablosu (yansıtılmış polinom 0xEDB88320) */
-    static const uint32_t crc_table[256] = {
-        0x00000000u, 0x77073096u, 0xEE0E612Cu, 0x990951BAu, 0x076DC419u, 0x706AF48Fu,
-        0xE963A535u, 0x9E6495A3u, 0x0EDB8832u, 0x79DCB8A4u, 0xE0D5E91Eu, 0x97D2D988u,
-        0x09B64C2Bu, 0x7EB17CBDu, 0xE7B82D07u, 0x90BF1D91u, 0x1DB71064u, 0x6AB020F2u,
-        0xF3B97148u, 0x84BE41DEu, 0x1ADAD47Du, 0x6DDDE4EBu, 0xF4D4B551u, 0x83D385C7u,
-        0x136C9856u, 0x646BA8C0u, 0xFD62F97Au, 0x8A65C9ECu, 0x14015C4Fu, 0x63066CD9u,
-        0xFA0F3D63u, 0x8D080DF5u, 0x3B6E20C8u, 0x4C69105Eu, 0xD56041E4u, 0xA2677172u,
-        0x3C03E4D1u, 0x4B04D447u, 0xD20D85FDu, 0xA50AB56Bu, 0x35B5A8FAu, 0x42B2986Cu,
-        0xDBBBC9D6u, 0xACBCF940u, 0x32D86CE3u, 0x45DF5C75u, 0xDCD60DCFu, 0xABD13D59u,
-        0x26D930ACu, 0x51DE003Au, 0xC8D75180u, 0xBFD06116u, 0x21B4F4B5u, 0x56B3C423u,
-        0xCFBA9599u, 0xB8BDA50Fu, 0x2802B89Eu, 0x5F058808u, 0xC60CD9B2u, 0xB10BE924u,
-        0x2F6F7C87u, 0x58684C11u, 0xC1611DABu, 0xB6662D3Du, 0x76DC4190u, 0x01DB7106u,
-        0x98D220BCu, 0xEFD5102Au, 0x71B18589u, 0x06B6B51Fu, 0x9FBFE4A5u, 0xE8B8D433u,
-        0x7807C9A2u, 0x0F00F934u, 0x9609A88Eu, 0xE10E9818u, 0x7F6A0DBBu, 0x086D3D2Du,
-        0x91646C97u, 0xE6635C01u, 0x6B6B51F4u, 0x1C6C6162u, 0x856530D8u, 0xF262004Eu,
-        0x6C0695EDu, 0x1B01A57Bu, 0x8208F4C1u, 0xF50FC457u, 0x65B0D9C6u, 0x12B7E950u,
-        0x8BBEB8EAu, 0xFCB9887Cu, 0x62DD1DDFu, 0x15DA2D49u, 0x8CD37CF3u, 0xFBD44C65u,
-        0x4DB26158u, 0x3AB551CEu, 0xA3BC0074u, 0xD4BB30E2u, 0x4ADFA541u, 0x3DD895D7u,
-        0xA4D1C46Du, 0xD3D6F4FBu, 0x4369E96Au, 0x346ED9FCu, 0xAD678846u, 0xDA60B8D0u,
-        0x44042D73u, 0x33031DE5u, 0xAA0A4C5Fu, 0xDD0D7CC9u, 0x5005713Cu, 0x270241AAu,
-        0xBE0B1010u, 0xC90C2086u, 0x5768B525u, 0x206F85B3u, 0xB966D409u, 0xCE61E49Fu,
-        0x5EDEF90Eu, 0x29D9C998u, 0xB0D09822u, 0xC7D7A8B4u, 0x59B33D17u, 0x2EB40D81u,
-        0xB7BD5C3Bu, 0xC0BA6CADu, 0xEDB88320u, 0x9ABFB3B6u, 0x03B6E20Cu, 0x74B1D29Au,
-        0xEAD54739u, 0x9DD277AFu, 0x04DB2615u, 0x73DC1683u, 0xE3630B12u, 0x94643B84u,
-        0x0D6D6A3Eu, 0x7A6A5AA8u, 0xE40ECF0Bu, 0x9309FF9Du, 0x0A00AE27u, 0x7D079EB1u,
-        0xF00F9344u, 0x8708A3D2u, 0x1E01F268u, 0x6906C2FEu, 0xF762575Du, 0x806567CBu,
-        0x196C3671u, 0x6E6B06E7u, 0xFED41B76u, 0x89D32BE0u, 0x10DA7A5Au, 0x67DD4ACCu,
-        0xF9B9DF6Fu, 0x8EBEEFF9u, 0x17B7BE43u, 0x60B08ED5u, 0xD6D6A3E8u, 0xA1D1937Eu,
-        0x38D8C2C4u, 0x4FDFF252u, 0xD1BB67F1u, 0xA6BC5767u, 0x3FB506DDu, 0x48B2364Bu,
-        0xD80D2BDAu, 0xAF0A1B4Cu, 0x36034AF6u, 0x41047A60u, 0xDF60EFC3u, 0xA867DF55u,
-        0x316E8EEFu, 0x4669BE79u, 0xCB61B38Cu, 0xBC66831Au, 0x256FD2A0u, 0x5268E236u,
-        0xCC0C7795u, 0xBB0B4703u, 0x220216B9u, 0x5505262Fu, 0xC5BA3BBEu, 0xB2BD0B28u,
-        0x2BB45A92u, 0x5CB36A04u, 0xC2D7FFA7u, 0xB5D0CF31u, 0x2CD99E8Bu, 0x5BDEAE1Du,
-        0x9B64C2B0u, 0xEC63F226u, 0x756AA39Cu, 0x026D930Au, 0x9C0906A9u, 0xEB0E363Fu,
-        0x72076785u, 0x05005713u, 0x95BF4A82u, 0xE2B87A14u, 0x7BB12BAEu, 0x0CB61B38u,
-        0x92D28E9Bu, 0xE5D5BE0Du, 0x7CDCEFB7u, 0x0BDBDF21u, 0x86D3D2D4u, 0xF1D4E242u,
-        0x68DDB3F8u, 0x1FDA836Eu, 0x81BE16CDu, 0xF6B9265Bu, 0x6FB077E1u, 0x18B74777u,
-        0x88085AE6u, 0xFF0F6A70u, 0x66063BCAu, 0x11010B5Cu, 0x8F659EFFu, 0xF862AE69u,
-        0x616BFFD3u, 0x166CCF45u, 0xA00AE278u, 0xD70DD2EEu, 0x4E048354u, 0x3903B3C2u,
-        0xA7672661u, 0xD06016F7u, 0x4969474Du, 0x3E6E77DBu, 0xAED16A4Au, 0xD9D65ADCu,
-        0x40DF0B66u, 0x37D83BF0u, 0xA9BCAE53u, 0xDEBB9EC5u, 0x47B2CF7Fu, 0x30B5FFE9u,
-        0xBDBDF21Cu, 0xCABAC28Au, 0x53B39330u, 0x24B4A3A6u, 0xBAD03605u, 0xCDD70693u,
-        0x54DE5729u, 0x23D967BFu, 0xB3667A2Eu, 0xC4614AB8u, 0x5D681B02u, 0x2A6F2B94u,
-        0xB40BBE37u, 0xC30C8EA1u, 0x5A05DF1Bu, 0x2D02EF8Du
-    };
+/*
+ * DESCRIPTOR'daki f64 alanları (örnekleme hızı, ölçek, ofset) IEEE 754 binary64
+ * olarak yazılır. double'ın bit gösterimi doğrudan kopyalandığı için hedefte
+ * double'ın binary64 olması gerekir (Cortex-M için AAPCS, PC için x86-64 ABI).
+ */
+#if (FLT_RADIX != 2) || (DBL_MANT_DIG != 53) || (DBL_MAX_EXP != 1024)
+#error "double must be an IEEE 754 binary64 type"
 #endif
-    uint32_t c = ~crc;
-    size_t i;
-    if (data == NULL)
+
+/* ------------------------------------------------- ortak başlık alan ofsetleri */
+
+#define OFFSET_MAGIC                (0U)
+#define OFFSET_VERSION              (4U)
+#define OFFSET_FRAME_TYPE           (5U)
+#define OFFSET_FLAGS                (6U)
+#define OFFSET_FRAME_LENGTH         (8U)
+#define OFFSET_STREAM_ID            (12U)
+#define OFFSET_DESC_REV             (14U)
+#define OFFSET_SEQ                  (16U)
+#define OFFSET_HEADER_RESERVED      (20U)
+#define OFFSET_TIMESTAMP            (24U)
+
+/* ---------------------------------------------- DESCRIPTOR gövdesi alan ofsetleri */
+
+#define OFFSET_SAMPLE_RATE          (32U)
+#define OFFSET_CHANNEL_COUNT        (40U)
+#define OFFSET_SAMPLE_TYPE          (42U)
+#define OFFSET_LAYOUT               (43U)
+#define OFFSET_DESC_RESERVED        (44U)
+#define OFFSET_STREAM_NAME          (48U)
+#define OFFSET_CHANNEL_RECORDS      (80U)
+
+/* ------------------------------------------- ChannelInfo kaydı içindeki ofsetler */
+
+#define CHANNEL_FIELD_NAME          (0U)
+#define CHANNEL_FIELD_UNIT          (32U)
+#define CHANNEL_FIELD_SCALE         (48U)
+#define CHANNEL_FIELD_OFFSET        (56U)
+
+/* ---------------------------------------------------- DATA gövdesi alan ofsetleri */
+
+#define OFFSET_FIRST_SAMPLE         (32U)
+#define OFFSET_SAMPLE_COUNT         (40U)
+#define OFFSET_DATA_RESERVED        (44U)
+#define OFFSET_SAMPLES              (48U)
+
+/* -------------------------------------------------- MARKER gövdesi alan ofsetleri */
+
+#define OFFSET_SAMPLE_INDEX         (32U)
+#define OFFSET_MARKER_CODE          (40U)
+#define OFFSET_TEXT_LENGTH          (44U)
+#define OFFSET_MARKER_RESERVED      (46U)
+#define OFFSET_TEXT                 (48U)
+
+/* ---------------------------------------------------------------- sabit değerler */
+
+/* magic alanı: ASCII "SPTF" */
+#define MAGIC_BYTE_0                (0x53U)
+#define MAGIC_BYTE_1                (0x50U)
+#define MAGIC_BYTE_2                (0x54U)
+#define MAGIC_BYTE_3                (0x46U)
+
+#define BYTE_MASK                   (0xFFU)
+#define BITS_PER_BYTE               (8U)
+#define BYTES_PER_U64               (8U)
+
+/* ======================================================= küçük uçlu yazıcılar */
+
+static void put_u8(uint8_t *buffer, uint32_t index, uint8_t value)
+{
+    buffer[index] = value;
+}
+
+static void put_u16(uint8_t *buffer, uint32_t index, uint16_t value)
+{
+    buffer[index] = (uint8_t)(value & BYTE_MASK);
+    buffer[index + 1U] = (uint8_t)((uint32_t)value >> BITS_PER_BYTE);
+}
+
+static void put_u32(uint8_t *buffer, uint32_t index, uint32_t value)
+{
+    buffer[index] = (uint8_t)(value & BYTE_MASK);
+    buffer[index + 1U] = (uint8_t)((value >> 8U) & BYTE_MASK);
+    buffer[index + 2U] = (uint8_t)((value >> 16U) & BYTE_MASK);
+    buffer[index + 3U] = (uint8_t)((value >> 24U) & BYTE_MASK);
+}
+
+static void put_u64(uint8_t *buffer, uint32_t index, uint64_t value)
+{
+    uint32_t position;
+
+    for (position = 0U; position < BYTES_PER_U64; position++)
     {
-        return crc;
+        const uint32_t shift = position * BITS_PER_BYTE;
+
+        buffer[index + position] = (uint8_t)((value >> shift) & BYTE_MASK);
     }
-    for (i = 0u; i < len; i++)
+}
+
+/** Hedefin küçük uçlu olup olmadığını, bir tamsayının ilk baytına bakarak belirler. */
+static bool host_is_little_endian(void)
+{
+    const uint32_t probe = 1U;
+    const uint8_t *probe_bytes = (const uint8_t *)&probe;
+
+    return probe_bytes[0] == 1U;
+}
+
+/**
+ * double'ın binary64 gösterimini küçük uçlu yazar. Nesnenin baytlarına unsigned char
+ * işaretçisiyle erişilir (MISRA C:2012 Kural 11.3 istisnası); double'ın bayt sırası
+ * tamsayılarınkiyle aynı kabul edilir (Cortex-M ve x86-64'te böyledir).
+ */
+static void put_f64(uint8_t *buffer, uint32_t index, sptf_float64_t value)
+{
+    const uint8_t *representation = (const uint8_t *)&value;
+    const bool little_endian = host_is_little_endian();
+    uint32_t position;
+
+    for (position = 0U; position < BYTES_PER_U64; position++)
     {
-#if (SPTF_CFG_CRC_TABLE != 0)
-        c = crc_table[(c ^ (uint32_t)data[i]) & 0xFFu] ^ (c >> 8u);
-#else
-        uint32_t bit;
-        c ^= (uint32_t)data[i];
-        for (bit = 0u; bit < 8u; bit++)
+        uint32_t source = position;
+
+        if (!little_endian)
         {
-            if ((c & 1u) != 0u)
+            source = (BYTES_PER_U64 - 1U) - position;
+        }
+
+        buffer[index + position] = representation[source];
+    }
+}
+
+/**
+ * Metni sabit uzunluklu alana yazar; alanın kalanını '\0' ile doldurur.
+ * Metnin alana sığdığı önceden doğrulanmıştır. Alanı tam dolduran metinde
+ * sonlandırıcı yazılmaz (SPT-PRT-002 [G-23]).
+ */
+static void put_text(uint8_t *buffer, uint32_t index, uint32_t field_size, const char *text)
+{
+    uint32_t position;
+    bool ended = false;
+
+    for (position = 0U; position < field_size; position++)
+    {
+        uint8_t byte_value = 0U;
+
+        if (!ended)
+        {
+            if (text[position] == '\0')
             {
-                c = (c >> 1u) ^ 0xEDB88320u;
+                ended = true;
             }
             else
             {
-                c >>= 1u;
+                byte_value = (uint8_t)text[position];
             }
         }
-#endif
+
+        buffer[index + position] = byte_value;
     }
-    return ~c;
 }
 
-/** @brief Çerçevenin CRC'si: donanım kancası tanımlıysa o, değilse yazılım. */
-static uint32_t frame_crc(const uint8_t *p, size_t n)
-{
-#if defined(SPTF_CFG_CRC32_HOOK)
-    return SPTF_CFG_CRC32_HOOK(p, n);
-#else
-    return sptf_crc32_update(0u, p, n);
-#endif
-}
-#endif /* SPTF_CFG_CRC */
-
-/** @brief CRC isteniyorsa çerçevenin son 4 baytına yazar. */
-static void finish_crc(uint8_t *p, size_t frame_len, bool crc)
-{
-#if (SPTF_CFG_CRC != 0)
-    if (crc)
-    {
-        const size_t body = frame_len - SPTF_CRC_SIZE;
-        put_u32(&p[body], frame_crc(p, body));
-    }
-#else
-    (void)p;
-    (void)frame_len;
-    (void)crc;
-#endif
-}
-
-/** @brief CRC isteği bu derlemede karşılanabilir mi. */
-static bool crc_supported(bool crc)
-{
-#if (SPTF_CFG_CRC != 0)
-    (void)crc;
-    return true;
-#else
-    return !crc;
-#endif
-}
-
-/* --------------------------------------------------------------------------------------------- tipler */
-
-uint32_t sptf_sample_size(sptf_sample_type_t type)
-{
-    uint32_t size;
-    switch (type)
-    {
-    case SPTF_INT8:
-    case SPTF_UINT8:
-        size = 1u;
-        break;
-    case SPTF_INT16:
-    case SPTF_UINT16:
-    case SPTF_FLOAT16:
-        size = 2u;
-        break;
-    case SPTF_INT24:
-    case SPTF_UINT24:
-        size = 3u;
-        break;
-    case SPTF_INT32:
-    case SPTF_UINT32:
-    case SPTF_FLOAT32:
-    case SPTF_CINT16:
-        size = 4u;
-        break;
-    case SPTF_INT64:
-    case SPTF_UINT64:
-    case SPTF_FLOAT64:
-    case SPTF_CINT32:
-    case SPTF_CFLOAT32:
-        size = 8u;
-        break;
-    case SPTF_CFLOAT64:
-        size = 16u;
-        break;
-    default:
-        size = 0u;
-        break;
-    }
-    return size;
-}
+/* ============================================================== yardımcılar */
 
 /**
- * @brief Bayt sırası çevrilirken kullanılan bileşen boyutu: karmaşıkta yarısı, 24 bit paketlide 1
- *        (çağıran zaten küçük uçlu paketler), diğerlerinde tipin kendisi.
+ * Metnin '\0'a kadarki bayt sayısını verir; en fazla limit + 1 bayt okur.
+ * Dönüş değeri limit'ten büyükse metin limit'e sığmıyor demektir.
  */
-static uint32_t element_size(sptf_sample_type_t type)
+static uint32_t text_length(const char *text, uint32_t limit)
 {
-    uint32_t elem = sptf_sample_size(type);
-    if ((type == SPTF_INT24) || (type == SPTF_UINT24))
-    {
-        elem = 1u;
-    }
-    else if ((type == SPTF_CINT16) || (type == SPTF_CINT32) || (type == SPTF_CFLOAT32) || (type == SPTF_CFLOAT64))
-    {
-        elem /= 2u;
-    }
-    else
-    {
-        /* tek bileşenli tip: boyut aynen */
-    }
-    return elem;
-}
+    uint32_t length = 0U;
+    bool ended = false;
 
-/**
- * @brief Örnek baytlarını kabloya kopyalar. Küçük uçlu hedefte düz kopya; büyük uçlu hedefte her
- *        @p elem baytlık bileşen ters çevrilir.
- */
-static void copy_samples(uint8_t *dst, const uint8_t *src, size_t nbytes, uint32_t elem)
-{
-#if (SPTF_CFG_HOST_BIG_ENDIAN != 0)
-    if (elem > 1u)
+    while ((!ended) && (length <= limit))
     {
-        size_t i;
-        uint32_t j;
-        for (i = 0u; (i + elem) <= nbytes; i += elem)
+        if (text[length] == '\0')
         {
-            for (j = 0u; j < elem; j++)
-            {
-                dst[i + j] = src[(i + elem) - 1u - j];
-            }
-        }
-    }
-    else
-    {
-        (void)memcpy(dst, src, nbytes);
-    }
-#else
-    (void)elem;
-    (void)memcpy(dst, src, nbytes);
-#endif
-}
-
-sptf_status_t sptf_config_check(const sptf_stream_config_t *cfg)
-{
-    bool ok;
-    if (cfg == NULL)
-    {
-        return SPTF_ERR_ARG;
-    }
-    /* NaN her karşılaştırmada yanlış döner: aralık denetimi NaN'ı da reddeder. */
-    ok = (cfg->sample_rate_hz >= SPTF_MIN_SAMPLE_RATE) && (cfg->sample_rate_hz <= SPTF_MAX_SAMPLE_RATE);
-    ok = ok && (cfg->channel_count != 0u) && (cfg->channel_count <= SPTF_MAX_CHANNELS) && (cfg->channels != NULL);
-    ok = ok && (sptf_sample_size(cfg->sample_type) != 0u);
-    ok = ok && ((cfg->layout == SPTF_LAYOUT_INTERLEAVED) || (cfg->layout == SPTF_LAYOUT_PLANAR));
-    ok = ok && crc_supported(cfg->crc) && text_fits(cfg->name, SPTF_NAME_SIZE);
-    if (ok)
-    {
-        uint32_t i;
-        for (i = 0u; (i < cfg->channel_count) && ok; i++)
-        {
-            const sptf_channel_t *ch = &cfg->channels[i];
-            ok = text_fits(ch->name, SPTF_NAME_SIZE) && text_fits(ch->unit, SPTF_UNIT_SIZE) && is_finite(ch->scale) &&
-                 is_finite(ch->offset);
-        }
-    }
-    return ok ? SPTF_OK : SPTF_ERR_CONFIG;
-}
-
-uint32_t sptf_descriptor_size(uint16_t channel_count, bool crc)
-{
-    return SPTF_HEADER_SIZE + SPTF_DESC_BODY_SIZE + (SPTF_CHANNEL_SIZE * (uint32_t)channel_count) +
-           (crc ? SPTF_CRC_SIZE : 0u);
-}
-
-/* ---------------------------------------------------------------------------------------- kodlayıcılar */
-
-/** @brief 32 baytlık ortak başlığı yazar. */
-static void put_header(uint8_t *p, sptf_frame_type_t type, const sptf_frame_info_t *info, uint16_t stream_id,
-                       size_t frame_len)
-{
-    p[0] = 0x53u; /* 'S' */
-    p[1] = 0x50u; /* 'P' */
-    p[2] = 0x54u; /* 'T' */
-    p[3] = 0x46u; /* 'F' */
-    p[4] = (uint8_t)SPTF_PROTOCOL_VERSION;
-    p[5] = (uint8_t)type;
-    put_u16(&p[6], info->crc ? 1u : 0u);
-    put_u32(&p[8], (uint32_t)frame_len);
-    put_u16(&p[12], stream_id);
-    put_u16(&p[14], info->desc_rev);
-    put_u32(&p[16], info->seq);
-    put_u32(&p[20], 0u);
-    put_u64(&p[24], info->timestamp_ns);
-}
-
-sptf_status_t sptf_encode_descriptor(uint8_t *buf, size_t cap, const sptf_frame_info_t *info,
-                                     const sptf_stream_config_t *cfg, size_t *out_len)
-{
-    sptf_status_t st;
-    size_t len;
-    uint32_t i;
-    if ((buf == NULL) || (info == NULL) || (cfg == NULL) || (out_len == NULL))
-    {
-        return SPTF_ERR_ARG;
-    }
-    st = sptf_config_check(cfg);
-    if (st != SPTF_OK)
-    {
-        return st;
-    }
-    if (!crc_supported(info->crc))
-    {
-        return SPTF_ERR_CONFIG;
-    }
-    len = (size_t)sptf_descriptor_size(cfg->channel_count, info->crc);
-    if (len > cap)
-    {
-        return SPTF_ERR_SIZE;
-    }
-    put_header(buf, SPTF_FRAME_DESCRIPTOR, info, cfg->stream_id, len);
-    put_f64(&buf[32], cfg->sample_rate_hz);
-    put_u16(&buf[40], cfg->channel_count);
-    buf[42] = (uint8_t)cfg->sample_type;
-    buf[43] = (uint8_t)cfg->layout;
-    put_u32(&buf[44], 0u);
-    put_text(&buf[48], SPTF_NAME_SIZE, cfg->name);
-    for (i = 0u; i < cfg->channel_count; i++)
-    {
-        uint8_t *c = &buf[(SPTF_HEADER_SIZE + SPTF_DESC_BODY_SIZE) + (SPTF_CHANNEL_SIZE * i)];
-        put_text(c, SPTF_NAME_SIZE, cfg->channels[i].name);
-        put_text(&c[32], SPTF_UNIT_SIZE, cfg->channels[i].unit);
-        put_f64(&c[48], cfg->channels[i].scale);
-        put_f64(&c[56], cfg->channels[i].offset);
-    }
-    finish_crc(buf, len, info->crc);
-    *out_len = len;
-    return SPTF_OK;
-}
-
-sptf_status_t sptf_priv_encode_data(uint8_t *buf, size_t cap, const sptf_frame_info_t *info,
-                                    const sptf_stream_config_t *cfg, uint64_t first_sample,
-                                    const uint8_t *block, uint32_t block_count, uint32_t offset,
-                                    uint32_t count, size_t *out_len)
-{
-    uint32_t size;
-    uint64_t payload;
-    uint64_t len;
-    if ((buf == NULL) || (info == NULL) || (cfg == NULL) || (block == NULL) || (out_len == NULL) || (count == 0u) ||
-        (count > block_count) || (offset > (block_count - count)) || (first_sample >= SPTF_PRIV_MAX_FIRST_SAMPLE))
-    {
-        return SPTF_ERR_ARG;
-    }
-    size = sptf_sample_size(cfg->sample_type);
-    if ((size == 0u) || (cfg->channel_count == 0u) || (cfg->channel_count > SPTF_MAX_CHANNELS) ||
-        ((cfg->layout != SPTF_LAYOUT_INTERLEAVED) && (cfg->layout != SPTF_LAYOUT_PLANAR)) ||
-        (!crc_supported(info->crc)))
-    {
-        return SPTF_ERR_CONFIG;
-    }
-    payload = (uint64_t)count * (uint64_t)size * (uint64_t)cfg->channel_count;
-    len = (uint64_t)SPTF_HEADER_SIZE + (uint64_t)SPTF_DATA_BODY_SIZE + payload +
-          (info->crc ? (uint64_t)SPTF_CRC_SIZE : 0u);
-    if (len > (uint64_t)cap)
-    {
-        return SPTF_ERR_SIZE;
-    }
-    put_header(buf, SPTF_FRAME_DATA, info, cfg->stream_id, (size_t)len);
-    put_u64(&buf[32], first_sample);
-    put_u32(&buf[40], count);
-    put_u32(&buf[44], 0u);
-    {
-        uint8_t *dst = &buf[SPTF_HEADER_SIZE + SPTF_DATA_BODY_SIZE];
-        const uint32_t elem = element_size(cfg->sample_type);
-        if (cfg->layout == SPTF_LAYOUT_INTERLEAVED)
-        {
-            const size_t start = (size_t)offset * (size_t)size * (size_t)cfg->channel_count;
-            copy_samples(dst, &block[start], (size_t)payload, elem);
+            ended = true;
         }
         else
         {
-            const size_t run = (size_t)count * (size_t)size;
-            uint32_t c;
-            for (c = 0u; c < cfg->channel_count; c++)
+            length++;
+        }
+    }
+
+    return length;
+}
+
+/** NaN ve sonsuz değerler bu karşılaştırmaların ikisini birden sağlamaz. */
+static bool is_finite(sptf_float64_t value)
+{
+    return (value >= -DBL_MAX) && (value <= DBL_MAX);
+}
+
+static uint32_t crc_size(bool crc_enabled)
+{
+    uint32_t size = 0U;
+
+    if (crc_enabled)
+    {
+        size = SPTF_CRC_SIZE;
+    }
+
+    return size;
+}
+
+static sptf_status_t check_channels(const sptf_channel_t *channels, uint16_t channel_count)
+{
+    sptf_status_t status = SPTF_STATUS_OK;
+    uint32_t channel = 0U;
+
+    while ((status == SPTF_STATUS_OK) && (channel < (uint32_t)channel_count))
+    {
+        const sptf_channel_t *info = &channels[channel];
+
+        if ((info->name == NULL) || (info->unit == NULL))
+        {
+            status = SPTF_STATUS_NULL_POINTER;
+        }
+        else if ((text_length(info->name, SPTF_NAME_FIELD_SIZE) > SPTF_NAME_FIELD_SIZE)
+                 || (text_length(info->unit, SPTF_UNIT_FIELD_SIZE) > SPTF_UNIT_FIELD_SIZE))
+        {
+            status = SPTF_STATUS_TEXT_TOO_LONG;
+        }
+        else if ((!is_finite(info->scale)) || (!is_finite(info->offset)))
+        {
+            status = SPTF_STATUS_NOT_FINITE;
+        }
+        else
+        {
+            channel++;
+        }
+    }
+
+    return status;
+}
+
+/** DATA çerçevesi için gereken alanları (tip, kanal sayısı, yerleşim) doğrular. */
+static sptf_status_t check_data_desc(const sptf_stream_desc_t *desc)
+{
+    sptf_status_t status = SPTF_STATUS_OK;
+
+    if ((desc->channel_count < 1U) || (desc->channel_count > SPTF_MAX_CHANNELS))
+    {
+        status = SPTF_STATUS_INVALID_CHANNELS;
+    }
+    else if (sptf_sample_type_size(desc->sample_type) == 0U)
+    {
+        status = SPTF_STATUS_INVALID_SAMPLE_TYPE;
+    }
+    else if ((desc->layout != SPTF_LAYOUT_INTERLEAVED) && (desc->layout != SPTF_LAYOUT_PLANAR))
+    {
+        status = SPTF_STATUS_INVALID_LAYOUT;
+    }
+    else
+    {
+        status = SPTF_STATUS_OK;
+    }
+
+    return status;
+}
+
+/** Örnek aralığının blok içinde kaldığını ve sayaç sınırını aşmadığını doğrular. */
+static sptf_status_t check_slice(const sptf_data_slice_t *slice, uint32_t bytes_per_instant)
+{
+    sptf_status_t status = SPTF_STATUS_OK;
+
+    if (slice->block == NULL)
+    {
+        status = SPTF_STATUS_NULL_POINTER;
+    }
+    else if ((slice->count == 0U) || (slice->offset > slice->block_length)
+             || (slice->count > (slice->block_length - slice->offset)))
+    {
+        status = SPTF_STATUS_INVALID_ARGUMENT;
+    }
+    else if (slice->block_length > (UINT32_MAX / bytes_per_instant))
+    {
+        status = SPTF_STATUS_INVALID_ARGUMENT;
+    }
+    else if ((slice->first_sample >= SPTF_FIRST_SAMPLE_LIMIT)
+             || ((uint64_t)slice->count > (SPTF_FIRST_SAMPLE_LIMIT - slice->first_sample)))
+    {
+        status = SPTF_STATUS_COUNTER_LIMIT;
+    }
+    else
+    {
+        status = SPTF_STATUS_OK;
+    }
+
+    return status;
+}
+
+static void put_header(uint8_t *buffer, const sptf_frame_header_t *header, uint8_t frame_type, uint32_t frame_size)
+{
+    uint16_t flags = 0U;
+
+    if (header->crc_enabled)
+    {
+        flags = SPTF_FLAG_CRC32;
+    }
+
+    put_u8(buffer, OFFSET_MAGIC, MAGIC_BYTE_0);
+    put_u8(buffer, OFFSET_MAGIC + 1U, MAGIC_BYTE_1);
+    put_u8(buffer, OFFSET_MAGIC + 2U, MAGIC_BYTE_2);
+    put_u8(buffer, OFFSET_MAGIC + 3U, MAGIC_BYTE_3);
+    put_u8(buffer, OFFSET_VERSION, SPTF_PROTOCOL_VERSION);
+    put_u8(buffer, OFFSET_FRAME_TYPE, frame_type);
+    put_u16(buffer, OFFSET_FLAGS, flags);
+    put_u32(buffer, OFFSET_FRAME_LENGTH, frame_size);
+    put_u16(buffer, OFFSET_STREAM_ID, header->stream_id);
+    put_u16(buffer, OFFSET_DESC_REV, header->desc_rev);
+    put_u32(buffer, OFFSET_SEQ, header->seq);
+    put_u32(buffer, OFFSET_HEADER_RESERVED, 0U);
+    put_u64(buffer, OFFSET_TIMESTAMP, header->timestamp_ns);
+}
+
+/** Çerçevenin son 4 baytına, önceki baytların CRC-32 değerini yazar. */
+static void put_crc(uint8_t *buffer, uint32_t frame_size)
+{
+    const uint32_t covered = frame_size - SPTF_CRC_SIZE;
+
+    put_u32(buffer, covered, sptf_crc32_compute(buffer, covered));
+}
+
+static void put_samples(uint8_t *buffer, const sptf_stream_desc_t *desc, const sptf_data_slice_t *slice,
+                        uint32_t bytes_per_instant)
+{
+    if (desc->layout == SPTF_LAYOUT_INTERLEAVED)
+    {
+        const uint32_t source_index = slice->offset * bytes_per_instant;
+        const uint32_t length = slice->count * bytes_per_instant;
+
+        (void)memcpy(&buffer[OFFSET_SAMPLES], &slice->block[source_index], (size_t)length);
+    }
+    else
+    {
+        const uint32_t sample_size = sptf_sample_type_size(desc->sample_type);
+        const uint32_t run_length = slice->count * sample_size;
+        uint32_t channel;
+
+        /* Her kanalın bloğu block_length örnek uzunluğundadır; aynı aralık sırayla alınır. */
+        for (channel = 0U; channel < (uint32_t)desc->channel_count; channel++)
+        {
+            const uint32_t source_index = ((channel * slice->block_length) + slice->offset) * sample_size;
+            const uint32_t target_index = OFFSET_SAMPLES + (channel * run_length);
+
+            (void)memcpy(&buffer[target_index], &slice->block[source_index], (size_t)run_length);
+        }
+    }
+}
+
+/* ================================================================== boyutlar */
+
+uint32_t sptf_sample_type_size(uint8_t sample_type)
+{
+    uint32_t size;
+
+    switch (sample_type)
+    {
+        case SPTF_SAMPLE_INT8:
+        case SPTF_SAMPLE_UINT8:
+            size = 1U;
+            break;
+
+        case SPTF_SAMPLE_INT16:
+        case SPTF_SAMPLE_UINT16:
+        case SPTF_SAMPLE_FLOAT16:
+            size = 2U;
+            break;
+
+        case SPTF_SAMPLE_INT24:
+        case SPTF_SAMPLE_UINT24:
+            size = 3U;
+            break;
+
+        case SPTF_SAMPLE_INT32:
+        case SPTF_SAMPLE_UINT32:
+        case SPTF_SAMPLE_FLOAT32:
+        case SPTF_SAMPLE_CINT16:
+            size = 4U;
+            break;
+
+        case SPTF_SAMPLE_INT64:
+        case SPTF_SAMPLE_UINT64:
+        case SPTF_SAMPLE_FLOAT64:
+        case SPTF_SAMPLE_CINT32:
+        case SPTF_SAMPLE_CFLOAT32:
+            size = 8U;
+            break;
+
+        case SPTF_SAMPLE_CFLOAT64:
+            size = 16U;
+            break;
+
+        default:
+            size = 0U;
+            break;
+    }
+
+    return size;
+}
+
+uint32_t sptf_bytes_per_instant(const sptf_stream_desc_t *desc)
+{
+    uint32_t bytes = 0U;
+
+    if (desc != NULL)
+    {
+        if ((desc->channel_count >= 1U) && (desc->channel_count <= SPTF_MAX_CHANNELS))
+        {
+            bytes = sptf_sample_type_size(desc->sample_type) * (uint32_t)desc->channel_count;
+        }
+    }
+
+    return bytes;
+}
+
+uint32_t sptf_descriptor_frame_size(uint16_t channel_count, bool crc_enabled)
+{
+    const uint32_t records = (uint32_t)channel_count * SPTF_CHANNEL_RECORD_SIZE;
+
+    return (SPTF_HEADER_SIZE + SPTF_DESCRIPTOR_BODY_SIZE) + records + crc_size(crc_enabled);
+}
+
+uint32_t sptf_data_frame_size(uint32_t bytes_per_instant, uint32_t sample_count, bool crc_enabled)
+{
+    const uint32_t overhead = (SPTF_HEADER_SIZE + SPTF_DATA_BODY_SIZE) + crc_size(crc_enabled);
+    uint32_t size = 0U;
+
+    if ((bytes_per_instant > 0U) && (sample_count <= ((UINT32_MAX - overhead) / bytes_per_instant)))
+    {
+        size = overhead + (sample_count * bytes_per_instant);
+    }
+
+    return size;
+}
+
+uint32_t sptf_max_samples_per_frame(uint32_t bytes_per_instant, uint32_t frame_size_limit, bool crc_enabled)
+{
+    const uint32_t overhead = (SPTF_HEADER_SIZE + SPTF_DATA_BODY_SIZE) + crc_size(crc_enabled);
+    uint32_t count = 0U;
+
+    if ((bytes_per_instant > 0U) && (frame_size_limit > overhead))
+    {
+        count = (frame_size_limit - overhead) / bytes_per_instant;
+    }
+
+    return count;
+}
+
+/* ================================================================= doğrulama */
+
+sptf_status_t sptf_check_stream_desc(const sptf_stream_desc_t *desc)
+{
+    sptf_status_t status = SPTF_STATUS_OK;
+
+    if (desc == NULL)
+    {
+        status = SPTF_STATUS_NULL_POINTER;
+    }
+    else if ((desc->name == NULL) || (desc->channels == NULL))
+    {
+        status = SPTF_STATUS_NULL_POINTER;
+    }
+    else if (!((desc->sample_rate_hz >= SPTF_MIN_SAMPLE_RATE_HZ) && (desc->sample_rate_hz <= SPTF_MAX_SAMPLE_RATE_HZ)))
+    {
+        status = SPTF_STATUS_INVALID_RATE;
+    }
+    else if (text_length(desc->name, SPTF_NAME_FIELD_SIZE) > SPTF_NAME_FIELD_SIZE)
+    {
+        status = SPTF_STATUS_TEXT_TOO_LONG;
+    }
+    else
+    {
+        status = check_data_desc(desc);
+
+        if (status == SPTF_STATUS_OK)
+        {
+            status = check_channels(desc->channels, desc->channel_count);
+        }
+    }
+
+    return status;
+}
+
+/* =============================================================== kodlayıcılar */
+
+sptf_status_t sptf_encode_descriptor(const sptf_frame_header_t *header, const sptf_stream_desc_t *desc,
+                                     uint8_t *buffer, uint32_t buffer_size, uint32_t *frame_size)
+{
+    sptf_status_t status = SPTF_STATUS_OK;
+
+    if ((header == NULL) || (buffer == NULL) || (frame_size == NULL))
+    {
+        status = SPTF_STATUS_NULL_POINTER;
+    }
+    else
+    {
+        status = sptf_check_stream_desc(desc);
+    }
+
+    if (status == SPTF_STATUS_OK)
+    {
+        const uint32_t size = sptf_descriptor_frame_size(desc->channel_count, header->crc_enabled);
+
+        if (size > buffer_size)
+        {
+            status = SPTF_STATUS_BUFFER_TOO_SMALL;
+        }
+        else
+        {
+            uint32_t channel;
+
+            put_header(buffer, header, SPTF_FRAME_DESCRIPTOR, size);
+            put_f64(buffer, OFFSET_SAMPLE_RATE, desc->sample_rate_hz);
+            put_u16(buffer, OFFSET_CHANNEL_COUNT, desc->channel_count);
+            put_u8(buffer, OFFSET_SAMPLE_TYPE, desc->sample_type);
+            put_u8(buffer, OFFSET_LAYOUT, desc->layout);
+            put_u32(buffer, OFFSET_DESC_RESERVED, 0U);
+            put_text(buffer, OFFSET_STREAM_NAME, SPTF_NAME_FIELD_SIZE, desc->name);
+
+            for (channel = 0U; channel < (uint32_t)desc->channel_count; channel++)
             {
-                const size_t src = (((size_t)c * (size_t)block_count) + (size_t)offset) * (size_t)size;
-                copy_samples(&dst[(size_t)c * run], &block[src], run, elem);
+                const sptf_channel_t *info = &desc->channels[channel];
+                const uint32_t record = OFFSET_CHANNEL_RECORDS + (channel * SPTF_CHANNEL_RECORD_SIZE);
+
+                put_text(buffer, record + CHANNEL_FIELD_NAME, SPTF_NAME_FIELD_SIZE, info->name);
+                put_text(buffer, record + CHANNEL_FIELD_UNIT, SPTF_UNIT_FIELD_SIZE, info->unit);
+                put_f64(buffer, record + CHANNEL_FIELD_SCALE, info->scale);
+                put_f64(buffer, record + CHANNEL_FIELD_OFFSET, info->offset);
+            }
+
+            if (header->crc_enabled)
+            {
+                put_crc(buffer, size);
+            }
+
+            *frame_size = size;
+        }
+    }
+
+    return status;
+}
+
+sptf_status_t sptf_encode_data(const sptf_frame_header_t *header, const sptf_stream_desc_t *desc,
+                               const sptf_data_slice_t *slice, uint8_t *buffer, uint32_t buffer_size,
+                               uint32_t *frame_size)
+{
+    sptf_status_t status = SPTF_STATUS_OK;
+    uint32_t bytes_per_instant = 0U;
+
+    if ((header == NULL) || (desc == NULL) || (slice == NULL) || (buffer == NULL) || (frame_size == NULL))
+    {
+        status = SPTF_STATUS_NULL_POINTER;
+    }
+    else
+    {
+        status = check_data_desc(desc);
+    }
+
+    if (status == SPTF_STATUS_OK)
+    {
+        bytes_per_instant = sptf_bytes_per_instant(desc);
+        status = check_slice(slice, bytes_per_instant);
+    }
+
+    if (status == SPTF_STATUS_OK)
+    {
+        const uint32_t size = sptf_data_frame_size(bytes_per_instant, slice->count, header->crc_enabled);
+
+        if ((size == 0U) || (size > buffer_size))
+        {
+            status = SPTF_STATUS_BUFFER_TOO_SMALL;
+        }
+        else
+        {
+            put_header(buffer, header, SPTF_FRAME_DATA, size);
+            put_u64(buffer, OFFSET_FIRST_SAMPLE, slice->first_sample);
+            put_u32(buffer, OFFSET_SAMPLE_COUNT, slice->count);
+            put_u32(buffer, OFFSET_DATA_RESERVED, 0U);
+            put_samples(buffer, desc, slice, bytes_per_instant);
+
+            if (header->crc_enabled)
+            {
+                put_crc(buffer, size);
+            }
+
+            *frame_size = size;
+        }
+    }
+
+    return status;
+}
+
+sptf_status_t sptf_encode_marker(const sptf_frame_header_t *header, uint64_t sample_index, uint32_t code,
+                                 const char *text, uint8_t *buffer, uint32_t buffer_size, uint32_t *frame_size)
+{
+    sptf_status_t status = SPTF_STATUS_OK;
+
+    if ((header == NULL) || (text == NULL) || (buffer == NULL) || (frame_size == NULL))
+    {
+        status = SPTF_STATUS_NULL_POINTER;
+    }
+    else
+    {
+        const uint32_t overhead = (SPTF_HEADER_SIZE + SPTF_MARKER_BODY_SIZE) + crc_size(header->crc_enabled);
+
+        if (buffer_size < overhead)
+        {
+            status = SPTF_STATUS_BUFFER_TOO_SMALL;
+        }
+        else
+        {
+            uint32_t room = buffer_size - overhead;
+            uint32_t text_bytes;
+
+            if (room > SPTF_MAX_MARKER_TEXT)
+            {
+                room = SPTF_MAX_MARKER_TEXT;
+            }
+
+            text_bytes = text_length(text, room);
+
+            if (text_bytes > room)
+            {
+                status = SPTF_STATUS_TEXT_TOO_LONG;
+            }
+            else
+            {
+                const uint32_t size = overhead + text_bytes;
+                uint32_t position;
+
+                put_header(buffer, header, SPTF_FRAME_MARKER, size);
+                put_u64(buffer, OFFSET_SAMPLE_INDEX, sample_index);
+                put_u32(buffer, OFFSET_MARKER_CODE, code);
+                put_u16(buffer, OFFSET_TEXT_LENGTH, (uint16_t)text_bytes);
+                put_u16(buffer, OFFSET_MARKER_RESERVED, 0U);
+
+                for (position = 0U; position < text_bytes; position++)
+                {
+                    buffer[OFFSET_TEXT + position] = (uint8_t)text[position];
+                }
+
+                if (header->crc_enabled)
+                {
+                    put_crc(buffer, size);
+                }
+
+                *frame_size = size;
             }
         }
     }
-    finish_crc(buf, (size_t)len, info->crc);
-    *out_len = (size_t)len;
-    return SPTF_OK;
-}
 
-sptf_status_t sptf_encode_data(uint8_t *buf, size_t cap, const sptf_frame_info_t *info,
-                               const sptf_stream_config_t *cfg, uint64_t first_sample,
-                               const void *samples, uint32_t count, size_t *out_len)
-{
-    return sptf_priv_encode_data(buf, cap, info, cfg, first_sample, (const uint8_t *)samples, count, 0u, count,
-                                 out_len);
-}
-
-sptf_status_t sptf_encode_marker(uint8_t *buf, size_t cap, const sptf_frame_info_t *info,
-                                 uint64_t sample_index, uint32_t code, const char *text, size_t *out_len)
-{
-    size_t n;
-    size_t len;
-    if ((buf == NULL) || (info == NULL) || (out_len == NULL))
-    {
-        return SPTF_ERR_ARG;
-    }
-    if (!crc_supported(info->crc))
-    {
-        return SPTF_ERR_CONFIG;
-    }
-    n = sptf_priv_strnlen(text, 0x10000u);
-    if (n > 0xFFFFu)
-    {
-        return SPTF_ERR_SIZE;
-    }
-    len = SPTF_HEADER_SIZE + SPTF_MARKER_BODY_SIZE + n + (info->crc ? SPTF_CRC_SIZE : 0u);
-    if (len > cap)
-    {
-        return SPTF_ERR_SIZE;
-    }
-    put_header(buf, SPTF_FRAME_MARKER, info, info->stream_id, len);
-    put_u64(&buf[32], sample_index);
-    put_u32(&buf[40], code);
-    put_u16(&buf[44], (uint16_t)n);
-    put_u16(&buf[46], 0u);
-    if (n > 0u)
-    {
-        (void)memcpy(&buf[SPTF_HEADER_SIZE + SPTF_MARKER_BODY_SIZE], (const uint8_t *)text, n);
-    }
-    finish_crc(buf, len, info->crc);
-    *out_len = len;
-    return SPTF_OK;
+    return status;
 }

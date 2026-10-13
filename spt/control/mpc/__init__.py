@@ -4,7 +4,8 @@
 - :mod:`spt.control.mpc.mpc` — MATLAB ``mpc`` nesnesi anlamlarıyla doğrusal MPC: varsayılan bozucu / gürültü modelleri,
   Kalman kestiricisi, ``mpcmove``, ``sim``, eşdeğer doğrusal kontrolcü (``ss``), ``cloffset``.
 
-Tasarım notları (QP formülasyonu adım adım, ölçekleme, ECR, kestirici, C'ye taşıma): ``spt/control/mpc/TASARIM.md``.
+Tasarım notları (QP formülasyonu adım adım, ölçekleme, ECR, kestirici, C'ye taşıma):
+``docs/SPT-TSR-001_MPC_Tasarim_Notlari.docx``.
 """
 from spt.control.mpc.mpc import (MPC, MPCData, MPCLinearController, MPCPlant, MPCState, SimResult, Struct, cloffset,
                                  getEstimator, mpc, mpcmove, mpcsimopt, mpcstate, setmpcsignals, setoutdist, sim, ss)

@@ -263,9 +263,9 @@ def test_csv_import_arx_oe_table_and_compare_match_api(app, tab, tmp_path):
     # tahmin / doğrulama sınırı: doğrulama verisinin ilk örneği
     assert tab._split_time() == pytest.approx(val.tstart)
     # hiçbir renk iki seride yok (veri kanalları, modeller, spa)
-    from spt.gui.control.sysid_tab import SPA_COLOR
+    from spt.gui.control.sysid_tab import spa_color
 
-    colors = [tr.color for tr in tab._data_curves] + [e.color for e in tab.entries] + [SPA_COLOR]
+    colors = [tr.color for tr in tab._data_curves] + [e.color for e in tab.entries] + [spa_color()]
     assert len(colors) == len(set(colors))
 
 
@@ -600,11 +600,17 @@ def test_tab_end_to_end_matches_matlab(app, tab, tmp_path):
         np.testing.assert_allclose(tr.item.yData, yh, rtol=0, atol=max(rtol, 1e-7) * np.max(np.abs(yh)))
 
 
-def test_palette_measured_distinct():
-    """Modül belgesindeki ölçüm: 16 rengin her çifti OKLab ΔE ≥ 10 (normal), ≥ 6.4 (protan / deutan)."""
-    from spt.gui.control.sysid_tab import CHANNEL_COLORS, MODEL_COLORS, SPA_COLOR
+@pytest.mark.parametrize("name, surface_hex, normal, colorblind, min_contrast", [
+    ("dark", "#121110", 10.0, 6.4, 4.9),
+    ("light", "#fffdfa", 11.5, 7.4, 3.09),
+])
+def test_palette_measured_distinct(name, surface_hex, normal, colorblind, min_contrast, monkeypatch):
+    """Modül belgesindeki ölçüm (tema başına): 16 rengin her çifti OKLab ΔE ≥ normal / renk körlüğü eşiği."""
+    from spt.gui import theme
+    from spt.gui.control.sysid_tab import CHANNEL_COLORS, MODEL_COLORS, spa_color
 
-    colors = list(MODEL_COLORS) + list(CHANNEL_COLORS) + [SPA_COLOR]
+    monkeypatch.setattr(theme, "_active", theme.THEMES[name])
+    colors = list(MODEL_COLORS) + list(CHANNEL_COLORS) + [spa_color()]
     assert len(set(colors)) == 16
     prot = np.array([[0.152286, 1.052583, -0.204868], [0.114503, 0.786281, 0.099216],
                      [-0.003882, -0.048116, 1.051998]])
@@ -626,9 +632,10 @@ def test_palette_measured_distinct():
     def lum(h):
         return float(lin(h) @ [0.2126, 0.7152, 0.0722])
 
-    for M, limit in ((None, 10.0), (prot, 6.4), (deut, 6.4)):
+    for M, limit in ((None, normal), (prot, colorblind), (deut, colorblind)):
         pts = [lab(c, M) for c in colors]
         dmin = min(np.linalg.norm(a - b) for i, a in enumerate(pts) for b in pts[i + 1:])
         assert dmin >= limit - 0.05
-    surface = lum("#121110")
-    assert min((lum(c) + 0.05) / (surface + 0.05) for c in colors) >= 4.9
+    surface = lum(surface_hex)
+    ratios = [(max(lum(c), surface) + 0.05) / (min(lum(c), surface) + 0.05) for c in colors]
+    assert min(ratios) >= min_contrast

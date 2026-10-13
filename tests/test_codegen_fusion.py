@@ -110,15 +110,15 @@ def test_generated_files_parameters_and_prefix():
 
 
 def test_mcu_profiles_and_cycle_tables():
-    for key in ("cortex-m0plus", "cortex-m3", "cortex-m4f", "cortex-m7", "cortex-m33f", "esp32", "rv32imac",
-                "rv32imfc"):
-        p = MCU_PROFILES[key]
+    assert set(MCU_PROFILES) == {"cortex-m0plus", "cortex-m3", "cortex-m4f", "cortex-m7", "cortex-m33f"}
+    for p in MCU_PROFILES.values():
         for op in OPS:
             assert p.cycles[cycle_key(op, "float")] > 0 and p.cycles[cycle_key(op, "double")] > 0
         assert p.cycles["mem"] >= 1 and p.cycles["call"] >= 1
         if p.fpu == "sp":   # tek hassasiyet FPU'da double yazılım kayan noktadır
             assert p.cycles["dadd"] > 10 * p.cycles["fadd"] and p.cycles["ddiv"] > 5 * p.cycles["fdiv"]
-        assert (p.gcc_flags is None) == (p.arch != "arm")
+        assert p.gcc_flags and p.clang_flags
+        assert all(part.strip().startswith("STM32") for part in p.examples.split(","))   # yalnız STM32 aileleri
     assert MCU_PROFILES["cortex-m7"].cycles["dadd"] <= 2
     assert MCU_PROFILES["cortex-m0plus"].cycles["fmul"] > MCU_PROFILES["cortex-m3"].cycles["fmul"] > 10
     assert set(COMPILERS) == {"gcc", "clang", "iar"}
@@ -251,7 +251,7 @@ def test_cross_compile_warning_free_all_cortex_m():
 @needs_cxx
 @pytest.mark.parametrize("real", ["0", "1"])
 def test_generated_code_is_valid_cpp(real):
-    """C++ projelerinden (Arduino, ESP-IDF …) de derlenebilir: -x c++ -Wall -Wextra -pedantic -Werror temiz."""
+    """C++ projelerinden (STM32CubeIDE C++ …) de derlenebilir: -x c++ -Wall -Wextra -pedantic -Werror temiz."""
     folder = tc.WORK_ROOT / "cxx_check" / real
     shutil.rmtree(folder, ignore_errors=True)
     fc.write_files(fc.generate(OPTS), folder)
@@ -294,21 +294,14 @@ def test_footprint_measured_on_cortex_m4f():
             assert d["frame_update"] == d["su_update"], d
 
 
-@needs_cross
-def test_footprint_estimates_for_profiles_without_compiler():
-    opts = fc.CodegenOptions(("mahony", "ekf"), mcu="esp32")
-    rows = fc.footprint(opts, ("gcc", "clang", "iar"))
-    assert {r.compiler for r in rows} == {"gcc", "clang"}               # IAR'ın Xtensa derleyicisi yok
-    assert all(not r.measured and "tahmin" in r.method for r in rows)
-    base = {(r.algorithm, r.compiler): r for r in
-            fc.footprint(fc.CodegenOptions(("mahony", "ekf"), mcu="cortex-m4f"), ("gcc", "clang"))}
-    for r in rows:
-        b = base[(r.algorithm, r.compiler)]
-        if b.measured:
-            assert r.flash_code == round(b.flash_code * MCU_PROFILES["esp32"].density)
-            assert r.ram_state == b.ram_state
-    rv = fc.footprint(fc.CodegenOptions(("mahony",), mcu="rv32imfc"), ("iar",))
-    assert len(rv) == 1 and not rv[0].measured and "IAR" in rv[0].method
+@pytest.mark.parametrize("key", ["esp32", "rv32imac", "rv32imfc"])
+def test_removed_non_stm32_profiles_are_rejected(key):
+    """Yalnız STM32 (Cortex-M) desteklenir: eski ESP32 / RISC-V profilleri açık bir hatayla reddedilir."""
+    opts = fc.CodegenOptions(("mahony",), mcu=key)
+    with pytest.raises(ValueError, match="Bilinmeyen MCU profili"):
+        fc.generate(opts)
+    with pytest.raises(ValueError, match="Bilinmeyen MCU profili"):
+        fc.footprint(opts, ("gcc",))
 
 
 def test_footprint_degrades_without_compilers(monkeypatch):

@@ -370,10 +370,10 @@ class BodeEditor(cp.BodePlot):
             pc.curve([wcp, wcp], [base, p_at], c, f"{s.name} · faz payı",
                      lambda *_a, pm=pm, wcp=wcp: [f"faz payı = {pm:.4f}°", f"kazanç geçişi ω = {wcp:.6g} rad/s"],
                      style=Qt.PenStyle.DashLine, width=1.5, bounds=False)
-            pc.guide_line(base, 0, cp.GUIDE, Qt.PenStyle.DotLine)
+            pc.guide_line(base, 0, cp.guide(), Qt.PenStyle.DotLine)
             mc.points([wcp], [0.0], c, f"{s.name} · 0 dB geçişi",
                       lambda *_a, wcp=wcp: [f"kazanç geçişi ω = {wcp:.6g} rad/s"], symbol="o", size=8)
-        mc.guide_line(0.0, 0, cp.GUIDE, Qt.PenStyle.DotLine)
+        mc.guide_line(0.0, 0, cp.guide(), Qt.PenStyle.DotLine)
 
     def _curve_db_at(self, xv: float) -> float | None:
         data = self.data(self._key) if self._key else None
@@ -576,7 +576,7 @@ class CurvesCard(cp.PlotCard):
                 self.curve(t, y, color, name, describe, None, style)
         for value, angle, text in guides:
             if np.isfinite(value):
-                self.guide_line(float(value), angle, cp.GUIDE, Qt.PenStyle.DashLine, text)
+                self.guide_line(float(value), angle, cp.guide(), Qt.PenStyle.DashLine, text)
         self.note.setText(note)
         self.note.setVisible(bool(note))
         self._finish()

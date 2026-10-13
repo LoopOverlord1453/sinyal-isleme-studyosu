@@ -15,7 +15,7 @@ modelinin ve mühendislik ölçümlerinin teoriyle ve bağımsız hesaplarla tut
   uzun ifade), hata konumunun doğruluğu; nokta eğrisinin ara değerleme kipleri ve periyodik süreklilik; harmonik
   tablosu ↔ formül eşdeğerliği; Türkçe CSV (`;`, ondalık virgül, cp1254).
 - **DAC modeli:** LSB, kod aralığı, yuvarlama, kırpma sayımı, sol / sağ hizalama, ikiye tümleyen, kelime genişliği;
-  hazır ayarların (STM32, ESP32, Arduino, I2S) gerçek donanım belgeleriyle tutarlılığı.
+  hazır ayarların (STM32 dahili DAC, MCP4725 / MCP4921, I2S) gerçek donanım belgeleriyle tutarlılığı.
 - **Tablolar:** tam periyotta seçilen N'in gerçekten en küçük frekans hatasını verdiği (kaba kuvvetle); DDS ayar
   kelimesi, frekans çözünürlüğü, ara değerleme; çok bileşenli sinyallerde tüm bileşenlerin tam periyotta olması.
 - **Ölçümler:** THD / SFDR / SNR / SINAD / ENOB'u bağımsız FFT ile yeniden hesapla (nicemleme teorisi 6.02·b + 1.76);

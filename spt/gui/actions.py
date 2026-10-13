@@ -61,12 +61,22 @@ SPECS: tuple[ActionSpec, ...] = (
                "Model, sistem tanımlama, kararlılık analizi, PID / LQR / MPC tasarımı ve blok diyagram benzetimi "
                "(MATLAB Control System / System Identification / MPC araç kutuları ve Simulink karşılığı)",
                checkable=True),
+    ActionSpec("view.connection", "Bağlantı", "ph.share-network", "Ctrl+7",
+               "Akış istatistikleri (paket hızı, kayıp, paket arası süre / titreşim, etkin örnekleme hızı), PC ağ "
+               "arayüzü (bağlantı hızı, MTU) ve UDP link testi (pasif ve yankı / RTT)", checkable=True),
     ActionSpec("view.command_palette", "Komut Paleti", "ph.magnifying-glass", "Ctrl+K"),
     ActionSpec("view.reset_layout", "Yerleşimi Sıfırla", "ph.layout"),
     ActionSpec("view.fullscreen", "Tam Ekran", "ph.corners-out", "F11", checkable=True),
+    ActionSpec("view.theme_light", "Açık Tema", "ph.sun",
+               tip="Açık temaya geç (uygulama yeniden başlatılınca uygulanır)", checkable=True),
+    ActionSpec("view.theme_terraflux", "TerraFlux Açık Tema", "ph.sun-horizon",
+               tip="Sıcak kâğıt tonlu eski açık temaya geç (uygulama yeniden başlatılınca uygulanır)", checkable=True),
+    ActionSpec("view.theme_dark", "Koyu Tema", "ph.moon",
+               tip="Koyu temaya geç (uygulama yeniden başlatılınca uygulanır)", checkable=True),
     # Bağlantı ve akış
-    ActionSpec("conn.listen", "UDP Dinlemeyi Başlat", "ph.broadcast", "F5",
-               "UDP portunu dinlemeye başla / durdur", checkable=True, phase=1),
+    ActionSpec("conn.listen", "Dinlemeyi Başlat", "ph.broadcast", "F5",
+               "Kaynaklar panelinde seçili bağlantıyı (Ethernet / UDP, USB ya da CAN-bus) dinlemeye başla / durdur",
+               checkable=True, phase=1),
     ActionSpec("conn.settings", "Bağlantı Ayarları…", "ph.sliders-horizontal", phase=1),
     ActionSpec("stream.run", "Çalıştır / Durdur", "ph.play", "F7",
                "Canlı görüntü güncellemesini başlat / durdur", checkable=True, phase=1),
@@ -110,6 +120,13 @@ SPECS: tuple[ActionSpec, ...] = (
     # Araçlar
     ActionSpec("tools.generator", "Sinyal Üreteci…", "mdi6.sine-wave"),
     ActionSpec("tools.simulator", "Cihaz Simülatörü…", "ph.cpu", phase=1),
+    ActionSpec("tools.signal_sender", "Sinyal Test Uygulaması…", "ph.paper-plane-tilt", "Ctrl+Shift+T",
+               "Ayrı pencerede çok akışlı gerçek zamanlı test göndericisi: senaryo seç (şebeke, IMU, ses, EKG, "
+               "titreşim, test tonları, I/Q…), akış / kanal / sinyal düzenle, ağ bozulmaları ekle; bu arayüzün "
+               "dinlediği porta gönderir"),
+    ActionSpec("tools.link_test", "UDP Link Testi", "ph.gauge",
+               tip="Bağlantı hızı, paket arası süre dağılımı, kayıp, gerçek zaman uygunluğu (pasif) ve yankı ile "
+                   "gidiş-dönüş süresi (RTT)"),
     ActionSpec("tools.packet_inspector", "Paket İnceleyici", "ph.brackets-curly", phase=2),
     # Yardım
     ActionSpec("help.docs", "Kullanım Kılavuzu", "ph.book-open", "F1", phase=5),

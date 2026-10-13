@@ -9,9 +9,10 @@ güncellenir. Referans (gerçek) değer varsa her algoritmanın hatası işlenen
 Görünüm:
   - Her çıktı (ör. roll / pitch / yaw ya da irtifa / dikey hız) kendi kartında, kendi başlığı ve birimiyle; kartlar
     ortak zaman ekseniyle hizalıdır ve küçük ekranda kaydırılır (ezilmez).
-  - Renkler ölçülerek seçildi: her algoritma ayrı bir renk ailesinden (kırmızı, sarı, yeşil, camgöbeği, mavi,
-    eflatun); referans beyaz kesikli, ham (füzyonsuz) gri — normal görüşte her çift ΔE ≥ 19, renk körlüğünde
-    algoritmalar arası ΔE ≥ 10 (OKLab). Aynı ekranda hiçbir renk iki seride kullanılmaz.
+  - Renkler her tema için ölçülerek seçildi: her algoritma ayrı bir renk ailesinden (kırmızı, sarı, yeşil,
+    camgöbeği, mavi, eflatun; açık temada sarı yerine turuncu); referans metin renginde kesikli (koyu temada beyaz,
+    açık temada siyah), ham (füzyonsuz) gri — iki temada da normal görüşte her çift ΔE ≥ 19, renk körlüğünde
+    algoritmalar arası ΔE ≥ 9.8 (OKLab). Aynı ekranda hiçbir renk iki seride kullanılmaz.
   - Yönelimde 3B görünüm (kuaterniyon), yapay ufuk ve pusula (Euler); 2B konumda x–y yörüngesi.
 """
 from __future__ import annotations
@@ -42,7 +43,7 @@ from PyQt6.QtWidgets import (
 from spt.core.fusion_engine import FusionEngine
 from spt.dsp import fusion_generic as fg
 from spt.gui.icons import line_swatch
-from spt.gui.theme import ThemeManager
+from spt.gui.theme import ThemedColors, ThemedMap, ThemeManager, themed
 from spt.gui.widgets.common import Card, CollapsibleSection, FlowLayout, PageHeader, chip, combo, hbox, icon_button, label
 from spt.gui.widgets.inspector import DataTips, PlotAnalysis, Trace
 from spt.gui.widgets.orientation3d import Body, Orientation3D, quat_from_euler_deg
@@ -51,12 +52,23 @@ from spt.gui.widgets.plot import Crosshair, make_plot, pen
 log = logging.getLogger("spt.gui")
 
 # Ölçülerek seçilen palet (bkz. modül belgesi): renk algoritmaya bağlıdır, sıraya değil
-ALGO_COLORS = {"mahony": "#f54748", "madgwick": "#488bfb", "kalman": "#dfa11a", "kf": "#dfa11a",
-               "ekf": "#45f27f", "ukf": "#e03fc7", "pf": "#4cd1ee", "complementary": "#f54748",
-               "dead_reckoning": "#f54748", "weighted_mean": "#488bfb"}
-PALETTE = ("#f54748", "#dfa11a", "#45f27f", "#4cd1ee", "#488bfb", "#e03fc7")
-REF_COLOR = "#f5f5f5"
-RAW_COLOR = "#8a837c"
+PALETTE = ThemedColors(
+    dark=("#f54748", "#dfa11a", "#45f27f", "#4cd1ee", "#488bfb", "#e03fc7"),
+    light=("#b31319", "#ea6a09", "#17a664", "#5391cc", "#1a4eda", "#af1da0"),
+)
+_ALGO_SLOTS = {"mahony": 0, "madgwick": 4, "kalman": 1, "kf": 1, "ekf": 2, "ukf": 5, "pf": 3, "complementary": 0,
+               "dead_reckoning": 0, "weighted_mean": 4}
+ALGO_COLORS = ThemedMap(lambda: {key: PALETTE[slot] for key, slot in _ALGO_SLOTS.items()})
+
+
+def ref_color() -> str:
+    """Referans (gerçek) değer: metin rengine yakın nötr, kesikli çizilir."""
+    return themed("#f5f5f5", "#1d1a16")
+
+
+def raw_color() -> str:
+    """Ham (füzyonsuz) kestirim: kılavuz grisi."""
+    return themed("#8a837c", "#7c7670")
 ALGO_WIDTH = 2.0
 WINDOWS = [("10 s", 10.0), ("30 s", 30.0), ("60 s", 60.0), ("Tümü", None)]
 PUMP_MS = 60
@@ -552,10 +564,10 @@ class FusionView(QWidget):
             plot.scene().sigMouseClicked.connect(lambda ev: self._return_to_follow() if ev.double() else None)
             if i:
                 plot.setXLink(self._plots[0])
-            ref_pen = pg.mkPen(REF_COLOR, width=1.6, style=Qt.PenStyle.DashLine)
+            ref_pen = pg.mkPen(ref_color(), width=1.6, style=Qt.PenStyle.DashLine)
             ref_pen.setCosmetic(True)
             ref = plot.plot(pen=ref_pen, connect="finite")
-            raw = plot.plot(pen=pen(RAW_COLOR, 1), connect="finite")
+            raw = plot.plot(pen=pen(raw_color(), 1), connect="finite")
             ref.setZValue(5)
             raw.setZValue(-1)
             self._curves[("ref", i)] = ref
@@ -580,8 +592,8 @@ class FusionView(QWidget):
                 _dispose(item.widget())
         items = [(k, self.scenario.algorithms[k].name.split(" (")[0], self.algo_color(k), Qt.PenStyle.SolidLine)
                  for k, box in self._enabled.items() if box.isChecked()]
-        items += [("ref", "referans", REF_COLOR, Qt.PenStyle.DashLine),
-                  ("raw", "ham (füzyonsuz)", RAW_COLOR, Qt.PenStyle.SolidLine)]
+        items += [("ref", "referans", ref_color(), Qt.PenStyle.DashLine),
+                  ("raw", "ham (füzyonsuz)", raw_color(), Qt.PenStyle.SolidLine)]
         for key, name, color, style in items:
             btn = QToolButton()
             btn.setObjectName("LegendToggle")
@@ -975,7 +987,7 @@ class FusionView(QWidget):
             sparse = sparse_ok and finite.any() and finite.mean() < 0.5
             if sparse:  # seyrek sensör (5 Hz GNSS, 25 Hz baro): noktalar
                 curve.setData(t[finite], y[finite], pen=None, symbol="o", symbolSize=4,
-                              symbolBrush=pg.mkBrush(RAW_COLOR), symbolPen=None)
+                              symbolBrush=pg.mkBrush(raw_color()), symbolPen=None)
             else:
                 curve.setData(t[:len(y)], y, connect="finite")
 
@@ -1041,8 +1053,8 @@ class FusionView(QWidget):
         series = [(k, self.algo_color(k), e.read(k, start, end)[::step]) for k in e.algos]
         ref = e.reference(start, end)
         if ref is not None:
-            series.append(("ref", REF_COLOR, ref[::step]))
-        series.append(("raw", RAW_COLOR, e.raw_estimate(start, end)[::step]))
+            series.append(("ref", ref_color(), ref[::step]))
+        series.append(("raw", raw_color(), e.raw_estimate(start, end)[::step]))
         for key, color, values in series:
             curve = self._traj_curves.get(key)
             if curve is None:
@@ -1068,7 +1080,7 @@ class FusionView(QWidget):
             if not curve.isVisible():
                 continue
             name = {"ref": "Referans", "raw": "GNSS (ham)"}.get(key) or self.scenario.algorithms[key].name
-            color = {"ref": REF_COLOR, "raw": RAW_COLOR}.get(key) or self.algo_color(key)
+            color = {"ref": ref_color(), "raw": raw_color()}.get(key) or self.algo_color(key)
             out.append(Trace(curve, name, color, lambda x, y: [f"x = {x:.3f} m", f"y = {y:.3f} m"]))
         return out
 
@@ -1157,7 +1169,7 @@ class FusionView(QWidget):
         ref = e.reference(n, n + 1)
         if ref is not None and self.ghost_ref.isChecked() and np.isfinite(ref).all():
             r = np.degrees(ref[0])
-            bodies.append(Body("ref", "Referans", REF_COLOR, quat_from_euler_deg(*r), False))
+            bodies.append(Body("ref", "Referans", ref_color(), quat_from_euler_deg(*r), False))
         main = None
         for key in e.algos:
             values = e.read(key, n, n + 1)
@@ -1271,7 +1283,7 @@ class FusionView(QWidget):
             if curve is None or not curve.isVisible() or curve.xData is None or not len(curve.xData):
                 continue
             name = {"ref": "Referans", "raw": "Ham (füzyonsuz)"}.get(key) or self.scenario.algorithms[key].name
-            color = {"ref": REF_COLOR, "raw": RAW_COLOR}.get(key) or self.algo_color(key)
+            color = {"ref": ref_color(), "raw": raw_color()}.get(key) or self.algo_color(key)
 
             def describe(x, y, h=h):
                 n = int(round((x - h.t0) * h.fs))

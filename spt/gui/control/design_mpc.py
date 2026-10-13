@@ -30,11 +30,11 @@ from spt.gui.control import control_plots as cp
 from spt.gui.control import design_core as dc
 from spt.gui.control.design_widgets import CurvesCard, mono_label, scroll_area, spin_box
 from spt.gui.control.workspace import SOURCE_DESIGN
-from spt.gui.theme import ThemeManager
+from spt.gui.theme import ThemedMap, ThemeManager
 from spt.gui.widgets.common import Card, CollapsibleSection, combo, label
 
 log = logging.getLogger("spt.gui")
-COLORS = {"y": cp.PALETTE[0], "u": cp.PALETTE[3], "du": cp.PALETTE[2]}
+COLORS = ThemedMap(lambda: {"y": cp.PALETTE[0], "u": cp.PALETTE[3], "du": cp.PALETTE[2]})
 
 
 # ============================================================================ Qt'siz kurulum
@@ -349,7 +349,7 @@ class MpcPanel(QWidget):
         v.u.show(ucurves, uguides)
         v.du.show(dcurves, dguides)
         v.legend.set_series([(COLORS["y"], "çıkış y"), (COLORS["u"], "MV u"), (COLORS["du"], "Δu"),
-                             (cp.GUIDE, "referans / kısıt sınırları")])
+                             (cp.guide(), "referans / kısıt sınırları")])
         st = out["status"]
         lines = [f"Ts = {d.Ts:g} s, p = {d.p}, m = {obj.ControlHorizon}",
                  f"QP: {int(np.sum(st > 0))} adım optimal, {int(np.sum(st == 0))} yineleme sınırında, "

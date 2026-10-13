@@ -3,8 +3,8 @@
 Pencerenin solunda MCU özellikleri sorulur: çekirdek (FPU), saat frekansı, derleyici, optimizasyon, sayı tipi
 (float / double), örnekleme hızı, flash / RAM kapasitesi ve (yönelimde) manyetometre. Seçimlere göre:
   - .h / .c dosyaları ve KULLANIM.md (entegrasyon adımları) üretilir,
-  - kod boyutu derleyiciye göre ÖLÇÜLÜR (makinede arm-none-eabi-gcc / clang varsa; IAR ve araç zinciri olmayan
-    çekirdeklerde açıkça "tahmin" yazar), RAM = durum yapısının boyutu, yığın = en kötü çağrı yolu,
+  - kod boyutu derleyiciye göre ÖLÇÜLÜR (makinede arm-none-eabi-gcc / clang varsa; IAR ve makinede bulunmayan
+    derleyicilerde açıkça "tahmin" yazar), RAM = durum yapısının boyutu, yığın = en kötü çağrı yolu,
   - maliyet: adım başına işlem sayıları (C++ sayaçla ölçülür), çekirdek çevrim tablosundan çevrim / µs / CPU yükü.
 Derleme saniyeler sürebildiği için ölçüm arka plan iş parçacığında yapılır; arayüz donmaz.
 """
@@ -311,8 +311,8 @@ class FusionCodeDialog(CodeDialog):
                       "<tr><th>Algoritma</th><th>Çevrim</th><th>µs</th><th>CPU yükü</th><th>En yüksek hız (Hz)</th>"
                       "<th>Not</th></tr>" + "".join(crow) + "</table>")
         notes = ("<p><b>Notlar:</b> Kod boyutu, makinedeki araç zinciriyle gerçekten derlenerek ölçülür (GCC: "
-                 "arm-none-eabi-gcc, Clang: Arm Compiler 6 / Keil MDK ile aynı altyapı); IAR ve yerel derleyicisi "
-                 "olmayan çekirdekler <i>tahmin</i>dir. RAM = durum yapısının boyutu (malloc yok). Yığın: en kötü çağrı "
+                 "arm-none-eabi-gcc, Clang: Arm Compiler 6 / Keil MDK ile aynı altyapı); IAR ve makinede bulunmayan "
+                 "derleyiciler <i>tahmin</i>dir. RAM = durum yapısının boyutu (malloc yok). Yığın: en kötü çağrı "
                  "yolu; libm dahil değer büyük açı indirgemesi nedeniyle muhafazakârdır. Çevrim sayıları, ölçülen işlem "
                  "sayıları × çekirdeğin komut çevrim tablosu (bellek / dallanma payıyla) — gerçek donanımda DWT->CYCCNT "
                  "ile doğrulayın. CPU yükü %100'ü aşan algoritma bu hızda gerçek zamanlı çalışamaz.</p>")

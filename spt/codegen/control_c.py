@@ -27,7 +27,7 @@ lsim, Simulink PID bloğu, tf / ss lsim, reg / estim / lqgreg / lqgtrack, dlqr +
 kalman current / delayed ve My).
 
 Ayak izi (`footprint`): yerel derleyici varsa ÖLÇÜLÜR (nesne bölümleri, sizeof, newlib-nano ile bağlanmış imaj farkı,
-disassembly'den en kötü yığın); IAR / Xtensa / RISC-V ölçülmüş bir değerden TAHMİN edilir. Maliyet (`cost`): adım
+disassembly'den en kötü yığın); IAR ölçülmüş GCC değerinden TAHMİN edilir. Maliyet (`cost`): adım
 başına işlem sayıları ana makinede C++ sayaç türüyle ÖLÇÜLÜR, çevrimler MCU profil tablosundan TAHMİN edilir
 (`spt.codegen.fusion_c` ile aynı düzenek).
 """
@@ -48,7 +48,7 @@ import numpy as np
 from spt.codegen import toolchain as tc
 from spt.codegen.fusion_c import (CostRow, FootprintRow, GeneratedFile, _c_float, _count_prelude, _fmt_int,
                                   _op_weights, write_files)
-from spt.codegen.mcu import (COMPILERS, IAR_LIBM_FACTOR, IAR_SIZE_FACTOR, MCU_PROFILES, OPS, OPT_LEVELS, McuProfile,
+from spt.codegen.mcu import (COMPILERS, IAR_LIBM_FACTOR, IAR_SIZE_FACTOR, OPS, OPT_LEVELS, McuProfile,
                              profile)
 from spt.control.errors import ControlError, ControlWarning
 
@@ -2367,7 +2367,7 @@ def _measure(spec: Spec, opts: ControlCodegenOptions, prof: McuProfile, compiler
     exidx = _exidx_bytes(build.objects[f"spt_{k}.c"])
     row = {"flash_code": sz.flash - exidx, "exidx": exidx, "ram_state": syms[f"spt_sizeof_{k}"].size,
            "flash_with_libm": None, "stack": None, "stack_own": None, "stack_path": [], "stack_exact": None}
-    if gcc is not None and prof.gcc_flags is not None:
+    if gcc is not None:
         bfiles = {f"spt_{k}.h": files[f"spt_{k}.h"], "spt_fp_base.c": _harness(spec, True)}
         base = tc.link_cross(bfiles, ["spt_fp_base.c"], prof, compiler, opts.opt, defines=[real_def])
         hfiles = {f"spt_{k}.h": files[f"spt_{k}.h"], f"spt_{k}.c": files[f"spt_{k}.c"],
@@ -2405,16 +2405,13 @@ def footprint(spec: Any, opts: ControlCodegenOptions, compilers: tuple[str, ...]
     for comp in tuple(compilers or (opts.compiler,)):
         if comp not in COMPILERS:
             raise ControlError(f"Bilinmeyen derleyici: {comp!r}")
-        if comp == "iar" and prof.arch == "xtensa":
-            continue
-        base_prof = prof if prof.measurable else MCU_PROFILES[prof.estimate_base]
         src_comp = "gcc" if comp == "iar" else comp
-        d = _measure(spec, opts, base_prof, src_comp) if base_prof.measurable else None
+        d = _measure(spec, opts, prof, src_comp)
         if d is None:
             f, fl, st = _REF_FLASH[spec.kind]
-            k = _REF_CORE[prof.fpu] * _REF_OPT[opts.opt] * prof.density * (IAR_SIZE_FACTOR if comp == "iar" else 1.0)
+            k = _REF_CORE[prof.fpu] * _REF_OPT[opts.opt] * (IAR_SIZE_FACTOR if comp == "iar" else 1.0)
             rows.append(FootprintRow(title, comp, int(round(f * k)), int(round(fl * k)), state_size(spec, opts.real),
-                                     int(round(st * prof.density)), False,
+                                     st, False,
                                      f"tahmin: {COMPILERS[src_comp]} bulunamadı; kaba referanstan ölçeklendi "
                                      f"(×{k:.2f}); RAM durum = sizeof (kesin)"))
             continue
@@ -2436,25 +2433,15 @@ def footprint(spec: Any, opts: ControlCodegenOptions, compilers: tuple[str, ...]
             return None if v is None else int(round(v * kf))
 
         if comp == "iar":
-            kf = IAR_SIZE_FACTOR * prof.density
-            rows.append(FootprintRow(title, comp, sc(d["flash_code"], kf), sc(d["flash_with_libm"],
-                                                                              IAR_LIBM_FACTOR * prof.density),
-                                     d["ram_state"], sc(d["stack"], prof.density), False,
-                                     f"tahmin: IAR yok — {label} {opts.opt} ({base_prof.name}) ölçümü × "
-                                     f"{IAR_SIZE_FACTOR}; RAM durum = sizeof (kesin)",
-                                     sc(d["stack_own"], prof.density)))
-        elif prof.measurable:
+            rows.append(FootprintRow(title, comp, sc(d["flash_code"], IAR_SIZE_FACTOR),
+                                     sc(d["flash_with_libm"], IAR_LIBM_FACTOR), d["ram_state"], d["stack"], False,
+                                     f"tahmin: IAR yok — {label} {opts.opt} ({prof.name}) ölçümü × "
+                                     f"{IAR_SIZE_FACTOR}; RAM durum = sizeof (kesin)", d["stack_own"]))
+        else:
             rows.append(FootprintRow(title, comp, d["flash_code"], d["flash_with_libm"], d["ram_state"], d["stack"],
                                      True, f"{label} {opts.opt}, {prof.name}, {opts.real}: ölçüldü (nesne "
                                      f".text+.rodata+.data; kütüphane dahil: newlib-nano ile bağlanmış imaj − boş "
                                      f"temel; RAM: sizeof){stack_note}", d["stack_own"]))
-        else:
-            kf = prof.density
-            rows.append(FootprintRow(title, comp, sc(d["flash_code"], kf), sc(d["flash_with_libm"], kf),
-                                     d["ram_state"], sc(d["stack"], kf), False,
-                                     f"tahmin: {prof.arch} derleyicisi yok — {label} {opts.opt} ({base_prof.name}) "
-                                     f"ölçümü × {kf} kod yoğunluğu; RAM durum = sizeof (kesin)",
-                                     sc(d["stack_own"], kf)))
     return rows
 
 
@@ -2661,7 +2648,7 @@ def usage_markdown(spec: Any, opts: ControlCodegenOptions, footprint_rows: list[
     fpu = {"none": "FPU yok: tüm kayan nokta yazılımda (float bile onlarca çevrim)",
            "sp": "tek hassasiyet FPU: `float` önerilir; `double` yazılım kayan noktadır",
            "dp": "çift hassasiyet FPU: `double` de donanımda (yine de `float` daha hızlı ve küçük)"}[prof.fpu]
-    flags = " ".join(prof.gcc_flags) if prof.gcc_flags else "(çekirdek bayrakları için üreticinin SDK'sına bakın)"
+    flags = " ".join(prof.gcc_flags)
     fp_md = _fp_table(opts, footprint_rows) if footprint_rows else \
         "_Bu dosya ölçümsüz üretildi; ayak izi tablosu için ölçümle yeniden üretin._"
     cost_md = _cost_table(opts, fs, cost_rows) if cost_rows else \

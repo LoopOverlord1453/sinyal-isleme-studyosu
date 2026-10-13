@@ -12,6 +12,7 @@ import select
 import socket
 import time
 import traceback
+from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -57,12 +58,21 @@ def _open_socket(cfg: ReceiverConfig, emit) -> socket.socket | None:
     return sock
 
 
+def rx_clock() -> tuple[int, Callable[[], int]]:
+    """Alım saati: duvar saatine bir kez eşlenmiş yüksek çözünürlüklü monoton sayaç (ns). `time.time_ns` Python
+    3.12 / Windows'ta ≈ 1 ms adımlıdır (GetSystemTimeAsFileTime); paket arası süre ölçümü µs çözünürlük ister.
+    Dönüş: (taban, perf_counter_ns) — zaman = taban + perf_counter_ns()."""
+    perf = time.perf_counter_ns
+    return time.time_ns() - perf(), perf
+
+
 def _serve(cfg: ReceiverConfig, commands, emit) -> None:
     sock = _open_socket(cfg, emit)
     if sock is None:
         return
     actual_buffer = sock.getsockopt(socket.SOL_SOCKET, socket.SO_RCVBUF)
-    store = StreamStore(emit, time.time_ns(), cfg.ring_seconds, cfg.max_ring_mb << 20)
+    base, perf_ns = rx_clock()
+    store = StreamStore(emit, base + perf_ns(), cfg.ring_seconds, cfg.max_ring_mb << 20)
     emit(("state", "listening", f"UDP {cfg.address}:{cfg.port}"))
     emit(("log", logging.INFO, f"UDP {cfg.address}:{cfg.port} dinleniyor (soket tamponu {actual_buffer >> 20} MB)"))
 
@@ -70,12 +80,13 @@ def _serve(cfg: ReceiverConfig, commands, emit) -> None:
     mv = memoryview(buf)
     recv_into = sock.recvfrom_into
     handle = store.handle_datagram
-    time_ns = time.time_ns
     clock = time.perf_counter
     next_cmd = next_stats = clock()
     prev = (0, 0, clock())
     recorder: SptrWriter | None = None
     received = 0
+    link = {"transport": "udp", "address": f"{cfg.address}:{cfg.port}", "socket_buffer": actual_buffer,
+            "socket_buffer_requested": cfg.socket_buffer_mb << 20}
     try:
         while True:
             try:
@@ -86,7 +97,7 @@ def _serve(cfg: ReceiverConfig, commands, emit) -> None:
             except ConnectionResetError:
                 n = 0  # Windows: önceki bir ICMP hatası; alıcı için önemsiz
             if n:
-                handle(mv, n, addr[0], time_ns())
+                handle(mv, n, addr[0], base + perf_ns(), addr[1])
                 received += 1
                 if received & 255:
                     continue  # yoğun akışta saati her 256 datagramda bir kontrol et
@@ -100,7 +111,7 @@ def _serve(cfg: ReceiverConfig, commands, emit) -> None:
                 break
             if now >= next_stats:
                 next_stats = now + STATS_INTERVAL
-                prev = _send_stats(store, recorder, prev, now, emit)
+                prev = _send_stats(store, recorder, prev, now, emit, base + perf_ns(), link)
     finally:
         if recorder is not None:
             recorder.close()
@@ -140,7 +151,10 @@ def _commands(commands, store: StreamStore, recorder: SptrWriter | None, emit):
             recorder = None
 
 
-def _send_stats(store: StreamStore, recorder, prev, now: float, emit):
+def _send_stats(store: StreamStore, recorder, prev, now: float, emit, now_ns: int | None = None,
+                extra: dict | None = None):
+    """Oturum ve akış istatistikleri olayı. `extra`: oturuma eklenecek sabit bilgiler (dinlenen adres, soket
+    tamponu); `now_ns`: alım saatiyle aynı saatte şimdiki zaman (boşta süresi için)."""
     datagrams, nbytes, t_prev = prev
     dt = max(now - t_prev, 1e-6)
     session = {
@@ -152,6 +166,8 @@ def _send_stats(store: StreamStore, recorder, prev, now: float, emit):
         "frame_errors": store.frame_errors,
         "no_descriptor": store.no_descriptor,
         "recorded_bytes": recorder.bytes_written if recorder else 0,
+        "unknown_frames": store.unknown_frames,
+        **(extra or {}),
     }
-    emit(("stats", session, store.stats(time.time_ns())))
+    emit(("stats", session, store.stats(time.time_ns() if now_ns is None else now_ns)))
     return store.datagrams, store.bytes, now

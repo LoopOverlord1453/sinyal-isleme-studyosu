@@ -7,11 +7,12 @@ import qtawesome as qta
 from PyQt6.QtCore import QPointF, QRectF, Qt
 from PyQt6.QtGui import QColor, QIcon, QLinearGradient, QPainter, QPainterPath, QPen, QPixmap
 
-from spt.gui.theme import TERRAFLUX_DARK, Tokens
+from spt.gui.theme import TERRAFLUX_DARK, Tokens, primary_text, tokens
 
 
-def icon(name: str, color: str | None = None, t: Tokens = TERRAFLUX_DARK) -> QIcon:
-    """Tema renklerinde ikon. İşaretli (checked) durumda vurgu rengine döner."""
+def icon(name: str, color: str | None = None, t: Tokens | None = None) -> QIcon:
+    """Etkin temanın renklerinde ikon. İşaretli (checked) durumda vurgu rengine döner."""
+    t = t or tokens()
     return qta.icon(
         name,
         color=color or t.text_secondary,
@@ -20,6 +21,11 @@ def icon(name: str, color: str | None = None, t: Tokens = TERRAFLUX_DARK) -> QIc
         color_on=t.accent,
         color_on_active=t.accent,
     )
+
+
+def primary_icon(name: str) -> QIcon:
+    """Birincil (Primary) düğme simgesi: düğme metniyle aynı renk (bkz. theme.primary_text)."""
+    return icon(name, primary_text())
 
 
 def swatch_icon(color: str, size: int = 12) -> QIcon:
@@ -55,7 +61,8 @@ def line_swatch(color: str, style: Qt.PenStyle = Qt.PenStyle.SolidLine, width: f
 
 
 def logo_pixmap(size: int, t: Tokens = TERRAFLUX_DARK) -> QPixmap:
-    """Turuncu gradyanlı kare üzerinde sinüs dalgası."""
+    """Turuncu gradyanlı kare üzerinde beyaz sinüs dalgası. Marka işaretidir: her temada aynı (koyu temanın vurgu
+    renkleri) — görev çubuğu ve pencere ikonu temadan bağımsızdır."""
     scale = 2.0
     pix = QPixmap(int(size * scale), int(size * scale))
     pix.setDevicePixelRatio(scale)
@@ -82,7 +89,7 @@ def logo_pixmap(size: int, t: Tokens = TERRAFLUX_DARK) -> QPixmap:
             path.moveTo(QPointF(x, y))
         else:
             path.lineTo(QPointF(x, y))
-    pen = QPen(QColor(t.text), max(1.5, size * 0.08))
+    pen = QPen(QColor("#fffdfb"), max(1.5, size * 0.08))
     pen.setCapStyle(Qt.PenCapStyle.RoundCap)
     pen.setJoinStyle(Qt.PenJoinStyle.RoundJoin)
     p.setPen(pen)

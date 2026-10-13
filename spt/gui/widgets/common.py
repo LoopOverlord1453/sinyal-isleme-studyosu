@@ -1,11 +1,12 @@
 """Tema ile uyumlu, tekrar kullanılan küçük arayüz bileşenleri."""
 from __future__ import annotations
 
-from collections.abc import Iterable
+from collections.abc import Callable, Iterable
 
-from PyQt6.QtCore import QPoint, QRect, QSize, Qt
-from PyQt6.QtGui import QAction
+from PyQt6.QtCore import QPoint, QRect, QSize, Qt, pyqtSignal
+from PyQt6.QtGui import QAction, QColor, QIcon
 from PyQt6.QtWidgets import (
+    QColorDialog,
     QComboBox,
     QDockWidget,
     QFormLayout,
@@ -20,8 +21,8 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
-from spt.gui.icons import icon
-from spt.gui.theme import TERRAFLUX_DARK
+from spt.gui.icons import icon, line_swatch
+from spt.gui.theme import tokens
 
 
 def label(text: str, object_name: str | None = None) -> QLabel:
@@ -41,9 +42,163 @@ def demo_chip() -> QLabel:
     return w
 
 
-def legend_chip(color: str, name: str) -> QLabel:
-    """Seri lejantı: renk çizgisi + metin rengiyle ad (kimlik yalnızca renge bağlı kalmaz)."""
-    return label(f'<span style="color:{color}">▬</span>&nbsp;{name}', "Readout")
+class LegendToggle(QToolButton):
+    """Tıklanabilir lejant öğesi: renk çizgisi + metin rengiyle ad (kimlik yalnızca renge bağlı kalmaz). Tıklayınca seri
+    gizlenir (kesikli çerçeve, soluk ad ve çizgi), yeniden tıklayınca gösterilir; `toggled(bool)` yayar."""
+
+    def __init__(self, color: str, name: str, style: Qt.PenStyle = Qt.PenStyle.SolidLine, checked: bool = True):
+        super().__init__()
+        self.color = QColor(color).name()
+        self.name = name
+        self.setObjectName("LegendToggle")
+        self.setText(name)
+        faded = QColor(color)
+        faded.setAlphaF(0.3)
+        ico = QIcon()
+        ico.addPixmap(line_swatch(color, style, 3).pixmap(26, 12), QIcon.Mode.Normal, QIcon.State.On)
+        ico.addPixmap(line_swatch(faded.name(QColor.NameFormat.HexArgb), style, 3).pixmap(26, 12),
+                      QIcon.Mode.Normal, QIcon.State.Off)
+        self.setIcon(ico)
+        self.setIconSize(QSize(26, 12))
+        self.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextBesideIcon)
+        self.setCheckable(True)
+        self.setChecked(checked)
+        self.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.setToolTip(f"{name} — gizlemek / göstermek için tıklayın")
+
+
+def legend_chip(color: str, name: str, style: Qt.PenStyle = Qt.PenStyle.SolidLine,
+                checked: bool = True) -> LegendToggle:
+    """Seri lejantı öğesi (tıklanabilir). Bağlandığı grafikte seriyi gizlemek için `toggled` kullanılır; çoğu yerde
+    `LegendBar` bunu kendisi yapar."""
+    return LegendToggle(color, name, style, checked)
+
+
+class LegendBar(QWidget):
+    """Tıklanabilir lejant satırı. Kapatılan renklerdeki çizim öğeleri `plots()` grafiklerinde gizlenir (her görünümde
+    bir seri tek renk taşır); kapalı renkler yeniden çizimde de korunur (`apply` çizimden sonra çağrılır).
+
+    `wrap=True`: dar alanda satır kaydırır. `limit`: bu kadar öğeden sonrası "+N" olarak (ipucunda adlarıyla)."""
+
+    toggled = pyqtSignal(str, bool)   # renk, görünür
+    context_requested = pyqtSignal(str, str, QPoint)   # sağ tık: renk, ad, ekran konumu (ör. rengi değiştir menüsü)
+
+    def __init__(self, plots: Callable[[], list], wrap: bool = False, limit: int | None = None,
+                 parent: QWidget | None = None):
+        super().__init__(parent)
+        self._plots = plots
+        self._limit = limit
+        self._wrap = wrap
+        self._lay = FlowLayout(self, spacing=6) if wrap else QHBoxLayout(self)
+        if not wrap:
+            self._lay.setContentsMargins(0, 0, 0, 0)
+            self._lay.setSpacing(4)
+        self.hidden: set[str] = set()
+        self._dirty = False              # grafiklerde lejantın gizlediği öğe olabilir
+        self._items: list[tuple[str, str, Qt.PenStyle]] = []
+        self._message = ""
+
+    def set_items(self, items, message: str = "") -> None:
+        """items: (renk, ad) ya da (renk, ad, çizgi stili). Öğe yokken `message` düz metin olarak gösterilir."""
+        self._items = [(QColor(i[0]).name(), i[1], i[2] if len(i) > 2 else Qt.PenStyle.SolidLine) for i in items]
+        self._message = message
+        self._rebuild()
+        self.apply()
+
+    def add(self, color: str, name: str, style: Qt.PenStyle = Qt.PenStyle.SolidLine) -> None:
+        self.set_items(self._items + [(color, name, style)], self._message)
+
+    def texts(self) -> list[str]:
+        return [name for _, name, _ in self._items]
+
+    def toggles(self) -> list[LegendToggle]:
+        return [self._lay.itemAt(i).widget() for i in range(self._lay.count())
+                if isinstance(self._lay.itemAt(i).widget(), LegendToggle)]
+
+    def apply(self) -> None:
+        """Kapalı renkleri grafiklere yeniden uygular (görünüm yeniden çizdikten sonra). Hiçbir seri kapalı değilse ve
+        önceden gizlenen yoksa grafiklere dokunmaz (canlı yenilemede maliyetsiz; grafik henüz kurulmamış olabilir)."""
+        if not self.hidden and not self._dirty:
+            return
+        from spt.gui.widgets.plot import apply_legend
+        apply_legend(self._plots(), self.hidden)
+        self._dirty = bool(self.hidden)
+
+    def _rebuild(self) -> None:
+        while self._lay.count():
+            w = self._lay.takeAt(0).widget()
+            if w is not None:
+                w.deleteLater()
+        shown = self._items if self._limit is None else self._items[:self._limit]
+        for color, name, style in shown:
+            btn = LegendToggle(color, name, style, checked=color not in self.hidden)
+            btn.toggled.connect(lambda on, c=color: self._toggle(c, on))
+            btn.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
+            btn.customContextMenuRequested.connect(
+                lambda pos, b=btn: self.context_requested.emit(b.color, b.name, b.mapToGlobal(pos)))
+            self._lay.addWidget(btn)
+        rest = self._items[len(shown):]
+        if rest:
+            more = label(f"+{len(rest)}", "Readout")
+            more.setToolTip("\n".join(name for _, name, _ in rest))
+            self._lay.addWidget(more)
+        if not self._items and self._message:
+            self._lay.addWidget(label(self._message, "Readout"))
+        self.setVisible(bool(self._items) or bool(self._message))
+        self.updateGeometry()
+
+    def _toggle(self, color: str, on: bool) -> None:
+        (self.hidden.discard if on else self.hidden.add)(color)
+        self.apply()
+        self.toggled.emit(color, on)
+
+
+def pick_color(parent: QWidget | None, current: str, title: str) -> str | None:
+    """Renk seçme penceresi; vazgeçilirse None. Testlerde bu fonksiyon yerine konabilir."""
+    color = QColorDialog.getColor(QColor(current), parent, title)
+    return color.name() if color.isValid() else None
+
+
+class ColorButton(QToolButton):
+    """Renk örneği gösteren düğme: tıklanınca renk seçtirir, `color_changed(renk)` yayar. `color` None ise varsayılan
+    (temanın) rengi gösterilir ve ipucunda "varsayılan" yazar."""
+
+    color_changed = pyqtSignal(str)
+
+    def __init__(self, default: str, title: str, parent: QWidget | None = None):
+        super().__init__(parent)
+        self._default = default
+        self._title = title
+        self.color: str | None = None
+        self.setObjectName("ColorButton")
+        self.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextBesideIcon)
+        self.setIconSize(QSize(26, 12))
+        self.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.clicked.connect(self._pick)
+        self._sync()
+
+    def set_default(self, default: str) -> None:
+        self._default = default
+        self._sync()
+
+    def set_color(self, color: str | None) -> None:
+        self.color = QColor(color).name() if color else None
+        self._sync()
+
+    def current(self) -> str:
+        return self.color or self._default
+
+    def _pick(self) -> None:
+        chosen = pick_color(self, self.current(), self._title)
+        if chosen is not None:
+            self.set_color(chosen)
+            self.color_changed.emit(chosen)
+
+    def _sync(self) -> None:
+        self.setIcon(line_swatch(self.current(), Qt.PenStyle.SolidLine, 3))
+        self.setText(self.current().upper() if self.color else "Varsayılan")
+        self.setToolTip(f"{self._title}: {'özel ' + self.color if self.color else 'tema varsayılanı'} — değiştirmek "
+                        "için tıklayın")
 
 
 def icon_button(icon_name: str | None = None, tip: str = "", action: QAction | None = None,
@@ -158,6 +313,10 @@ class Card(QFrame):
 
     def resizeEvent(self, event) -> None:
         super().resizeEvent(event)
+        self.refit()
+
+    def refit(self) -> None:
+        """Başlık öğelerinin genişliği değişince (ör. lejant doldu) sığmayanları yeniden belirler."""
         if self._optional:
             self._fit_header()
 
@@ -182,7 +341,8 @@ class Card(QFrame):
         for widget in self._optional:
             if widget in hidden and not widget.isHidden():
                 widget.setVisible(False)
-                self._auto_hidden.append(widget)
+                if widget not in self._auto_hidden:   # öğe kendini yeniden gösterip tekrar gizlenmiş olabilir
+                    self._auto_hidden.append(widget)
             elif widget not in hidden and widget in self._auto_hidden:
                 self._auto_hidden.remove(widget)
                 widget.setVisible(True)
@@ -212,12 +372,7 @@ class PageHeader(QWidget):
 class StatusBadge(QLabel):
     """Sol kenarında durum çizgisi ve noktası olan rozet (ör. ● Aktif)."""
 
-    COLORS = {
-        "good": TERRAFLUX_DARK.good,
-        "warning": TERRAFLUX_DARK.warning,
-        "critical": TERRAFLUX_DARK.critical,
-        "idle": TERRAFLUX_DARK.text_muted,
-    }
+    ROLES = {"good": "good", "warning": "warning", "critical": "critical", "idle": "text_muted"}
 
     def __init__(self, text: str, state: str = "idle", parent: QWidget | None = None):
         super().__init__(parent)
@@ -229,7 +384,7 @@ class StatusBadge(QLabel):
             return
         self._current = (text, state)
         self.setProperty("state", state)
-        color = self.COLORS.get(state, TERRAFLUX_DARK.text_muted)
+        color = getattr(tokens(), self.ROLES.get(state, "text_muted"))
         self.setText(f'<span style="color:{color}">●</span>&nbsp;&nbsp;{text}')
         self.style().unpolish(self)
         self.style().polish(self)
@@ -272,7 +427,7 @@ class DockTitleBar(QFrame):
         lay.setSpacing(8)
 
         ico = QLabel()
-        ico.setPixmap(icon(icon_name, TERRAFLUX_DARK.text_muted).pixmap(16, 16))
+        ico.setPixmap(icon(icon_name, tokens().text_muted).pixmap(16, 16))
         lay.addWidget(ico)
         lay.addWidget(label(dock.windowTitle(), "DockTitleLabel"))
         lay.addStretch(1)
@@ -285,10 +440,18 @@ class DockTitleBar(QFrame):
         else:
             float_btn = icon_button("ph.arrow-square-out", "Paneli ayır / yerleştir", object_name="FlatIcon", size=14)
             float_btn.clicked.connect(lambda: dock.setFloating(not dock.isFloating()))
-        close_btn = icon_button("ph.x", "Paneli kapat", object_name="FlatIcon", size=14)
-        close_btn.clicked.connect(dock.close)
+        # Kapat yerine kenara gizle: panel bulunduğu kenarın şeridine iner, oradan tek tıkla geri açılır
+        self.close_btn = icon_button("ph.caret-double-left", "Paneli sola gizle", object_name="FlatIcon", size=14)
+        self.close_btn.clicked.connect(dock.close)
         lay.addWidget(float_btn)
-        lay.addWidget(close_btn)
+        lay.addWidget(self.close_btn)
+
+    def set_side(self, side: str) -> None:
+        """Gizle düğmesinin yönü panelin bulunduğu kenara göre (sol / sağ / alt şerit)."""
+        name, text = {"left": ("ph.caret-double-left", "sola"), "right": ("ph.caret-double-right", "sağa"),
+                      "bottom": ("ph.caret-double-down", "alta")}.get(side, ("ph.caret-double-left", "sola"))
+        self.close_btn.setIcon(icon(name))
+        self.close_btn.setToolTip(f"Paneli {text} gizle (kenar şeridinden geri açılır)")
 
     def add_widget(self, widget: QWidget) -> None:
         self._extras.insertWidget(self._extras.count() - 3, widget)
@@ -340,7 +503,7 @@ class CollapsibleSection(QWidget):
 
     def _toggle(self, expanded: bool) -> None:
         self.content.setVisible(expanded)
-        self.header.setIcon(icon("ph.caret-down" if expanded else "ph.caret-right", TERRAFLUX_DARK.text_muted))
+        self.header.setIcon(icon("ph.caret-down" if expanded else "ph.caret-right", tokens().text_muted))
 
     def add_row(self, text: str, widget: QWidget) -> None:
         add_form_row(self.form, text, widget)

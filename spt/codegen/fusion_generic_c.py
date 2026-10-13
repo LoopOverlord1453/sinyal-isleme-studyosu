@@ -43,7 +43,7 @@ import numpy as np
 from spt.codegen import toolchain as tc
 from spt.codegen.fusion_c import (CostRow, FootprintRow, GeneratedFile, _c_float, _count_prelude, _fill, _fmt_int,
                                   _op_weights, _prefixed, write_files)
-from spt.codegen.mcu import (COMPILERS, IAR_LIBM_FACTOR, IAR_SIZE_FACTOR, MCU_PROFILES, OPS, OPT_LEVELS, McuProfile,
+from spt.codegen.mcu import (COMPILERS, IAR_LIBM_FACTOR, IAR_SIZE_FACTOR, OPS, OPT_LEVELS, McuProfile,
                              profile)
 from spt.dsp import fusion_generic as fg
 from spt.dsp.fusion_scenarios import linear_multi as lin_mod
@@ -3259,8 +3259,8 @@ def _example(opts: GenericCodegenOptions, r: _Resolved) -> str:
  *
  * {{BANNER}}
  *
- * Donanıma bağlı üç fonksiyon (sensor_oku, ornek_bekle, sonuc_kullan) kullanıcı tarafından yazılır (STM32 HAL,
- * Zephyr, ESP-IDF …). fuzyon_gorevi() main() içinden ya da bir RTOS görevinden çağrılır ve geri dönmez.
+ * Donanıma bağlı üç fonksiyon (sensor_oku, ornek_bekle, sonuc_kullan) kullanıcı tarafından yazılır (STM32 HAL / LL,
+ * FreeRTOS …). fuzyon_gorevi() main() içinden ya da bir RTOS görevinden çağrılır ve geri dönmez.
  */
 #include <stdint.h>
 #include <stddef.h>
@@ -3647,7 +3647,7 @@ def _measure(opts: GenericCodegenOptions, prof: McuProfile, compiler: str) -> li
     syms = tc.elf_symbols(build.objects["spt_sizeof_probe.c"])
     su = build.stack_usage()
     rows = []
-    linkable = gcc is not None and prof.gcc_flags is not None
+    linkable = gcc is not None
     base_flash = None
     common = {n: t for n, t in files.items() if n.endswith("_common.h")}
     if linkable:
@@ -3703,12 +3703,11 @@ _REF_OPT = {"-O0": 2.2, "-Os": 1.0, "-O2": 1.25, "-O3": 1.6}
 def _reference_row(opts: GenericCodegenOptions, r: _Resolved, prof: McuProfile, compiler: str, algo: str,
                    why: str) -> FootprintRow:
     f, fl, st = _REFERENCE[(r.scenario, algo)]
-    k = _REF_CORE[prof.fpu] * _REF_OPT[opts.opt] * prof.density
+    k = _REF_CORE[prof.fpu] * _REF_OPT[opts.opt]
     if opts.real == "double" and prof.double_is_soft() and prof.fpu != "none":
         k *= 1.5
     k *= {"gcc": 1.0, "clang": 1.0, "iar": IAR_SIZE_FACTOR}[compiler]
-    return FootprintRow(algo, compiler, int(round(f * k)), int(round(fl * k)), state_size(opts, algo),
-                        int(round(st * prof.density)), False,
+    return FootprintRow(algo, compiler, int(round(f * k)), int(round(fl * k)), state_size(opts, algo), st, False,
                         f"tahmin: {why}; önceden ölçülmüş Cortex-M4F GCC -Os referansından ölçeklendi (×{k:.2f}); RAM "
                         f"durum = sizeof (yapı düzeninden kesin)")
 
@@ -3723,19 +3722,16 @@ def footprint(opts: GenericCodegenOptions, compilers: tuple[str, ...] | None = N
 
     def get(p: McuProfile, comp: str) -> list[dict] | None:
         if (p.key, comp) not in measured:
-            measured[(p.key, comp)] = _measure(opts, p, comp) if p.measurable else None
+            measured[(p.key, comp)] = _measure(opts, p, comp)
         return measured[(p.key, comp)]
 
     for comp in compilers:
         if comp not in COMPILERS:
             raise ValueError(f"Bilinmeyen derleyici: {comp!r}")
-        if comp == "iar" and prof.arch == "xtensa":
-            continue                                     # IAR'ın Xtensa derleyicisi yok
-        base_prof = prof if prof.measurable else MCU_PROFILES[prof.estimate_base]
         src_comp = "gcc" if comp == "iar" else comp
-        data = get(base_prof, src_comp)
+        data = get(prof, src_comp)
         if data is None:
-            why = f"{COMPILERS[src_comp]} bulunamadı" if base_prof.measurable else "derleyici yok"
+            why = f"{COMPILERS[src_comp]} bulunamadı"
             rows += [_reference_row(opts, r, prof, comp, a, why) for a in r.algorithms]
             continue
         tool = tc.cross_tool(src_comp)
@@ -3755,25 +3751,16 @@ def footprint(opts: GenericCodegenOptions, compilers: tuple[str, ...] | None = N
 
             if comp == "iar":
                 rows.append(FootprintRow(
-                    d["algorithm"], comp, int(round(d["flash_code"] * IAR_SIZE_FACTOR * prof.density)),
-                    scaled(d["flash_with_libm"], IAR_LIBM_FACTOR * prof.density), d["ram_state"],
-                    scaled(d["stack"], prof.density), False,
-                    f"tahmin: IAR yok — {tool_label} {opts.opt} ({base_prof.name}) ölçümü × {IAR_SIZE_FACTOR}"
-                    + (f" × {prof.density} kod yoğunluğu" if not prof.measurable else "")
-                    + "; RAM durum = sizeof (ABI aynı, kesin)", scaled(d.get("stack_own"), prof.density)))
-            elif prof.measurable:
+                    d["algorithm"], comp, int(round(d["flash_code"] * IAR_SIZE_FACTOR)),
+                    scaled(d["flash_with_libm"], IAR_LIBM_FACTOR), d["ram_state"], d["stack"], False,
+                    f"tahmin: IAR yok — {tool_label} {opts.opt} ({prof.name}) ölçümü × {IAR_SIZE_FACTOR}"
+                    "; RAM durum = sizeof (ABI aynı, kesin)", d.get("stack_own")))
+            else:
                 rows.append(FootprintRow(
                     d["algorithm"], comp, d["flash_code"], d["flash_with_libm"], d["ram_state"], d["stack"], True,
                     f"{tool_label} {opts.opt}, {prof.name}, {opts.real}: ölçüldü (nesne .text+.rodata+.data; "
                     f"libm: newlib-nano ile bağlanmış imaj − boş temel; RAM: sizeof){stack_note}",
                     d.get("stack_own")))
-            else:
-                k = prof.density
-                rows.append(FootprintRow(
-                    d["algorithm"], comp, int(round(d["flash_code"] * k)), scaled(d["flash_with_libm"], k),
-                    d["ram_state"], scaled(d["stack"], k), False,
-                    f"tahmin: {prof.arch} derleyicisi yok — {tool_label} {opts.opt} ({base_prof.name}) ölçümü × "
-                    f"{k} kod yoğunluğu; RAM durum = sizeof (ILP32 düzeni aynı, kesin)", scaled(d.get("stack_own"), k)))
     return rows
 
 
@@ -3978,7 +3965,7 @@ kadar** float ile double aynı doğrulukta (fark ≤ %2); **70–90 km'de** konu
     fpu = {"none": "FPU yok: `-mfloat-abi=soft` (tüm kayan nokta yazılımda)",
            "sp": "tek hassasiyet FPU: `float` önerilir; `double` yazılım kayan noktadır (10–100× yavaş)",
            "dp": "çift hassasiyet FPU: `double` de donanımda (yine de `float` daha hızlı ve küçük)"}[prof.fpu]
-    flags = " ".join(prof.gcc_flags) if prof.gcc_flags else "(bu çekirdek için bayraklar üreticinin SDK'sına bakın)"
+    flags = " ".join(prof.gcc_flags)
     fp_md = _footprint_table(opts, r, fp) if fp else \
         "_Bu dosya ölçümsüz üretildi; ayak izi tablosu için `footprint()` sonuçlarıyla yeniden üretin._"
     cost_md = _cost_table(opts, r, cost) if cost else \
@@ -4092,10 +4079,6 @@ bir sonraki `step()`'te etkilidir (başlangıç belirsizlikleri ve tohum `reset(
 Dosyaları projeye ekleyin, include yolunu verin; FPU: "Single Precision" (M4F / M33F) ya da "Double Precision" (M7);
 dil C99 ya da üstü; *Fast math* kapalı. AC6 clang tabanlıdır (boyutlar "Clang" satırlarına yakındır); IAR boyutları
 **tahmindir** (GCC ölçümü × {IAR_SIZE_FACTOR}).
-
-### ESP32 (ESP-IDF) / RISC-V
-Dosyaları bir bileşenin `srcs` listesine ekleyin. ESP32'nin FPU'su tek hassasiyettir (`float`). FPU'suz çekirdeklerde
-tüm kayan nokta yazılımdadır.
 
 ## Sabit hızda çağırma ve dt
 

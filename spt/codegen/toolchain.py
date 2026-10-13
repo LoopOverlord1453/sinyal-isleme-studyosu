@@ -437,11 +437,11 @@ double exp(double); double log(double); double fabs(double); double fmod(double,
 
 
 def cross_flags(profile: McuProfile, compiler: str) -> list[str] | None:
-    """Profil + derleyici için hedef bayrakları; derleyici ya da çekirdek desteği yoksa None."""
+    """Profil + derleyici için hedef bayrakları; derleyici makinede yoksa None."""
     if compiler == "gcc":
-        return list(profile.gcc_flags) if profile.gcc_flags is not None and find_arm_gcc() else None
+        return list(profile.gcc_flags) if find_arm_gcc() else None
     if compiler == "clang":
-        if profile.clang_flags is None or find_clang() is None:
+        if find_clang() is None:
             return None
         flags = list(profile.clang_flags) + ["-fshort-enums"]   # newlib (GCC) ile aynı enum ABI'si
         root = arm_sysroot()
@@ -483,7 +483,7 @@ def link_cross(files: Mapping[str, str], sources: Sequence[str], profile: McuPro
     alınarak kütüphane dahil gerçek flash maliyeti bulunur."""
     tool, gcc = cross_tool(compiler), find_arm_gcc()
     flags = cross_flags(profile, compiler)
-    if tool is None or gcc is None or flags is None or profile.gcc_flags is None:
+    if tool is None or gcc is None or flags is None:
         return Build(False, f"{compiler}: {profile.key} için bağlayıcı / derleyici yok", WORK_ROOT, None)
     files = dict(files)
     if "spt_shim" in flags:

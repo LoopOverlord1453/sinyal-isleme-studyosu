@@ -44,7 +44,7 @@ from spt.gui.control.design_widgets import (
 )
 from spt.gui.control.design_widgets import spin_box as dc_spin
 from spt.gui.control.workspace import SOURCE_DESIGN
-from spt.gui.theme import ThemeManager
+from spt.gui.theme import ThemedMap, ThemeManager
 from spt.gui.widgets.common import Card, CollapsibleSection, combo, label
 
 log = logging.getLogger("spt.gui")
@@ -53,8 +53,8 @@ CTRL_METHODS = (("place", "Kutup yerleştirme (place)"), ("acker", "Ackermann (a
                 ("lqr", "LQR"), ("lqi", "LQI (integral eylemli)"))
 EST_METHODS = (("none", "Yok (tam durum ölçümü)"), ("observer", "Gözlemci (kutup yerleştirme)"),
                ("kalman", "Kalman süzgeci"))
-COLORS = {"T": cp.PALETTE[0], "G": cp.PALETTE[1], "obs": cp.PALETTE[2], "KS": cp.PALETTE[3],
-          "T_lqg": cp.PALETTE[4], "KS_lqg": cp.PALETTE[5]}
+COLORS = ThemedMap(lambda: {"T": cp.PALETTE[0], "G": cp.PALETTE[1], "obs": cp.PALETTE[2], "KS": cp.PALETTE[3],
+                            "T_lqg": cp.PALETTE[4], "KS_lqg": cp.PALETTE[5]})
 
 
 # ============================================================================ Qt'siz tasarım

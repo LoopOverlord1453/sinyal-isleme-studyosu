@@ -3,8 +3,8 @@
 Solda MCU özellikleri (çekirdek / FPU, saat, derleyici, optimizasyon, sayı tipi, flash / RAM, önek) ve MPC kod
 seçenekleri (referans / MD önizlemesi) sorulur. Çağrı hızı MPC'nin örnekleme zamanından gelir (fs = 1/Ts). Sonuç:
   - <önek>.h / <önek>.c / <önek>_ornek.c ve KULLANIM_<önek>.md,
-  - kod / sabit veri boyutu derleyiciye göre ÖLÇÜLÜR (makinede arm-none-eabi-gcc / clang varsa; IAR ve araç zinciri
-    olmayan çekirdeklerde açıkça "tahmin"), RAM = durum yapısının boyutu, yığın = en kötü çağrı yolu,
+  - kod / sabit veri boyutu derleyiciye göre ÖLÇÜLÜR (makinede arm-none-eabi-gcc / clang varsa; IAR ve makinede
+    bulunmayan derleyicilerde açıkça "tahmin"), RAM = durum yapısının boyutu, yığın = en kötü çağrı yolu,
   - maliyet: kapalı çevrim senaryosunda adım başına işlem sayıları (C++ sayaçla ölçülür) + MaxIterations
     yinelemeli en kötü durum (analitik üst sınır) → çevrim / µs / CPU yükü ve Ts bütçesine sığan yineleme sayısı.
 Ölçüm arka plan iş parçacığında yapılır (MPC nesnesinin kopyasıyla); arayüz donmaz.
@@ -21,7 +21,7 @@ from PyQt6.QtWidgets import QCheckBox, QComboBox, QDoubleSpinBox, QLineEdit, QPu
 
 from spt.codegen import mcu, mpc_c
 from spt.gui.dialogs.code_dialog import CodeDialog
-from spt.gui.theme import TERRAFLUX_DARK
+from spt.gui.theme import tokens as active_tokens
 from spt.gui.widgets.common import CollapsibleSection, combo, label
 
 log = logging.getLogger("spt.gui")
@@ -105,7 +105,7 @@ class MpcCodeDialog(CodeDialog):
         self.generate_button.clicked.connect(self.refresh)
         lay.addWidget(self.generate_button)
         lay.addStretch(1)
-        super().__init__(tokens or TERRAFLUX_DARK, "MPC — C Kodu", "mpc_code", parent, side=side)
+        super().__init__(tokens or active_tokens(), "MPC — C Kodu", "mpc_code", parent, side=side)
         self.mcu.currentIndexChanged.connect(self._on_mcu)
         self._bridge = _Bridge(self)
         self._bridge.done.connect(self._measured)
@@ -267,8 +267,8 @@ class MpcCodeDialog(CodeDialog):
             warn = f"<p><span style='color:{color}'>⚠ {html.escape(advice)}</span> Ayrıntı: KULLANIM.</p>"
         for w in mpc_c.numeric_warnings(obj, opts):
             warn += f"<p><span style='color:{t.warning}'>⚠ Sayısal: {html.escape(w)}</span></p>"
-        notes = ("<p><b>Notlar:</b> Kod boyutu makinedeki araç zinciriyle gerçekten derlenerek ölçülür; IAR ve yerel "
-                 "derleyicisi olmayan çekirdekler <i>tahmin</i>dir. RAM = durum yapısı (QP çalışma alanı dahil; malloc "
+        notes = ("<p><b>Notlar:</b> Kod boyutu makinedeki araç zinciriyle gerçekten derlenerek ölçülür; IAR ve makinede "
+                 "bulunmayan derleyiciler <i>tahmin</i>dir. RAM = durum yapısı (QP çalışma alanı dahil; malloc "
                  "yok). İşlem sayıları üretilen C'nin kapalı çevrimde C++ sayaçla çalıştırılmasıyla ölçülür; en kötü "
                  "durum kodun yapısından türetilmiş üst sınırdır; çevrimler çekirdek tablosundan tahmindir — gerçek "
                  "donanımda DWT->CYCCNT ile doğrulayın.</p>")

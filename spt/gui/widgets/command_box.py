@@ -6,7 +6,7 @@ from PyQt6.QtGui import QAction
 from PyQt6.QtWidgets import QCompleter, QFrame, QHBoxLayout, QLabel, QLineEdit
 
 from spt.gui.icons import icon
-from spt.gui.theme import TERRAFLUX_DARK
+from spt.gui.theme import tokens
 from spt.gui.widgets.common import label
 
 
@@ -20,7 +20,7 @@ class CommandBox(QFrame):
         lay.setSpacing(6)
 
         glyph = QLabel()
-        glyph.setPixmap(icon("ph.magnifying-glass", TERRAFLUX_DARK.text_muted).pixmap(QSize(16, 16)))
+        glyph.setPixmap(icon("ph.magnifying-glass", tokens().text_muted).pixmap(QSize(16, 16)))
         lay.addWidget(glyph)
 
         self.edit = QLineEdit()

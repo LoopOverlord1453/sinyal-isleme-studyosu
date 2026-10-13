@@ -573,7 +573,7 @@ def test_capraz_derleme_uyarisiz_tum_cortex_m():
 @needs_cxx
 @pytest.mark.parametrize("real", ["0", "1"])
 def test_cpp_derleyicisiyle_uyarisiz(real):
-    """C++ projelerinden (Arduino, ESP-IDF …) de derlenir: -x c++ -std=c++11 -Wall -Wextra -pedantic -Werror."""
+    """C++ projelerinden (STM32CubeIDE C++ …) de derlenir: -x c++ -std=c++11 -Wall -Wextra -pedantic -Werror."""
     for o, opts in _plans():
         folder = tc.WORK_ROOT / "cxx_check_mpc" / f"{opts.prefix}_{real}"
         shutil.rmtree(folder, ignore_errors=True)

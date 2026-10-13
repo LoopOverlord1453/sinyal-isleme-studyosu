@@ -50,7 +50,7 @@ from spt.gui.control.diagram_canvas import GRID, BlockItem, DiagramScene, Diagra
 from spt.gui.control.diagram_palette import BlockPalette
 from spt.gui.control.diagram_params import ParamPanel, fmt_number
 from spt.gui.control.diagram_scope import ScopePanel
-from spt.gui.icons import icon
+from spt.gui.icons import icon, primary_icon
 from spt.gui.widgets.common import Card, StatusBadge, add_form_row, combo, form_layout, hbox, icon_button, label
 
 TEMPLATE_MODULES: tuple[str, ...] = ("spt.control.uav.diagram_templates",)
@@ -346,7 +346,7 @@ class DiagramEditor(QWidget):
         self.btn_undo.setEnabled(False)
         self.btn_redo.setEnabled(False)
 
-        self.btn_run = QPushButton(icon("ph.play"), "Çalıştır")
+        self.btn_run = QPushButton(primary_icon("ph.play"), "Çalıştır")
         self.btn_run.setObjectName("Primary")
         self.btn_run.setToolTip("Benzetimi arka planda çalıştır (Ctrl+T)")
         self.btn_run.clicked.connect(lambda *_: self.run())

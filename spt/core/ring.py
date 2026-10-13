@@ -11,6 +11,8 @@ Bellek düzeni:
 """
 from __future__ import annotations
 
+import os
+import sys
 from multiprocessing import shared_memory
 
 import numpy as np
@@ -75,8 +77,7 @@ class SharedRing(RingQueries):
 
     @classmethod
     def attach(cls, name: str, dtype: np.dtype) -> SharedRing:
-        shm = shared_memory.SharedMemory(name=name, track=False)
-        return cls(shm, dtype, owner=False)
+        return cls(_attach_untracked(name), dtype, owner=False)
 
     @property
     def name(self) -> str:
@@ -206,3 +207,18 @@ class SharedRing(RingQueries):
                 self._shm.unlink()
         except (BufferError, FileNotFoundError):
             pass
+
+
+def _attach_untracked(name: str) -> shared_memory.SharedMemory:
+    """Yazıcı sürecin oluşturduğu belleğe bağlanır. Okuyucu belleğin sahibi değildir: kapanınca bellek silinmemeli.
+
+    Python 3.13+ bunu `track=False` ile yapar. Daha eski sürümlerde (ör. 3.12 ile kurulmuş ortam) bu parametre yoktur;
+    POSIX'te bağlanma bellek adını kaynak izleyiciye kaydeder ve kayıt geri alınır (Windows'ta izleyici yoktur)."""
+    if sys.version_info >= (3, 13):
+        return shared_memory.SharedMemory(name=name, track=False)
+    shm = shared_memory.SharedMemory(name=name)
+    if os.name == "posix":
+        from multiprocessing import resource_tracker
+
+        resource_tracker.unregister(shm._name, "shared_memory")  # noqa: SLF001 (izleyici iç adı kullanır)
+    return shm

@@ -4,15 +4,17 @@ from __future__ import annotations
 import json
 import logging
 import math
+import sys
 from dataclasses import replace
 from datetime import datetime
 from functools import partial
 from pathlib import Path
 
-from PyQt6.QtCore import QSettings, QSize, Qt, QTimer, QUrl
+from PyQt6.QtCore import QProcess, QSettings, QSize, Qt, QTimer, QUrl
 from PyQt6.QtGui import (
     QActionGroup,
     QCloseEvent,
+    QColor,
     QDesktopServices,
     QGuiApplication,
     QResizeEvent,
@@ -25,12 +27,14 @@ from PyQt6.QtWidgets import (
     QDockWidget,
     QFileDialog,
     QFrame,
+    QHBoxLayout,
     QHeaderView,
     QMainWindow,
     QMenu,
     QMessageBox,
     QSizePolicy,
     QStackedWidget,
+    QTabBar,
     QTableWidget,
     QTableWidgetItem,
     QToolBar,
@@ -55,30 +59,36 @@ from spt.gui.icons import app_icon, icon, logo_pixmap
 from spt.gui.panels.chain_panel import ChainPanel
 from spt.gui.panels.log_panel import LogPanel
 from spt.gui.panels.measurements_panel import MeasurementsPanel
-from spt.gui.panels.properties_panel import PropertiesPanel
+from spt.gui.panels.properties_panel import FONT_PX_RANGE, PropertiesPanel
 from spt.gui.panels.sources_panel import SourcesPanel
 from spt.gui.panels.stats_panel import StatsPanel
 from spt.gui.panels.workspace_panel import WorkspacePanel
 from spt.gui.settings import app_settings
-from spt.gui.theme import ThemeManager, style_native_titlebar
+from spt.gui.theme import THEMES, ThemeManager, save_theme, saved_theme, style_native_titlebar
+from spt.gui.views.connection_view import ConnectionView
 from spt.gui.views.control_view import ControlView
 from spt.gui.views.filter_designer_view import FilterDesignerView
 from spt.gui.views.fusion_view import FusionView
 from spt.gui.views.live_view import LiveView
 from spt.gui.views.siggen_view import SignalGeneratorView
 from spt.gui.widgets.command_box import CommandBox
-from spt.gui.widgets.common import DockTitleBar, demo_chip, hbox, icon_button, label
+from spt.gui.widgets.common import DockTitleBar, demo_chip, icon_button, label, pick_color
+from spt.gui.widgets.plot import AXIS_FONT_PX
+from spt.gui.widgets.side_stripe import SideStripes
 from spt.gui.widgets.status_bar import StatusBar
 from spt.sources.manager import SourceManager
 from spt.sources.receiver import ReceiverConfig
+from spt.sources.stream_receiver import CAN_DEFAULT_ID, CAN_DEFAULT_MASK, CanConfig
 
 log = logging.getLogger("spt.gui")
 
 ROOT = Path(__file__).resolve().parents[2]
-PROTOCOL_DOC = ROOT / "docs" / "SPTF_Protokol_v1.md"
-EMBEDDED_DOC = ROOT / "docs" / "SPTF_UDP_Kullanim_Kilavuzu.md"
+PROTOCOL_DOC = ROOT / "docs" / "SPT-PRT-001_SPTF_Cerceve_Formati.docx"
+EMBEDDED_DOC = ROOT / "docs" / "SPT-REF-001_SPTF_UDP_Referans_Kilavuzu.docx"
 SAMPLES_DIR = ROOT / "samples_signal_data"
-LAYOUT_VERSION = 2   # 2: İşlem Zinciri paneli eklendi (eski kayıtlı yerleşim yerine varsayılan kurulur)
+# Kayıtlı yerleşim sürümü; değişince eski kayıt yerine varsayılan kurulur. 2: İşlem Zinciri paneli eklendi.
+# 3: Günlük alttan sağ kenara (İşlem Zinciri / Ölçümler sekmeleri) taşındı; panel kenar şeritleri eklendi.
+LAYOUT_VERSION = 3
 REFRESH_MS = 33      # canlı grafik ~30 FPS
 HISTORY_MS = 400     # tasarımcıdaki ardışık değişiklikler tek geri alma adımında birleşir
 
@@ -93,15 +103,17 @@ MENU_LAYOUT = [
     ]),
     ("Dü&zen", ["edit.undo", "edit.redo", None, "edit.copy_plot", None, "edit.preferences"]),
     ("&Görünüm", [
-        "view.live", "view.review", "view.siggen", "view.filter", "view.fusion", "view.control", None,
-        ("Paneller", "ph.layout", ["@panels"]),
-        ("Ayrı Pencerede Aç", "ph.app-window", ["@detach"]), None,
+        "view.live", "view.connection", "view.review", "view.siggen", "view.filter", "view.fusion", "view.control",
+        None, ("Paneller", "ph.layout", ["@panels"]),
+        ("Ayrı Pencerede Aç", "ph.app-window", ["@detach"]),
+        ("Tema", "ph.palette", ["view.theme_light", "view.theme_terraflux", "view.theme_dark"]), None,
         "view.command_palette", "view.reset_layout", "view.fullscreen",
     ]),
     ("&Bağlantı", [
         "conn.listen", "conn.settings", None,
         "stream.run", "stream.freeze", None,
-        "stream.record", "stream.replay",
+        "stream.record", "stream.replay", None,
+        "tools.link_test", "tools.signal_sender",
     ]),
     ("&Analiz", [
         "an.fft", "an.psd", None, "view.fusion", "view.control", None,
@@ -117,12 +129,15 @@ MENU_LAYOUT = [
         ]),
         None, "flt.design", "flt.apply", None, "flt.chain", "flt.export",
     ]),
-    ("A&raçlar", ["tools.generator", "tools.simulator", "tools.packet_inspector", None, "edit.preferences"]),
+    ("A&raçlar", ["tools.generator", "tools.simulator", "tools.signal_sender", "tools.link_test",
+                  "tools.packet_inspector", None,
+                  "edit.preferences"]),
     ("&Yardım", ["help.docs", "help.protocol", "help.embedded", "help.shortcuts", None, "help.about"]),
 ]
 
 # Sıra kayıtlı ayarlardaki görünüm indeksidir (view/index): yeni görünümler SONA eklenir
-VIEW_KEYS = ("view.live", "view.siggen", "view.filter", "view.review", "view.fusion", "view.control")
+VIEW_KEYS = ("view.live", "view.siggen", "view.filter", "view.review", "view.fusion", "view.control",
+             "view.connection")
 
 # Dar pencerede (FOCUS_WIDTH altı) bu görünümlerde ilgisiz paneller geçici olarak gizlenir: 1366×768'de paneller
 # genişliğin yarısını, 1600×960'ta alt paneller yüksekliğin üçte birini alıyor, grafiklere yer kalmıyordu. Görünümden
@@ -137,9 +152,12 @@ FOCUS_DOCKS = {
     "view.control": _ALL_PANELS,
     # tasarımcı örnekleme hızını kendi "Akış" düğmesiyle alır; tasarımın uygulandığı İşlem Zinciri açık kalır
     "view.filter": ("sources", "workspace", "properties", "measurements", "stats", "log"),
+    # bağlantı sayfası: dinleme ayarları (Kaynaklar) ve paket istatistikleri tablosu kalır
+    "view.connection": ("workspace", "properties", "chain", "measurements", "log"),
 }
 FOCUS_WIDTH = 1800
-NAV_ORDER = ("view.live", "view.review", "view.siggen", "view.filter", "view.fusion", "view.control")
+NAV_ORDER = ("view.live", "view.connection", "view.review", "view.siggen", "view.filter", "view.fusion",
+             "view.control")
 
 # Aşama numarasına gelen bulunma eki: "Aşama 1'de", "Aşama 3'te"
 _LOCATIVE = {1: "'de", 2: "'de", 3: "'te", 4: "'te", 5: "'te"}
@@ -158,7 +176,7 @@ class MainWindow(QMainWindow):
         height = min(960, int(area.height() * 0.94)) if area else 960
         self.resize(width, height)
         self.setMinimumSize(1000, 640)
-        self._compact = None  # dar ekran düzeni (üst çubuk ikon modunda)
+        self._compact = None  # üst çubuk kademesi: 0 tam, 1 dar (logo yazısız), 2 simge (bkz. resizeEvent)
         self._focus_hidden: set[str] = set()              # odak düzeni için gizlediğimiz paneller
         self._focus_raised: set[str] = set()              # gizlenirken sekme grubunda önde olanlar
         self._focus_kept: set[tuple[str, str]] = set()    # (görünüm, panel): kullanıcı açık tuttu, gizleme
@@ -185,6 +203,8 @@ class MainWindow(QMainWindow):
         self._receiver_cfg = self._load_receiver_config()
         self._channel_colors: dict[tuple[str, int], str] = {}
         self._channel_visible: dict[tuple[str, int], bool] = {}
+        # Kullanıcının seçtiği kanal renkleri, "akış adı/kanal adı" → renk (yeniden bağlanınca ve oturumlar arası kalır)
+        self._color_overrides: dict[str, str] = {}
         self._simulator: SimulatorDialog | None = None
         self._editing_uid: int | None = None  # tasarımcıda düzenlenen zincir adımının kimliği
         self._window_user_set = False  # zaman penceresi kullanıcı tarafından seçildi (otomatik öneri yapılmaz)
@@ -203,6 +223,7 @@ class MainWindow(QMainWindow):
         self._wire_properties()
         self._wire_filters()
         self._place_docks()
+        self._build_side_stripes()
         self.registry["stream.run"].setChecked(True)
 
         self._refresh_timer = QTimer(self)
@@ -227,8 +248,9 @@ class MainWindow(QMainWindow):
         self.review_view = LiveView(self.theme, review=True)
         self.fusion_view = FusionView(self.theme)
         self.control_view = ControlView(self.theme)
+        self.connection_view = ConnectionView(self.theme, self.sources)
         for v in (self.live_view, self.siggen_view, self.filter_view, self.review_view, self.fusion_view,
-                  self.control_view):
+                  self.control_view, self.connection_view):
             self.views.addWidget(v)
 
         host = QFrame()
@@ -268,6 +290,7 @@ class MainWindow(QMainWindow):
         self.sources_panel = SourcesPanel(self.theme, r["conn.listen"], r["stream.replay"], r["tools.simulator"])
         self.sources_panel.address.setText(self._receiver_cfg.address)
         self.sources_panel.port.setValue(self._receiver_cfg.port)
+        self._load_link_settings()
         self.properties_panel = PropertiesPanel()
         self.stats_panel = StatsPanel()
         self.workspace_panel = WorkspacePanel(r["stream.freeze"])
@@ -320,16 +343,28 @@ class MainWindow(QMainWindow):
         self.addDockWidget(right, d["properties"])
         self.splitDockWidget(d["properties"], d["chain"], Qt.Orientation.Vertical)
         self.tabifyDockWidget(d["chain"], d["measurements"])
+        # Günlük sağ kenarda (diğer paneller gibi sağ şeritten gizlenir / açılır), İşlem Zinciri ile sekmeli
+        self.tabifyDockWidget(d["measurements"], d["log"])
         d["chain"].raise_()
         self.addDockWidget(bottom, d["stats"])
-        if self._narrow_screen():
-            self.tabifyDockWidget(d["stats"], d["log"])
-            d["stats"].raise_()
-        else:
-            self.splitDockWidget(d["stats"], d["log"], Qt.Orientation.Horizontal)
-        if self._short_screen():  # ≤ 900 px yükseklikte grafiklere yer kalsın: alt paneller kapalı başlar
+        if self._short_screen():  # ≤ 900 px yükseklikte grafiklere yer kalsın: alt panel kapalı başlar
             d["stats"].hide()
-            d["log"].hide()
+
+    def _build_side_stripes(self) -> None:
+        """Pencere kenarlarında panel şeritleri: her panel bulunduğu kenara gizlenir, şeritteki düğmesiyle geri açılır."""
+        self.stripes = SideStripes(self)
+        for dock in self.docks.values():
+            self.stripes.add(dock, dock.titleBarWidget().set_side)
+            dock.visibilityChanged.connect(lambda *_: QTimer.singleShot(0, self._hide_orphan_tab_bars))
+
+    def _hide_orphan_tab_bars(self) -> None:
+        """Sekmeli panellerin hepsi gizliyken Qt'nin sekme çubuğu eski konumunda görünür kalıyor (ör. kısa ekranda
+        birlikte gizli başlayan Paket İstatistikleri / Günlük; kenar şeritleri yerleşimi kaydırınca grafiklerin
+        kenarında yarım "Paket…" yazısı olarak görünüyordu). Paneli görünmeyen sekme çubukları gizlenir."""
+        shown = {d.windowTitle() for d in self.docks.values() if d.isVisible()}
+        for bar in self.findChildren(QTabBar, options=Qt.FindChildOption.FindDirectChildrenOnly):
+            if bar.isVisible() and not {bar.tabText(i) for i in range(bar.count())} & shown:
+                bar.hide()
 
     def _narrow_screen(self) -> bool:
         screen = QGuiApplication.primaryScreen()
@@ -347,8 +382,6 @@ class MainWindow(QMainWindow):
         self.resizeDocks([d["sources"], d["workspace"]], [520, 340], v)
         self.resizeDocks([d["properties"], d["chain"]], [470, 390], v)
         self.resizeDocks([d["stats"]], [180 if narrow else 230], v)
-        if not narrow:
-            self.resizeDocks([d["stats"], d["log"]], [600, 320], h)
 
     def _build_menus(self) -> None:
         bar = self.menuBar()
@@ -390,12 +423,12 @@ class MainWindow(QMainWindow):
         self._wordmark = label("Signal Processing Toolbox", "Wordmark")
         self._wordmark_action = bar.addWidget(self._wordmark)
         self._nav_pills = []
-        bar.addSeparator()
 
         self.command_box = CommandBox([a for _, a in self.registry.items()])
         bar.addWidget(self.command_box)
-        bar.addSeparator()
+        bar.addWidget(self._spacer())
 
+        # Görünümler ortada tek bir segment kabında
         self._view_group = QActionGroup(self)
         self._view_group.setExclusive(True)
         for key in NAV_ORDER:
@@ -404,34 +437,93 @@ class MainWindow(QMainWindow):
             pill = icon_button(action=act, object_name="NavPill", size=16)
             pill.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextBesideIcon)
             self._nav_pills.append(pill)
-            bar.addWidget(pill)
         self.registry["view.live"].setChecked(True)
+        bar.addWidget(self._group_frame("NavGroup", self._nav_pills))
+        bar.addWidget(self._spacer())
 
+        # Akış denetimi (dinle / çalıştır / dondur / kaydet) ayrı grupta
+        stream_keys = ("conn.listen", "stream.run", "stream.freeze", "stream.record")
+        bar.addWidget(self._group_frame("ToolGroup", [icon_button(action=self.registry[k], object_name="GroupIcon")
+                                                      for k in stream_keys]))
+
+        # Tercihler ve Dışa Aktar menülerde (Düzen, Dosya › Dışa Aktar, Filtre; Ctrl+E): üst çubukta görünüm
+        # düğmelerine yer kalsın
+        self.theme_button = icon_button("ph.moon", "")
+        self.theme_button.clicked.connect(
+            lambda: self._choose_theme("dark" if saved_theme() == "light" else "light"))
+        bar.addWidget(self.theme_button)
+        self._sync_theme_controls()
+
+    @staticmethod
+    def _spacer() -> QWidget:
         spacer = QWidget()
         spacer.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred)
-        bar.addWidget(spacer)
+        return spacer
 
-        stream_keys = ("conn.listen", "stream.run", "stream.freeze", "stream.record")
-        bar.addWidget(hbox(*(icon_button(action=self.registry[k]) for k in stream_keys), spacing=6))
-        bar.addSeparator()
-        bar.addWidget(icon_button(action=self.registry["edit.preferences"]))
+    @staticmethod
+    def _group_frame(name: str, buttons: list[QToolButton]) -> QFrame:
+        """Düğmeleri ince kenarlı tek bir kapta (segment görünümü) toplar."""
+        frame = QFrame()
+        frame.setObjectName(name)
+        lay = QHBoxLayout(frame)
+        lay.setContentsMargins(3, 3, 3, 3)
+        lay.setSpacing(2)
+        for btn in buttons:
+            lay.addWidget(btn)
+        return frame
 
-        export_menu = QMenu(self)
-        for key in ("export.csv", "export.wav", None, "export.png", "flt.export"):
-            if key is None:
-                export_menu.addSeparator()
-            else:
-                export_menu.addAction(self.registry[key])
-        export = QToolButton()
-        export.setObjectName("MenuButton")
-        export.setText("Dışa Aktar")
-        export.setIcon(icon("ph.upload-simple"))
-        export.setIconSize(QSize(16, 16))
-        export.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextBesideIcon)
-        export.setPopupMode(QToolButton.ToolButtonPopupMode.InstantPopup)
-        export.setMenu(export_menu)
-        export.setCursor(Qt.CursorShape.PointingHandCursor)
-        bar.addWidget(export)
+    # ------------------------------------------------------------------ tema
+    def _sync_theme_controls(self) -> None:
+        """Menüdeki seçim ve üst çubuktaki düğme kayıtlı tercihi gösterir (yeniden başlatma bekliyor olabilir)."""
+        preferred = saved_theme()
+        for name in THEMES:
+            act = self.registry[f"view.theme_{name}"]
+            act.blockSignals(True)
+            act.setChecked(name == preferred)
+            act.blockSignals(False)
+        other = THEMES["light" if THEMES[preferred].dark else "dark"]   # üst çubuk düğmesi: açık ↔ koyu
+        self.theme_button.setIcon(icon("ph.moon" if other.dark else "ph.sun"))
+        self.theme_button.setToolTip(f"{other.label} temaya geç")
+
+    def _choose_theme(self, name: str) -> None:
+        """Tema tercihini kaydeder; etkin temadan farklıysa yeniden başlatmayı önerir (renkler widget'lar kurulurken
+        alındığı için tema çalışırken değişmez)."""
+        pending = saved_theme()
+        save_theme(name)
+        self._sync_theme_controls()
+        if name == self.theme.name:
+            if pending != name:
+                self.status.showMessage("Tema değişikliği geri alındı", 3000)
+            return
+        title = THEMES[name].label
+        box = QMessageBox(self)
+        box.setWindowTitle("Tema")
+        box.setIcon(QMessageBox.Icon.Question)
+        box.setText(f"{title} tema, uygulama yeniden başlatılınca uygulanır.")
+        box.setInformativeText("Panel yerleşimi, filtre tasarımı ve ayarlar kaydedilir; canlı akış ve Çalışma "
+                               "Alanı'ndaki anlık görüntüler kapanır.")
+        restart = box.addButton("Şimdi Yeniden Başlat", QMessageBox.ButtonRole.AcceptRole)
+        box.addButton("Sonra", QMessageBox.ButtonRole.RejectRole)
+        box.setDefaultButton(restart)
+        style_native_titlebar(box, self.theme.tokens)
+        box.exec()
+        if box.clickedButton() is restart:
+            self.restart()
+        else:
+            log.info("%s tema seçildi; bir sonraki açılışta uygulanacak.", title)
+            self.status.showMessage(f"{title} tema bir sonraki açılışta uygulanacak", 5000)
+
+    def restart(self) -> None:
+        """Pencereyi kapatıp (ayarlar kaydedilir) uygulamayı aynı komut satırıyla yeniden başlatır."""
+        if not sys.argv or not sys.argv[0]:
+            self.status.showMessage("Yeniden başlatılamadı — uygulamayı kapatıp yeniden açın", 5000)
+            return
+        if not self.close():
+            return
+        started = QProcess.startDetached(sys.executable, sys.argv)
+        if not (started[0] if isinstance(started, tuple) else started):
+            QMessageBox.warning(None, "Tema", "Uygulama yeniden başlatılamadı; lütfen elle açın.")
+        QApplication.quit()
 
     def _wire_actions(self) -> None:
         handlers = {
@@ -446,6 +538,9 @@ class MainWindow(QMainWindow):
             "view.command_palette": lambda *_: self.command_box.focus(),
             "view.reset_layout": lambda *_: self._reset_layout(),
             "view.fullscreen": self._set_fullscreen,
+            "view.theme_light": lambda *_: self._choose_theme("light"),
+            "view.theme_terraflux": lambda *_: self._choose_theme("terraflux"),
+            "view.theme_dark": lambda *_: self._choose_theme("dark"),
             "help.protocol": lambda *_: self._open_protocol_doc(),
             "help.embedded": lambda *_: self._open_protocol_doc(EMBEDDED_DOC),
             "help.shortcuts": lambda *_: self._show_shortcuts(),
@@ -458,6 +553,9 @@ class MainWindow(QMainWindow):
             "stream.replay": lambda *_: self._open_recording(),
             "import.sptr": lambda *_: self._open_recording(),
             "tools.simulator": lambda *_: self._show_simulator(),
+            "tools.signal_sender": lambda *_: self._open_signal_sender(),
+            "tools.link_test": lambda *_: self._show_link_test(),
+            "view.connection": lambda *_: self._show_view(VIEW_KEYS.index("view.connection")),
             "edit.undo": lambda *_: self.undo(),
             "edit.redo": lambda *_: self.redo(),
             "flt.iir": lambda *_: self._open_designer("iir"),
@@ -495,6 +593,8 @@ class MainWindow(QMainWindow):
         s.recording_changed.connect(self._on_recording)
         s.marker_received.connect(self.live_view.add_event_marker)
         self.sources_panel.channel_toggled.connect(self._on_channel_toggled)
+        self.sources_panel.color_requested.connect(self._choose_channel_color)
+        self.live_view.channel_color_changed.connect(self._on_channel_color_changed)
         self.sources_panel.replay.command.connect(self._on_replay_command)
         self.live_view.listen_requested.connect(self.registry["conn.listen"].trigger)
         self.live_view.open_requested.connect(self._open_recording)
@@ -517,7 +617,30 @@ class MainWindow(QMainWindow):
             for v in views:
                 v.set_fft(int(p.fft_size.currentText()), p.window.currentText(), p.kaiser_beta.value())
 
+        def spectrum_colors(colors):
+            for v in views:
+                v.set_spectrum_colors(colors)
+
+        def plot_font(family, px):
+            for v in views:
+                v.set_plot_font(family, px)
+
+        def spectrum_colors_from_legend(colors):  # spektrum lejantından değişti: panel ve İnceleme de izlesin
+            p.set_appearance(colors, self.live_view.default_spectrum_colors(), *p.plot_font())
+            self.review_view.set_spectrum_colors(colors)
+
+        p.spectrum_colors_changed.connect(spectrum_colors)
+        p.plot_font_changed.connect(plot_font)
+        p.reset_requested.connect(self._reset_channel_colors)
+        self.live_view.spectrum_colors_changed.connect(spectrum_colors_from_legend)
         p.time_window.currentTextChanged.connect(window)
+        self.live_view.set_window_options([p.time_window.itemText(i) for i in range(p.time_window.count())])
+
+        def choose_window(text: str) -> None:  # canlı görünüm başlığındaki pencere çipi
+            self._window_user_set = True
+            p.time_window.setCurrentText(text)
+
+        self.live_view.window_chosen.connect(choose_window)
         for w in (p.y_min, p.y_max):
             w.valueChanged.connect(y_axis)
         p.y_mode.currentTextChanged.connect(y_axis)
@@ -571,16 +694,32 @@ class MainWindow(QMainWindow):
 
     # ------------------------------------------------------------------ kaynaklar
     def _toggle_listen(self, checked: bool) -> None:
+        """Kaynaklar panelinde seçili bağlantıyı (Ethernet / UDP, USB sanal COM ya da CAN-bus) dinler."""
         if not checked:
             self.sources.stop()
             return
-        cfg = replace(self._receiver_cfg, address=self.sources_panel.address.text().strip() or "0.0.0.0",
-                      port=self.sources_panel.port.value())
+        panel = self.sources_panel
+        transport = panel.transport()
+        cfg = replace(self._receiver_cfg, address=panel.address.text().strip() or "0.0.0.0", port=panel.port.value())
         self._receiver_cfg = cfg
+        try:
+            link = (panel.serial_config(cfg.ring_seconds, cfg.max_ring_mb) if transport == "usb" else
+                    panel.can_config(cfg.ring_seconds, cfg.max_ring_mb) if transport == "can" else None)
+        except ValueError as exc:
+            self.registry["conn.listen"].setChecked(False)
+            log.warning("Dinleme başlatılamadı: %s", exc)
+            self.status.showMessage(str(exc), 6000)
+            return
         self._reset_channels()
-        self.sources_panel.replay.hide()
-        self.sources.start_udp(cfg)
-        self.sources_panel.set_listening(True)
+        panel.replay.hide()
+        if transport == "usb":
+            self.sources.start_serial(link)
+        elif transport == "can":
+            self.sources.start_can(link)
+        else:
+            self.sources.start_udp(cfg)
+        panel.set_listening(True)
+        self._save_link_settings()
 
     def _open_recording(self) -> None:
         s = self._settings()
@@ -616,10 +755,10 @@ class MainWindow(QMainWindow):
         if not checked:
             self.sources.send("record_stop")
             return
-        if self.sources.mode != "udp":
+        if not self.sources.live:
             act.setChecked(False)
-            log.warning("Kayıt yalnızca UDP dinlenirken yapılabilir; önce dinlemeyi başlatın.")
-            self.status.showMessage("Kayıt için önce UDP dinlemeyi başlatın", 4000)
+            log.warning("Kayıt yalnızca canlı dinlemede (UDP, USB ya da CAN-bus) yapılabilir; önce dinlemeyi başlatın.")
+            self.status.showMessage("Kayıt için önce dinlemeyi başlatın", 4000)
             return
         default = SAMPLES_DIR / f"kayit_{datetime.now():%Y%m%d_%H%M%S}.sptr"
         path, _ = QFileDialog.getSaveFileName(self, "Kaydı kaydet", str(default), "SPTF kayıtları (*.sptr)")
@@ -648,7 +787,7 @@ class MainWindow(QMainWindow):
             key = (handle.key, ch)
             if key not in self._channel_colors:  # renk kanala bağlıdır; yeniden bağlanınca değişmez
                 self._channel_colors[key] = self.theme.series_color(len(self._channel_colors))
-            colors.append(self._channel_colors[key])
+            colors.append(self._color_overrides.get(self._color_name(handle, ch), self._channel_colors[key]))
             visible.append(self._channel_visible.setdefault(key, True))
         first = not self.live_view._streams and handle.key not in self._seen_streams
         self._seen_streams.add(handle.key)
@@ -699,6 +838,8 @@ class MainWindow(QMainWindow):
         self.sources_panel.clear_streams()
         self.live_view.clear()
         self.stats_panel.clear()
+        self.connection_view.clear()
+        self.live_view.clear_kpis()
         self.live_filter.clear()
         self._update_stream_rates()
 
@@ -722,12 +863,64 @@ class MainWindow(QMainWindow):
         self.fusion_view.set_sources(sources)
         self.control_view.set_sources(sources)
 
+    @staticmethod
+    def _color_name(handle, ch: int) -> str:
+        """Kanal rengi kaydının anahtarı: akış ve kanal adı (kaynak IP'den bağımsız; kart başka adresten gelse de)."""
+        desc = handle.desc
+        return f"{desc.name or desc.stream_id}/{desc.channels[ch].name or f'ch{ch}'}"
+
+    def _choose_channel_color(self, key: str, channel: int) -> None:
+        handle = self.sources.streams.get(key)
+        current = self.live_view._colors.get((key, channel))
+        if handle is None or current is None:
+            return
+        chosen = pick_color(self, current, f"{self._color_name(handle, channel)} — kanal rengi")
+        if chosen is not None:
+            self.live_view.set_channel_color(key, channel, chosen)
+            self._on_channel_color_changed(key, channel, chosen)
+
+    def _on_channel_color_changed(self, key: str, channel: int, color: str) -> None:
+        handle = self.sources.streams.get(key)
+        if handle is not None:
+            self._color_overrides[self._color_name(handle, channel)] = color
+        self.sources_panel.set_channel_color(key, channel, color)
+
+    def _reset_channel_colors(self) -> None:
+        """"Varsayılana dön": kullanıcı kanal renkleri silinir, açık akışlar tema sırasındaki renge döner."""
+        self._color_overrides.clear()
+        for (key, ch), color in self._channel_colors.items():
+            self.live_view.set_channel_color(key, ch, color)
+            self.sources_panel.set_channel_color(key, ch, color)
+
+    def _load_appearance(self, s) -> None:
+        p = self.properties_panel
+
+        def color_map(key: str) -> dict[str, str]:  # bozuk / geçersiz kayıt yok sayılır (diğerlerini etkilemez)
+            try:
+                data = json.loads(s.value(key, "{}") or "{}")
+            except (TypeError, ValueError):
+                return {}
+            if not isinstance(data, dict):
+                return {}
+            return {k: QColor(v).name() for k, v in data.items() if isinstance(v, str) and QColor(v).isValid()}
+
+        colors = color_map("display/spectrum_colors")
+        self._color_overrides = color_map("display/channel_colors")
+        family = str(s.value("display/plot_font_family", "") or "") or None
+        px = min(max(s.value("display/plot_font_px", AXIS_FONT_PX, type=int), FONT_PX_RANGE[0]), FONT_PX_RANGE[1])
+        for v in (self.live_view, self.review_view):
+            v.set_spectrum_colors(colors)
+            v.set_plot_font(family, px)
+        p.set_appearance(self.live_view.spectrum_colors, self.live_view.default_spectrum_colors(), family, px)
+
     def _on_channel_toggled(self, key: str, channel: int, visible: bool) -> None:
         self._channel_visible[(key, channel)] = visible
         self.live_view.set_channel_visible(key, channel, visible)
 
     def _on_stats(self, session: dict, rates: dict) -> None:
         self.stats_panel.update_rates(rates)
+        self.connection_view.update_stats(session, rates)
+        self.live_view.update_kpis(session, rates)
         self.status.set_traffic(sum(r.packets_per_s for r in rates.values()),
                                 sum(r.bytes_per_s for r in rates.values()),
                                 sum(r.stats.lost_samples for r in rates.values() if r.stats))
@@ -737,9 +930,9 @@ class MainWindow(QMainWindow):
 
     def _on_state(self, state: str, detail: str) -> None:
         self.status.set_connection(state, detail)
-        udp = self.sources.mode == "udp" and state in ("starting", "listening", "receiving")
-        self.registry["conn.listen"].setChecked(udp)
-        self.sources_panel.set_listening(udp)
+        live = self.sources.live and state in ("starting", "listening", "receiving")
+        self.registry["conn.listen"].setChecked(live)
+        self.sources_panel.set_listening(live)
         subtitles = {
             "idle": "Akış bağlı değil",
             "starting": "Başlatılıyor…",
@@ -773,13 +966,38 @@ class MainWindow(QMainWindow):
         self._save_receiver_config()
         log.info("Bağlantı ayarları kaydedildi; bir sonraki dinlemede geçerli olacak.")
 
+    def _open_signal_sender(self) -> bool:
+        """Sinyal Test Uygulaması'nı ayrı süreç olarak açar; hedefi bu arayüzün dinlediği adres / port. Dinleme
+        kapalıysa açılır (gönderilen akışlar hemen Canlı İzleme'de görünsün)."""
+        if self.sources.mode != "udp":
+            self.sources_panel.set_transport("udp")   # test uygulaması UDP gönderir
+            self.registry["conn.listen"].setChecked(True)
+            self._toggle_listen(True)
+        address = self._receiver_cfg.address
+        host = "127.0.0.1" if address in ("", "0.0.0.0") else address
+        args = ["-m", "spt.sender", "--studio", "--host", host, "--port", str(self._receiver_cfg.port)]
+        started = QProcess.startDetached(sys.executable, args, str(ROOT))
+        ok = bool(started[0] if isinstance(started, tuple) else started)
+        if ok:
+            self.status.showMessage(f"Sinyal Test Uygulaması açılıyor → {host}:{self._receiver_cfg.port}", 6000)
+        else:
+            QMessageBox.warning(self, "Sinyal Test Uygulaması", "Uygulama başlatılamadı (python -m spt.sender).")
+        return ok
+
     def _show_simulator(self) -> None:
         if self._simulator is None:
             self._simulator = SimulatorDialog(self.theme.tokens, self)
             self._simulator.started.connect(self._on_simulator_started)
+            self._simulator.sender_requested.connect(self._open_signal_sender)
         self._simulator.show()
         self._simulator.raise_()
         self._simulator.activateWindow()
+
+    # ---------------------------------------------------------------- bağlantı paneli / link testi
+    def _show_link_test(self, key: str = "", echo: bool = False) -> None:
+        """UDP Link Testi: Bağlantı görünümündeki test sekmeleri (ayrı pencere değil)."""
+        self._show_view(VIEW_KEYS.index("view.connection"))
+        self.connection_view.open_test(key, echo)
 
     def _send_generated_signal(self, path: str, fs: float) -> None:
         """Sinyal Üreteci'nin nicemlenmiş çıkışını simülatörle UDP akışı olarak gönder (döngülü) ve dinlemeyi aç."""
@@ -798,7 +1016,8 @@ class MainWindow(QMainWindow):
         if self.sources.mode == "udp" and self._receiver_cfg.port == port:
             return
         self.sources_panel.port.setValue(port)
-        if self.sources.mode == "udp":
+        self.sources_panel.set_transport("udp")   # simülatör UDP gönderir
+        if self.sources.active:
             self.sources.stop()
         self.registry["conn.listen"].setChecked(True)
         self._toggle_listen(True)
@@ -809,6 +1028,40 @@ class MainWindow(QMainWindow):
                               int(s.value("conn/socket_mb", d.socket_buffer_mb)),
                               float(s.value("buffer/seconds", d.ring_seconds)),
                               int(s.value("buffer/max_mb", d.max_ring_mb)))
+
+    def _load_link_settings(self) -> None:
+        """USB ve CAN-bus bağlantı ayarları ile son seçilen bağlantı türü."""
+        s, panel, d = self._settings(), self.sources_panel, CanConfig()
+
+        def number(key: str, default: int) -> int:
+            try:
+                return int(str(s.value(key, default)), 0)
+            except (TypeError, ValueError):
+                return default
+
+        def flag(key: str) -> bool:
+            return str(s.value(key, "false")).lower() in ("1", "true")
+
+        panel.set_serial(str(s.value("usb/port", "") or ""), number("usb/baud", 115200))
+        panel.set_can(CanConfig(str(s.value("can/interface", d.interface)), str(s.value("can/channel", d.channel)),
+                                number("can/bitrate", d.bitrate), flag("can/fd"),
+                                number("can/data_bitrate", d.data_bitrate), number("can/id", CAN_DEFAULT_ID),
+                                number("can/mask", CAN_DEFAULT_MASK), flag("can/extended")))
+        panel.set_transport(str(s.value("conn/transport", "udp")))
+
+    def _save_link_settings(self) -> None:
+        s, panel = self._settings(), self.sources_panel
+        s.setValue("conn/transport", panel.transport())
+        s.setValue("usb/port", panel.serial_port_name())
+        s.setValue("usb/baud", panel.baud.currentText())
+        try:
+            can = panel.can_config(1.0, 16)
+        except ValueError:
+            return   # eksik / hatalı CAN ayarı kaydedilmez
+        for key, value in (("interface", can.interface), ("channel", can.channel), ("bitrate", can.bitrate),
+                           ("fd", can.fd), ("data_bitrate", can.data_bitrate), ("id", hex(can.can_id)),
+                           ("mask", hex(can.can_mask)), ("extended", can.extended)):
+            s.setValue(f"can/{key}", value)
 
     def _save_receiver_config(self) -> None:
         s, c = self._settings(), self._receiver_cfg
@@ -1163,7 +1416,7 @@ class MainWindow(QMainWindow):
             "Hakkında",
             f"<h3>{APP_NAME}</h3>"
             f"<p>Sürüm {__version__} — Aşama 1 (altyapı ve canlı akış) ve Aşama 3 (filtre tasarımı ve işleme)</p>"
-            "<p>Ethernet (UDP) üzerinden SPTF formatında gelen sinyalleri gerçek zamanlı "
+            "<p>Ethernet (UDP), USB ya da CAN-bus üzerinden SPTF formatında gelen sinyalleri gerçek zamanlı "
             "görselleştirme, filtreleme ve analiz aracı.</p>"
             "<p>PyQt6 · pyqtgraph · NumPy · SciPy</p>",
         )
@@ -1199,6 +1452,11 @@ class MainWindow(QMainWindow):
         if self._window_user_set and index >= 0:
             p.time_window.setCurrentIndex(index)
         p.time_window.activated.connect(lambda *_: setattr(self, "_window_user_set", True))  # yalnız elle seçim
+        self.live_view.set_peak_count(s.value("display/peaks", 5, type=int))
+        self.live_view.set_show_extrema(s.value("display/extrema", True, type=bool))
+        for mode in ("max", "min"):
+            self.live_view.set_hold(mode, s.value(f"display/{mode}_hold", True, type=bool))
+        self._load_appearance(s)
         controls = self.sources_panel.replay
         speed = controls.speed.findText(str(s.value("replay/speed", "")))
         if speed >= 0:
@@ -1211,6 +1469,15 @@ class MainWindow(QMainWindow):
         s = self._settings()
         s.setValue("display/time_window", self.properties_panel.time_window.currentText())
         s.setValue("display/window_user", self._window_user_set)
+        s.setValue("display/peaks", self.live_view.peak_count)
+        s.setValue("display/extrema", self.live_view.show_extrema)
+        for mode, on in self.live_view.hold.items():
+            s.setValue(f"display/{mode}_hold", on)
+        s.setValue("display/spectrum_colors", json.dumps(self.live_view.spectrum_colors))
+        s.setValue("display/channel_colors", json.dumps(self._color_overrides, ensure_ascii=False))
+        family, px = self.properties_panel.plot_font()
+        s.setValue("display/plot_font_family", family or "")
+        s.setValue("display/plot_font_px", px)
         s.setValue("replay/speed", self.sources_panel.replay.speed.currentText())
         s.setValue("replay/loop", self.sources_panel.replay.loop.isChecked())
 
@@ -1240,15 +1507,19 @@ class MainWindow(QMainWindow):
 
     def resizeEvent(self, event: QResizeEvent) -> None:
         super().resizeEvent(event)
-        compact = self.width() < 1500
-        if compact != self._compact and hasattr(self, "_nav_pills"):
-            self._compact = compact
-            style = (Qt.ToolButtonStyle.ToolButtonIconOnly if compact
+        # Üst çubuk kademeleri: 0 tam; 1 (< 1760 px) yazı logosu gizli, arama kutusu dar — yedi görünüm düğmesi
+        # (Bağlantı eklenince) 1600 px'te yazılarıyla sığsın, sağdaki akış düğmeleri taşma menüsüne düşmesin;
+        # 2 (< 1500 px) görünüm düğmeleri yalnız simge.
+        width = self.width()
+        level = 0 if width >= 1760 else (1 if width >= 1500 else 2)
+        if level != self._compact and hasattr(self, "_nav_pills"):
+            self._compact = level
+            style = (Qt.ToolButtonStyle.ToolButtonIconOnly if level == 2
                      else Qt.ToolButtonStyle.ToolButtonTextBesideIcon)
             for pill in self._nav_pills:
                 pill.setToolButtonStyle(style)
-            self._wordmark_action.setVisible(not compact)
-            self.command_box.setFixedWidth(200 if compact else 300)
+            self._wordmark_action.setVisible(level == 0)
+            self.command_box.setFixedWidth((300, 230, 200)[level])
         narrow = self.width() < FOCUS_WIDTH
         if narrow != self._focus_narrow and self.isVisible():
             self._focus_narrow = narrow
@@ -1260,6 +1531,7 @@ class MainWindow(QMainWindow):
             style_native_titlebar(self, self.theme.tokens)
             self._titlebar_styled = True
         QTimer.singleShot(0, self._fit_docks_to_view)
+        QTimer.singleShot(0, self._hide_orphan_tab_bars)
 
     def closeEvent(self, event: QCloseEvent) -> None:
         # Ayrık pencereler hatırlanır ve geri alınır; böylece panel yerleşimi tam hâliyle kaydedilir.
@@ -1281,12 +1553,14 @@ class MainWindow(QMainWindow):
         self._receiver_cfg = replace(self._receiver_cfg, address=self.sources_panel.address.text().strip() or "0.0.0.0",
                                      port=self.sources_panel.port.value())
         self._save_receiver_config()
+        self._save_link_settings()
         self._refresh_timer.stop()
         self.fusion_view.shutdown()
         self.siggen_view.shutdown()
         self.control_view.shutdown()
         if self._simulator is not None:
             self._simulator.stop()
+        self.connection_view.shutdown()   # yankı testi süreci ve yerel yankı sunucusu durur
         self.sources.shutdown()
         self.log_panel.detach()
         super().closeEvent(event)

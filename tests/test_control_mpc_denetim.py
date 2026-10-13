@@ -139,7 +139,7 @@ def test_drone_yineleme_siniri_3_matlab(ref, so):
 @pytest.mark.parametrize("so", [0, 1])
 def test_drone_yineleme_siniri_2_kurali(ref, so):
     """MaxIterations = 2: bildirilen yineleme ≤ 3 (MATLAB'de de) ve sınır durumları (0) oluşur. Sınıra takılan
-    adımlarda KWIK'in yolu farklı olabildiğinden u dizisinin birebir eşleşmesi beklenmez (TASARIM.md §7)."""
+    adımlarda KWIK'in yolu farklı olabildiğinden u dizisinin birebir eşleşmesi beklenmez (SPT-TSR-001 §7)."""
     o = case5()
     o.Optimizer.MaxIterations = 2
     o.Optimizer.UseSuboptimalSolution = bool(so)

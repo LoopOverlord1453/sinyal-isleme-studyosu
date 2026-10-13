@@ -19,7 +19,7 @@ from PyQt6.QtWidgets import (
 )
 
 from spt.console import CHILD_ENV
-from spt.gui.icons import icon
+from spt.gui.icons import icon, primary_icon
 from spt.gui.theme import Tokens, style_native_titlebar
 from spt.gui.widgets.common import CollapsibleSection, combo, label
 from spt.protocol.format import MAX_DATAGRAM, SAMPLE_TYPES, UDP_PORT
@@ -40,6 +40,7 @@ def _console_python() -> str:
 
 class SimulatorDialog(QDialog):
     started = pyqtSignal(str, int)  # hedef adres, port
+    sender_requested = pyqtSignal()  # çok akışlı Sinyal Test Uygulaması'nı aç
 
     def __init__(self, tokens: Tokens, parent: QWidget | None = None):
         super().__init__(parent)
@@ -120,8 +121,14 @@ class SimulatorDialog(QDialog):
         lay.addWidget(self.status)
 
         row = QHBoxLayout()
+        multi = QPushButton(icon("ph.paper-plane-tilt"), "  Çok akışlı test…")
+        multi.setToolTip("Sinyal Test Uygulaması: birden çok akış ve kanal, hazır senaryolar, ağ bozulmaları "
+                         "(ayrı pencere; bu arayüzün dinlediği porta gönderir)")
+        multi.setCursor(Qt.CursorShape.PointingHandCursor)
+        multi.clicked.connect(self.sender_requested.emit)
+        row.addWidget(multi)
         row.addStretch(1)
-        self.start_btn = QPushButton(icon("ph.play"), "  Başlat")
+        self.start_btn = QPushButton(primary_icon("ph.play"), "  Başlat")
         self.start_btn.setObjectName("Primary")
         self.start_btn.clicked.connect(self.toggle)
         close = QPushButton("Kapat")
@@ -185,7 +192,7 @@ class SimulatorDialog(QDialog):
         self._proc.finished.connect(self._finished)
         self._proc.start(_console_python(), self.arguments())
         self.start_btn.setText("  Durdur")
-        self.start_btn.setIcon(icon("ph.stop"))
+        self.start_btn.setIcon(primary_icon("ph.stop"))
         self.status.setText("Başlatılıyor…")
         if self.auto_listen.isChecked():
             self.started.emit(self.host.text().strip(), self.port.value())
@@ -202,6 +209,6 @@ class SimulatorDialog(QDialog):
 
     def _finished(self, *_) -> None:
         self.start_btn.setText("  Başlat")
-        self.start_btn.setIcon(icon("ph.play"))
+        self.start_btn.setIcon(primary_icon("ph.play"))
         if not self.status.text().startswith(("BİTTİ", "Hata")):
             self.status.setText("Durduruldu.")

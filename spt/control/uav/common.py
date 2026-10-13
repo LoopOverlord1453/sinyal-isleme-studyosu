@@ -1,7 +1,7 @@
 """İHA modelleri için ortak araçlar: döndürmeler, kuaterniyonlar, sayısal Jacobian, benzetim, doğrusal model kabı,
 motor / pervane yardımcıları, Dryden türbülansı ve algılayıcı modelleri.
 
-Koordinat ve birim kuralları (docs/asamalar/Asama_4_Kontrol_Tasarimi.md "Koordinatlar (İHA)"):
+Koordinat ve birim kuralları (docs/SPT-DEV-001_Gelistirme_Asamalari.docx, Aşama 4 "Koordinatlar (İHA)"):
   - Dünya çerçevesi NED: x kuzey, y doğu, z aşağı. Gövde çerçevesi FRD: x ileri, y sağ, z aşağı.
   - Euler açıları ZYX (yaw ψ, pitch θ, roll φ): R = Rz(ψ)·Ry(θ)·Rx(φ), v_NED = R·v_gövde (gövde → NED).
   - Kuaterniyon q = [w, x, y, z] (Hamilton), gövde → NED döndürmesi: R(q) aynı matristir; kinematik

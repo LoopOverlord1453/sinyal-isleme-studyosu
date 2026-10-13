@@ -16,9 +16,11 @@ from spt.core.stream_store import StreamInfo, StreamStats
 from spt.protocol.format import Descriptor
 from spt.sources.receiver import ReceiverConfig, run_udp_receiver
 from spt.sources.replay import run_replay
+from spt.sources.stream_receiver import CanConfig, SerialConfig, run_can_receiver, run_serial_receiver
 
 log = logging.getLogger("spt.sources")
 POLL_MS = 30
+LIVE_MODES = ("udp", "usb", "can")   # canlı alıcılar (oynatma dışında); kayıt bunlarda yapılabilir
 MAX_EVENTS_PER_POLL = 2000
 
 
@@ -59,7 +61,7 @@ class SourceManager(QObject):
         self._proc = None
         self._commands = None
         self._events = None
-        self.mode: str | None = None   # "udp" | "replay" | None
+        self.mode: str | None = None   # "udp" | "usb" | "can" | "replay" | None
         self.state = "idle"
         self._detail = ""
         self._emitted = ("idle", "")
@@ -73,6 +75,19 @@ class SourceManager(QObject):
     def start_udp(self, cfg: ReceiverConfig) -> None:
         self.stop()
         self._spawn(run_udp_receiver, (cfg,), "udp")
+
+    def start_serial(self, cfg: SerialConfig) -> None:
+        self.stop()
+        self._spawn(run_serial_receiver, (cfg,), "usb")
+
+    def start_can(self, cfg: CanConfig) -> None:
+        self.stop()
+        self._spawn(run_can_receiver, (cfg,), "can")
+
+    @property
+    def live(self) -> bool:
+        """Canlı alıcı (UDP, USB ya da CAN) çalışıyor mu."""
+        return self.mode in LIVE_MODES
 
     def start_replay(self, path: Path, speed: float, loop: bool, ring_seconds: float, max_ring_mb: int) -> None:
         self.stop()
@@ -208,7 +223,7 @@ class SourceManager(QObject):
                     rate.last_loss = now
             rate._prev = (st.packets, st.bytes, st.lost_samples, now)
             rate.stats = st
-        if self.mode == "udp" and self.state in ("listening", "receiving"):
+        if self.live and self.state in ("listening", "receiving") and session.get("connected", True):
             receiving = any(r.stats and r.stats.idle_s < 1.0 for r in self.rates.values())
             self._set_state("receiving" if receiving else "listening")
         self.stats_updated.emit(session, dict(self.rates))

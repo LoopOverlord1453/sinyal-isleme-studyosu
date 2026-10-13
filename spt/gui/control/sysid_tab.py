@@ -14,14 +14,15 @@ Tüm hesaplar `spt.control.sysid` API'sindendir (bkz. `sysid_jobs`). Uyum %: `co
 başlangıç durumu tahmin edilir — MATLAB compare varsayılanı); FPE / AIC: modelin tahmin raporu (MATLAB
 `Report.Fit` tanımları).
 
-Renkler ölçülerek seçildi (OKLab ΔE, #121110 yüzeyinde; protan / deutan benzetimi Machado 2009, şiddet 1.0):
-8 model rengi + 7 kanal rengi + spa rengi — 16 rengin her çifti normal görüşte ΔE ≥ 10.0, renk körlüğünde ≥ 6.4,
-yüzeye kontrast ≥ 4.9:1. Aynı sekmede hiçbir renk iki seride kullanılmaz: kanal rengi kanala, model rengi modele
-bağlıdır (model silinince renk serbest kalır); bu yüzden en çok 8 model ve 7 kanal (giriş + çıkış) tutulur.
+Renkler her tema için ölçülerek seçildi (OKLab ΔE; protan / deutan benzetimi Machado 2009, şiddet 1.0): 8 model
+rengi + 7 kanal rengi + spa rengi. Koyu tema (#121110 yüzeyi): 16 rengin her çifti normal görüşte ΔE ≥ 10.0, renk
+körlüğünde ≥ 6.4, yüzeye kontrast ≥ 4.9:1. Açık tema (#fffdfa): her çift normal görüşte ΔE ≥ 11.5, renk körlüğünde
+≥ 7.4, yüzeye kontrast ≥ 3.1:1 (ilk altı model rengi Kontrol paletinden; kanal renkleri koyu temadaki açık tonların
+karşılığı olarak koyu tonlar). Aynı sekmede hiçbir renk iki seride kullanılmaz: kanal rengi kanala, model rengi
+modele bağlıdır (model silinince renk serbest kalır); bu yüzden en çok 8 model ve 7 kanal (giriş + çıkış) tutulur.
 """
 from __future__ import annotations
 
-import html
 import logging
 import re
 from dataclasses import dataclass, field
@@ -37,7 +38,6 @@ from PyQt6.QtWidgets import (
     QDoubleSpinBox,
     QFileDialog,
     QHeaderView,
-    QLabel,
     QLineEdit,
     QListWidget,
     QListWidgetItem,
@@ -57,17 +57,28 @@ from spt.control.errors import ControlError
 from spt.gui.control import sysid_jobs as J
 from spt.gui.control.sysid_runner import JobRunner
 from spt.gui.icons import line_swatch
-from spt.gui.theme import ThemeManager
-from spt.gui.widgets.common import Card, CollapsibleSection, combo, form_layout, hbox, label
+from spt.gui.theme import ThemedColors, ThemeManager, themed
+from spt.gui.widgets.common import Card, CollapsibleSection, LegendBar, combo, form_layout, hbox, label
 from spt.gui.widgets.inspector import DataTips, Trace, fmt
 from spt.gui.widgets.plot import make_plot, pen
 
 log = logging.getLogger("spt.gui")
 
 # Ölçülmüş palet (bkz. modül belgesi)
-MODEL_COLORS = ("#f54748", "#488bfb", "#dfa11a", "#45f27f", "#e03fc7", "#4cd1ee", "#c396a8", "#8fa1e4")
-CHANNEL_COLORS = ("#f5f5f5", "#ced51f", "#9becc1", "#bebebe", "#baff3f", "#94c080", "#219a2c")
-SPA_COLOR = "#5c8c79"
+MODEL_COLORS = ThemedColors(
+    dark=("#f54748", "#488bfb", "#dfa11a", "#45f27f", "#e03fc7", "#4cd1ee", "#c396a8", "#8fa1e4"),
+    light=("#b31319", "#1a4eda", "#ea6a09", "#17a664", "#af1da0", "#5391cc", "#f12ca9", "#7060f9"),
+)
+CHANNEL_COLORS = ThemedColors(
+    dark=("#f5f5f5", "#ced51f", "#9becc1", "#bebebe", "#baff3f", "#94c080", "#219a2c"),
+    light=("#161616", "#1c600f", "#411d6c", "#5a5355", "#427a58", "#0f0e9e", "#82748c"),
+)
+
+
+def spa_color() -> str:
+    """Çalışma verisinden spa (spektral analiz) eğrisi."""
+    return themed("#5c8c79", "#472d34")
+
 MEASURED_WIDTH = 2.0
 MODEL_WIDTH = 1.6
 PLOT_MIN_HEIGHT = 100
@@ -123,30 +134,19 @@ INPUT_HINT = re.compile(r"(^u\d*$|^u_|giri|input|cmd|komut|pwm|motor|throttle|ga
 OUTPUT_HINT = re.compile(r"(^y\d*$|^y_|çıkı|cikis|output|meas|ölç|olc|açı|aci|angle|rate|hız|hiz|pos|konum)", re.I)
 
 
-class _Legend(QLabel):
-    """Seri lejantı: renk çizgisi + ad (zengin metin). Başlık satırında tek satır, grafiğin altında kaydırmalı."""
+class _Legend(LegendBar):
+    """Seri lejantı (tıklanabilir: seri o grafikte gizlenir / gösterilir). Başlık satırında tek satır, grafiğin
+    altında kaydırmalı."""
 
-    def __init__(self, card: Card, wrap: bool = False):
-        super().__init__()
-        self.setObjectName("Readout")
-        self.setTextFormat(Qt.TextFormat.RichText)
-        self.setWordWrap(wrap)
+    def __init__(self, card: Card, plot: pg.PlotWidget, wrap: bool = False):
+        super().__init__(lambda: [plot], wrap=wrap)
         self._card = card
-        self._items: list[tuple[str, str]] = []
 
-    def set_items(self, items) -> None:
-        self._items = list(items)
-        self.setText("&nbsp;&nbsp;&nbsp; ".join(f'<span style="color:{c}">▬</span>&nbsp;{html.escape(t)}'
-                                                for c, t in self._items))
+    def set_items(self, items, message: str = "") -> None:
+        super().set_items(items, message)
         fit = getattr(self._card, "_fit_header", None)
-        if not self.wordWrap() and callable(fit):
+        if not self._wrap and callable(fit):
             fit()  # başlıkta: yeni genişliğe göre sığmayan isteğe bağlı öğeleri yeniden seç
-
-    def add(self, color: str, text: str) -> None:
-        self.set_items(self._items + [(color, text)])
-
-    def texts(self) -> list[str]:
-        return [t for _, t in self._items]
 
 
 @dataclass
@@ -533,7 +533,7 @@ class SysIdTab(QWidget):
         plot = make_plot(self._theme, x_label, y_label, x_units, y_units, si_prefix)
         plot.setMinimumHeight(PLOT_MIN_HEIGHT)
         card.body.addWidget(plot, 1)
-        legend = _Legend(card, wrap=legend_below)
+        legend = _Legend(card, plot, wrap=legend_below)
         if legend_below:
             card.body.addWidget(legend)
         else:
@@ -1597,7 +1597,7 @@ class SysIdTab(QWidget):
         j = max(self.freq_input.currentIndex(), 0)
         series = []
         if ctx.spa is not None:
-            series.append(("spa (çalışma verisi)", SPA_COLOR, ctx.spa[0], ctx.spa[1], MEASURED_WIDTH))
+            series.append(("spa (çalışma verisi)", spa_color(), ctx.spa[0], ctx.spa[1], MEASURED_WIDTH))
         for e in self._shown():
             if e.ev.H is not None and e.ev.w is not None:
                 series.append((e.name, e.color, e.ev.w, e.ev.H, MODEL_WIDTH))

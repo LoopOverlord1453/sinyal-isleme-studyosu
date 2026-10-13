@@ -1,6 +1,6 @@
 """Kontrol tasarımı, sistem tanımlama, MPC, blok diyagram ve İHA modelleri (Aşama 4).
 
-Mimari ve ortak kurallar: docs/asamalar/Asama_4_Kontrol_Tasarimi.md. MATLAB adlarıyla toplu erişim:
+Mimari ve ortak kurallar: docs/SPT-DEV-001_Gelistirme_Asamalari.docx, Aşama 4. MATLAB adlarıyla toplu erişim:
 
     from spt.control import tf, c2d, step, margin, pidtune, lqr, MPC
     G = tf([1], [1, 2, 1]); Gd = c2d(G, 0.01, "zoh")

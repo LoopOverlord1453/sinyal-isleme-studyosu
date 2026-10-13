@@ -5,7 +5,7 @@
 adlarıyla ve **boyutsuz** (ölçekli) iç biçimde `static const` olarak flash'a gömülür; boyutlar `#define`, sayı türü
 `<ÖNEK>_REAL` (float / double), durum çağıranın yapısında (malloc yok, global yok, yeniden girişli).
 
-Her örnekte (Ts) adım (TASARIM.md §3 ile birebir):
+Her örnekte (Ts) adım (SPT-TSR-001 §3 ile birebir):
   1. y = ym / S_y − y_off; r, v aynı biçimde (önizleme: satır dizisi, eksik satırlar sonuncuyla doldurulur).
   2. e = y − Cm x̂ − Dvm v(k); x̂(k|k) = x̂ + M e.
   3. f = Kxᵀ x̂ + Krᵀ R + Ku1ᵀ u₋₁ + Kvᵀ V + Kutᵀ U_hedef;  b = −(Mlim + Mx x̂ + Mu1 u₋₁ + Mv V).
@@ -28,7 +28,7 @@ Python / MATLAB'den bilinçli farklar (hepsi belgelenir, testlerle ölçülür):
   - Optimizer.MaxIterations = 0 desteklenmez (MATLAB'de de pozitif tamsayı olmalıdır).
 
 Ayak izi (`footprint`): yerel derleyici varsa ÖLÇÜLÜR (nesne bölümleri, sizeof, libm dahil bağlanmış imaj farkı,
-disassembly'den en kötü yığın); yoksa / IAR / Xtensa / RISC-V için ölçülmüş değerden TAHMİN (satırda yazar).
+disassembly'den en kötü yığın); yoksa / IAR için ölçülmüş değerden TAHMİN (satırda yazar).
 Maliyet (`cost`): adım başına işlem sayıları ana makinede C++ sayaç türüyle ÖLÇÜLÜR (kapalı çevrim senaryosu);
 en kötü durum (MaxIterations yinelemesi) kodun yapısından türetilmiş ANALİTİK ÜST SINIRDIR (testte her ölçülen
 adımın bu sınırın altında kaldığı doğrulanır); çevrimler MCU profil tablosundan TAHMİN edilir.
@@ -48,7 +48,7 @@ import numpy as np
 from spt.codegen import toolchain as tc
 from spt.control.errors import ControlWarning
 from spt.codegen.fusion_c import FootprintRow, GeneratedFile, _count_prelude, write_files
-from spt.codegen.mcu import (BASIC_OPS, COMPILERS, IAR_LIBM_FACTOR, IAR_SIZE_FACTOR, LIBRARY_OPS, MCU_PROFILES,
+from spt.codegen.mcu import (BASIC_OPS, COMPILERS, IAR_LIBM_FACTOR, IAR_SIZE_FACTOR, LIBRARY_OPS,
                              OPS, OPT_LEVELS, McuProfile, cycle_key, profile)
 
 __all__ = ["MpcCodegenOptions", "MpcCostRow", "HostRun", "GeneratedFile", "FootprintRow", "check_options", "plan",
@@ -2203,7 +2203,7 @@ def _measure(mpcobj, opts: MpcCodegenOptions, prof: McuProfile, compiler: str) -
     row = {"flash_code": sz.flash, "text": sz.text, "rodata": sz.rodata, "data": sz.data, "bss": sz.bss,
            "ram_state": syms["spt_sizeof_state"].size, "flash_with_libm": None, "stack": None, "stack_own": None,
            "stack_path": [], "su_step": su.get("spt_step"), "object": str(build.objects["spt.c"])}
-    if gcc is not None and prof.gcc_flags is not None:
+    if gcc is not None:
         base = tc.link_cross({"spt.h": files["spt.h"], "spt_fp_base.c": _harness(pl, True)}, ["spt_fp_base.c"], prof,
                              compiler, opts.opt, defines=[real_def])
         img = tc.link_cross({"spt.h": files["spt.h"], "spt.c": files["spt.c"], "spt_fp_harness.c": _harness(pl, False)},
@@ -2232,9 +2232,9 @@ _REF_OPT = {"-O0": 2.2, "-Os": 1.0, "-O2": 1.25, "-O3": 1.6}
 def _reference_row(pl: _Plan, opts: MpcCodegenOptions, prof: McuProfile, compiler: str, why: str) -> FootprintRow:
     r = 8 if opts.real == "double" else 4
     data = sum(a.values.size for a in pl.arrays) * r
-    k = _REF_OPT[opts.opt] * prof.density * {"gcc": 1.0, "clang": 1.0, "iar": IAR_SIZE_FACTOR}[compiler]
+    k = _REF_OPT[opts.opt] * {"gcc": 1.0, "clang": 1.0, "iar": IAR_SIZE_FACTOR}[compiler]
     code = int(round(_REF_CODE[prof.fpu] * k * (1.6 if opts.real == "double" and prof.double_is_soft() else 1.0)))
-    return FootprintRow(pl.name, compiler, code + data, None, state_size(pl, opts.real), int(round(300 * prof.density)),
+    return FootprintRow(pl.name, compiler, code + data, None, state_size(pl, opts.real), 300,
                         False, f"tahmin: {why}; kod ≈ {code} B (çekirdek / iyileştirmeye göre ölçeklenmiş referans) + "
                                f"sabit veri {data} B (kesin); RAM durum = sizeof (yapı düzeninden kesin)")
 
@@ -2250,14 +2250,10 @@ def footprint(mpcobj, opts: MpcCodegenOptions | None = None, compilers: tuple[st
     for comp in tuple(compilers or (opts.compiler,)):
         if comp not in COMPILERS:
             raise ValueError(f"Bilinmeyen derleyici: {comp!r}")
-        if comp == "iar" and prof.arch == "xtensa":
-            continue
-        base_prof = prof if prof.measurable else MCU_PROFILES[prof.estimate_base]
         src_comp = "gcc" if comp == "iar" else comp
-        dm = _measure(mpcobj, opts, base_prof, src_comp) if base_prof.measurable else None
+        dm = _measure(mpcobj, opts, prof, src_comp)
         if dm is None:
-            why = f"{COMPILERS[src_comp]} bulunamadı" if base_prof.measurable else "derleyici yok"
-            rows.append(_reference_row(pl, opts, prof, comp, why))
+            rows.append(_reference_row(pl, opts, prof, comp, f"{COMPILERS[src_comp]} bulunamadı"))
             continue
         tool = tc.cross_tool(src_comp)
         label = tool.label if tool else src_comp
@@ -2275,26 +2271,16 @@ def footprint(mpcobj, opts: MpcCodegenOptions | None = None, compilers: tuple[st
             return None if v is None else int(round(v * k))
 
         if comp == "iar":
-            rows.append(FootprintRow(pl.name, comp, int(round(dm["flash_code"] * IAR_SIZE_FACTOR * prof.density)),
-                                     sc(dm["flash_with_libm"], IAR_LIBM_FACTOR * prof.density), dm["ram_state"],
-                                     sc(dm["stack"], prof.density), False,
-                                     f"tahmin: IAR yok — {label} {opts.opt} ({base_prof.name}) ölçümü × "
-                                     f"{IAR_SIZE_FACTOR}" + (f" × {prof.density} kod yoğunluğu" if not prof.measurable
-                                                              else "") + "; RAM durum = sizeof (kesin)",
-                                     sc(dm.get("stack_own"), prof.density)))
-        elif prof.measurable:
+            rows.append(FootprintRow(pl.name, comp, int(round(dm["flash_code"] * IAR_SIZE_FACTOR)),
+                                     sc(dm["flash_with_libm"], IAR_LIBM_FACTOR), dm["ram_state"], dm["stack"], False,
+                                     f"tahmin: IAR yok — {label} {opts.opt} ({prof.name}) ölçümü × "
+                                     f"{IAR_SIZE_FACTOR}; RAM durum = sizeof (kesin)", dm.get("stack_own")))
+        else:
             rows.append(FootprintRow(pl.name, comp, dm["flash_code"], dm["flash_with_libm"], dm["ram_state"],
                                      dm["stack"], True,
                                      f"{label} {opts.opt}, {prof.name}, {opts.real}: ölçüldü (nesne .text {dm['text']} "
                                      f"+ .rodata {dm['rodata']} + .data {dm['data']} B; libm: newlib-nano ile "
                                      f"bağlanmış imaj − boş temel; RAM: sizeof(durum)){note}", dm.get("stack_own")))
-        else:
-            k = prof.density
-            rows.append(FootprintRow(pl.name, comp, int(round(dm["flash_code"] * k)), sc(dm["flash_with_libm"], k),
-                                     dm["ram_state"], sc(dm["stack"], k), False,
-                                     f"tahmin: {prof.arch} derleyicisi yok — {label} {opts.opt} ({base_prof.name}) "
-                                     f"ölçümü × {k} kod yoğunluğu; RAM durum = sizeof (ILP32 düzeni aynı, kesin)",
-                                     sc(dm.get("stack_own"), k)))
     return rows
 
 
@@ -2441,7 +2427,7 @@ def usage_markdown(mpcobj, opts: MpcCodegenOptions | None = None, name: str | No
     fpu = {"none": "FPU yok: tüm kayan nokta yazılımda; float bile onlarca çevrim — MPC için en az Cortex-M4F önerilir",
            "sp": "tek duyarlık FPU: `float` önerilir; `double` yazılım kayan noktadır (10–100× yavaş)",
            "dp": "çift duyarlık FPU: `double` da donanımda (yine de `float` daha hızlı ve küçük)"}[prof.fpu]
-    flags = " ".join(prof.gcc_flags) if prof.gcc_flags else "(üretici SDK'sının bayrakları)"
+    flags = " ".join(prof.gcc_flags)
     fp_md = _footprint_md(opts, footprint_rows) if footprint_rows else \
         "_Bu dosya ölçümsüz üretildi; ayak izi tablosu için `footprint()` sonuçlarıyla yeniden üretin._"
     cost_md = _cost_md(pl, opts, cost_rows) if cost_rows else \
@@ -2583,7 +2569,7 @@ eder: üst katmanda güvenli kipe geçin.
 Dosyaları gruba ekleyin, C99; *Floating Point Hardware* = Single (M4F / M33F) ya da Double (M7). Fast-math kapalı.
 AC6 clang tabanlıdır (boyutlar yerelde clang ile ölçüldü); IAR boyutları GCC ölçümünden **tahmindir**.
 
-### C++ projeleri (Arduino, ESP-IDF, Zephyr C++)
+### C++ projeleri (STM32CubeIDE C++ projesi, Zephyr C++)
 Başlık `extern "C"` korumalıdır; `.c` dosyası C++ derleyicisiyle de uyarısız derlenir.
 
 ## Çağırma hızı ve zamanlama

@@ -575,9 +575,12 @@ def test_layout_readable_at_1366x768(ed, app, tmp_path):
         assert vr.contains(it.sceneBoundingRect().center())
 
 
-def test_distinct_colors_are_unique_and_far_apart():
-    from spt.gui.control.diagram_scope import BASE_COLORS, SURFACE, delta_e, distinct_colors
+@pytest.mark.parametrize("name", ["dark", "light"])
+def test_distinct_colors_are_unique_and_far_apart(name, monkeypatch):
+    from spt.gui import theme
+    from spt.gui.control.diagram_scope import BASE_COLORS, delta_e, distinct_colors, surface
 
+    monkeypatch.setattr(theme, "_active", theme.THEMES[name])
     cols = distinct_colors(12)
     assert len(set(cols)) == 12 and cols[:len(BASE_COLORS)] == BASE_COLORS
     assert min(delta_e(a, b) for i, a in enumerate(cols) for b in cols[i + 1:]) > 10
@@ -587,7 +590,8 @@ def test_distinct_colors_are_unique_and_far_apart():
         c = np.where(c <= 0.04045, c / 12.92, ((c + 0.055) / 1.055) ** 2.4)
         return float(c @ [0.2126, 0.7152, 0.0722])
 
-    assert min((lum(c) + 0.05) / (lum(SURFACE) + 0.05) for c in cols) >= 3.0     # zemine kontrast ≥ 3:1
+    bg = lum(surface())
+    assert min((max(lum(c), bg) + 0.05) / (min(lum(c), bg) + 0.05) for c in cols) >= 3.0   # zemine kontrast ≥ 3:1
 
 
 # ============================================================================ Kontrol Tasarımı görünümüyle entegrasyon

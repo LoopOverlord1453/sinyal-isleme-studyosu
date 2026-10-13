@@ -7,12 +7,13 @@ Hedefler (`TARGETS`):
     `dac_write()` fonksiyonunu yazar.
   - dds: 32 bit faz akümülatörlü üreteç, çalışırken frekans değişimi (`<ad>_dds_set_freq`), 2^k tablo,
     isteğe bağlı doğrusal ara değerleme. Python modeli `spt.dsp.siggen.dds_sequence` ile bit düzeyinde aynı.
-  - esp32: ESP-IDF v5.1+ yeni DAC sürücüsü `driver/dac_continuous.h` (DMA, `dac_continuous_write_cyclically`).
-  - arduino: Due / Zero / MKR / Uno R4 — `analogWrite` + `micros()` zamanlaması (basit; titreşimli).
+
+Yalnız STM32 desteklenir; generic_isr ve dds STM32 zamanlayıcı kesmesiyle (dahili DAC ya da SPI / I2C / I2S üzerinden
+harici DAC) kullanılır.
 
 Üretilen çekirdek (.h/.c) satıcı başlığı olmadan `-std=c99 -Wall -Wextra -pedantic -Werror` ile temiz derlenir:
-satıcıya özgü bölümler `USE_HAL_DRIVER` (STM32 CubeMX) ve `ESP_PLATFORM` (ESP-IDF) korumalarının içindedir.
-Örnek dosyalar satıcı başlıklarına ihtiyaç duyabilir.
+HAL'e özgü bölümler `USE_HAL_DRIVER` (STM32 CubeMX) korumasının içindedir. Örnek dosyalar HAL başlıklarına ihtiyaç
+duyabilir.
 """
 from __future__ import annotations
 
@@ -39,17 +40,13 @@ TARGETS: dict[str, str] = {
     "stm32_hal_dma": "STM32 HAL — DAC + TIM6 TRGO + DMA dairesel",
     "generic_isr": "Genel — zamanlayıcı kesmesi (ISR) + dac_write()",
     "dds": "DDS — faz akümülatörü, çalışırken frekans değişimi",
-    "esp32": "ESP32 — ESP-IDF v5.1+ dac_continuous (DMA, döngüsel)",
-    "arduino": "Arduino Due / Zero / MKR / Uno R4 — analogWrite + micros()",
 }
 
 # Kod boyutu / CPU tahminleri (Cortex-M3/M4, -O2). TAHMİNDİR; kesin değer derlenmiş nesne dosyasından ölçülmeli.
-_CODE_EST = {"stm32_hal_dma": 160, "generic_isr": 48, "dds": 110, "esp32": 220, "arduino": 90}
-_CYCLES_EST: dict[str, float | None] = {"stm32_hal_dma": 0.0, "generic_isr": 40.0, "dds": 50.0, "esp32": 0.0,
-                                        "arduino": None}
+_CODE_EST = {"stm32_hal_dma": 160, "generic_isr": 48, "dds": 110}
+_CYCLES_EST = {"stm32_hal_dma": 0.0, "generic_isr": 40.0, "dds": 50.0}
 _DDS_INTERP_EXTRA_CODE = 60
 _DDS_INTERP_EXTRA_CYCLES = 15.0
-_ESP_BUF_SIZE = 2048
 
 
 # ============================================================================ yardımcılar
@@ -143,17 +140,6 @@ def _validate(ctx: _Ctx) -> None:
                               "seçin.")
         if ctx.dac_channel not in (1, 2):
             raise SignalError("STM32 DAC kanalı 1 ya da 2 olmalı.")
-    if t == "esp32":
-        if dac.bits != 8 or dac.word_bits != 8 or dac.signed or dac.align != "right":
-            raise SignalError("ESP32 dahili DAC'ı 8 bit, işaretsiz ve sağa hizalıdır: “ESP32 DAC 8 bit” hazır "
-                              "ayarını seçin.")
-    if t == "arduino":
-        if dac.bits > 12 or dac.signed or dac.align != "right":
-            raise SignalError("Arduino analogWrite en fazla 12 bit, işaretsiz ve sağa hizalı değer alır.")
-        if dac.word_bits == 32:
-            raise SignalError("Arduino hedefi için kelime 8 ya da 16 bit olmalı (“Kelime” alanı).")
-        if ctx.table.fs > 1e6:
-            raise SignalError("Arduino micros() zamanlamasıyla fs ≤ 1 MHz olmalı (pratikte çok daha düşük).")
 
 
 # ============================================================================ başlık (.h)
@@ -229,8 +215,7 @@ def _header(ctx: _Ctx) -> str:
         "",
     ]
     tgt = ctx.target
-    if tgt in ("stm32_hal_dma", "generic_isr", "dds"):
-        out += _timer_macros(ctx)
+    out += _timer_macros(ctx)
     if tgt == "dds":
         k = t.table_bits or 0
         out += [
@@ -272,17 +257,8 @@ def _header(ctx: _Ctx) -> str:
             out += [f"void dac_write({ident}_word_t code);   /* KULLANICI yazar: kodu DAC'a gönder */"]
         out += [f"void {ident}_isr_tick(void);   /* zamanlayıcı kesmesinde fs hızında çağırın */",
                 f"void {ident}_reset(void);"]
-    if tgt == "arduino":
-        out += _arduino_macros(ctx)
-        if t.channels == 2:
-            out += [f"void {ident}_next_stereo({ident}_word_t *ch1, {ident}_word_t *ch2);"]
-        else:
-            out += [f"{ident}_word_t {ident}_next(void);   /* sıradaki örnek (döngüsel) */"]
-        out += [f"void {ident}_reset(void);"]
     if tgt == "stm32_hal_dma":
         out += _stm32_header(ctx)
-    if tgt == "esp32":
-        out += _esp32_header(ctx)
     out += ["", "#ifdef __cplusplus", "}", "#endif", "", f"#endif /* {guard} */", ""]
     return "\n".join(out)
 
@@ -308,50 +284,6 @@ def _stm32_header(ctx: _Ctx) -> list[str]:
         f"HAL_StatusTypeDef {ident}_stop(DAC_HandleTypeDef *hdac, TIM_HandleTypeDef *htim);",
         f"void {ident}_set_arr(TIM_HandleTypeDef *htim, uint32_t arr);   /* çalışırken frekans değiştir */",
         "#endif",
-    ]
-
-
-def _esp_dma(table: Table) -> tuple[int, int]:
-    nbytes = table.memory_bytes
-    buf = _ESP_BUF_SIZE if nbytes > _ESP_BUF_SIZE else max(32, (nbytes + 3) // 4 * 4)
-    return max(2, int(math.ceil(nbytes / buf))), buf
-
-
-def _esp32_header(ctx: _Ctx) -> list[str]:
-    P, ident, t = ctx.P, ctx.ident, ctx.table
-    desc, buf = _esp_dma(t)
-    stereo = t.channels == 2
-    return [
-        "",
-        f"#define {P}_ESP_FREQ_HZ         {_uint(int(round(t.fs)))}   /* dac_continuous freq_hz (tamsayı) */",
-        f"#define {P}_ESP_DESC_NUM        {_uint(desc)}",
-        f"#define {P}_ESP_BUF_SIZE        {_uint(buf)}",
-        f"#define {P}_ESP_CHAN_MASK       {'DAC_CHANNEL_MASK_ALL' if stereo else 'DAC_CHANNEL_MASK_CH0'}"
-        f"   /* CH0 = GPIO25, CH1 = GPIO26 (ESP32) */",
-        f"#define {P}_ESP_CHAN_MODE       {'DAC_CHANNEL_MODE_ALTER' if stereo else 'DAC_CHANNEL_MODE_SIMUL'}",
-        "",
-        "#if defined(ESP_PLATFORM)",
-        "#include \"driver/dac_continuous.h\"",
-        f"esp_err_t {ident}_start(dac_continuous_handle_t *out_handle);",
-        f"esp_err_t {ident}_stop(dac_continuous_handle_t handle);",
-        "#endif",
-    ]
-
-
-def _arduino_fs(t: Table) -> tuple[int, int, int]:
-    fs_int = max(1, int(round(t.fs)))
-    return fs_int, 1_000_000 // fs_int, 1_000_000 % fs_int
-
-
-def _arduino_macros(ctx: _Ctx) -> list[str]:
-    P = ctx.P
-    fs_int, per, rem = _arduino_fs(ctx.table)
-    return [
-        f"/* micros() zamanlaması: ortalama periyot = {per} + {rem}/{fs_int} µs (kesirli birikimle tam fs) */",
-        f"#define {P}_ARD_FS_HZ           {_uint(fs_int)}",
-        f"#define {P}_ARD_PERIOD_US       {_uint(per)}",
-        f"#define {P}_ARD_PERIOD_REM      {_uint(rem)}",
-        "",
     ]
 
 
@@ -502,28 +434,6 @@ def _generic_code(ctx: _Ctx) -> list[str]:
     ]
 
 
-def _arduino_code(ctx: _Ctx) -> list[str]:
-    P, ident = ctx.P, ctx.ident
-    out = [f"static uint32_t {ident}_pos = 0u;", ""]
-    if ctx.table.channels == 2:
-        out += [f"void {ident}_next_stereo({ident}_word_t *ch1, {ident}_word_t *ch2)",
-                "{",
-                f"    uint32_t i = {ident}_pos;",
-                f"    *ch1 = {ident}_table_data[2u * i];",
-                f"    *ch2 = {ident}_table_data[2u * i + 1u];",
-                f"    {ident}_pos = (i + 1u < {P}_N) ? i + 1u : 0u;",
-                "}", ""]
-    else:
-        out += [f"{ident}_word_t {ident}_next(void)",
-                "{",
-                f"    uint32_t i = {ident}_pos;",
-                f"    {ident}_pos = (i + 1u < {P}_N) ? i + 1u : 0u;",
-                f"    return {ident}_table_data[i];",
-                "}", ""]
-    out += [f"void {ident}_reset(void)", "{", f"    {ident}_pos = 0u;", "}", ""]
-    return out
-
-
 def _stm32_code(ctx: _Ctx) -> list[str]:
     P, ident = ctx.P, ctx.ident
     stereo = ctx.table.channels == 2
@@ -588,60 +498,6 @@ def _stm32_code(ctx: _Ctx) -> list[str]:
     return out
 
 
-def _esp32_code(ctx: _Ctx) -> list[str]:
-    P, ident = ctx.P, ctx.ident
-    return [
-        "#if defined(ESP_PLATFORM)",
-        "/* ESP-IDF v5.1+ yeni DAC sürücüsü (driver/dac_continuous.h). Tablo sürücünün DMA tamponlarına",
-        " * kopyalanır ve döngüsel çalınır; CPU serbest kalır. */",
-        f"esp_err_t {ident}_start(dac_continuous_handle_t *out_handle)",
-        "{",
-        "    dac_continuous_handle_t h = NULL;",
-        "    esp_err_t err;",
-        "    dac_continuous_config_t cfg = {",
-        f"        .chan_mask = {P}_ESP_CHAN_MASK,",
-        f"        .desc_num = {P}_ESP_DESC_NUM,",
-        f"        .buf_size = {P}_ESP_BUF_SIZE,",
-        f"        .freq_hz = {P}_ESP_FREQ_HZ,",
-        "        .offset = 0,",
-        "        .clk_src = DAC_DIGI_CLK_SRC_DEFAULT,   /* düşük freq_hz'de hata alırsanız DAC_DIGI_CLK_SRC_APLL */",
-        f"        .chan_mode = {P}_ESP_CHAN_MODE,",
-        "    };",
-        "    err = dac_continuous_new_channels(&cfg, &h);",
-        "    if (err != ESP_OK) {",
-        "        return err;",
-        "    }",
-        "    err = dac_continuous_enable(h);",
-        "    if (err != ESP_OK) {",
-        "        (void)dac_continuous_del_channels(h);",
-        "        return err;",
-        "    }",
-        f"    err = dac_continuous_write_cyclically(h, (uint8_t *)(uintptr_t){ident}_table_data, {P}_TABLE_BYTES,"
-        " NULL);",
-        "    if (err != ESP_OK) {",
-        "        (void)dac_continuous_disable(h);",
-        "        (void)dac_continuous_del_channels(h);",
-        "        return err;",
-        "    }",
-        "    if (out_handle != NULL) {",
-        "        *out_handle = h;",
-        "    }",
-        "    return ESP_OK;",
-        "}",
-        "",
-        f"esp_err_t {ident}_stop(dac_continuous_handle_t handle)",
-        "{",
-        "    esp_err_t err = dac_continuous_disable(handle);",
-        "    if (err != ESP_OK) {",
-        "        return err;",
-        "    }",
-        "    return dac_continuous_del_channels(handle);",
-        "}",
-        "#endif /* ESP_PLATFORM */",
-        "",
-    ]
-
-
 def _source(ctx: _Ctx) -> str:
     out = _banner(ctx, "DAC dalga tablosu")
     out += [f'#include "{ctx.ident}.h"', ""]
@@ -653,12 +509,8 @@ def _source(ctx: _Ctx) -> str:
         out += _dds_code(ctx)
     elif tgt == "generic_isr":
         out += _generic_code(ctx)
-    elif tgt == "arduino":
-        out += _arduino_code(ctx)
     elif tgt == "stm32_hal_dma":
         out += _stm32_code(ctx)
-    elif tgt == "esp32":
-        out += _esp32_code(ctx)
     while out and out[-1] == "":
         out.pop()
     return "\n".join(out) + "\n"
@@ -729,95 +581,33 @@ def _example(ctx: _Ctx) -> GeneratedFile:
             "",
         ]
         return GeneratedFile(f"{ident}_ornek.c", "\n".join(body))
-    if tgt == "dds":
-        body = head + [
-            f'#include "{ident}.h"',
-            "",
-            f"static {ident}_dds_t gen;",
-            "",
-            f"void dac_write({ident}_word_t code);   /* donanımınıza göre yazın (bkz. KULLANIM.md) */",
-            f"void dac_write({ident}_word_t code)",
-            "{",
-            "    (void)code;   /* ör. DAC->DHR12R1 = code; */",
-            "}",
-            "",
-            f"void {ident}_example_init(void)",
-            "{",
-            f"    {ident}_dds_init(&gen);              /* tasarım frekansı: {P}_F_HZ */",
-            f"    {ident}_dds_set_freq(&gen, 440.0);   /* istediğiniz an, kesme açıkken de güvenli */",
-            "}",
-            "",
-            f"/* fs = {t.fs:.9g} Hz zamanlayıcı kesmesi */",
-            "void TIMx_IRQHandler(void)",
-            "{",
-            "    /* önce kesme bayrağını temizleyin */",
-            f"    dac_write({ident}_dds_next(&gen));",
-            "}",
-            "",
-        ]
-        return GeneratedFile(f"{ident}_ornek.c", "\n".join(body))
-    if tgt == "esp32":
-        body = head + [
-            "/* ESP-IDF v5.1+ projesinde main/ altına koyun; main/CMakeLists.txt: REQUIRES driver",
-            " * (IDF 5.3+ için esp_driver_dac de olur). */",
-            '#include "freertos/FreeRTOS.h"',
-            '#include "freertos/task.h"',
-            '#include "esp_err.h"',
-            f'#include "{ident}.h"',
-            "",
-            "void app_main(void)",
-            "{",
-            "    dac_continuous_handle_t dac = NULL;",
-            f"    ESP_ERROR_CHECK({ident}_start(&dac));",
-            "    /* DAC tabloyu DMA ile döngüsel çalıyor; CPU serbest. */",
-            "    for (;;) {",
-            "        vTaskDelay(pdMS_TO_TICKS(1000));",
-            "    }",
-            "}",
-            "",
-        ]
-        return GeneratedFile(f"{ident}_ornek.c", "\n".join(body))
-    # arduino (.ino: C++)
-    if stereo:
-        write = [f"    {ident}_word_t a, b;",
-                 f"    {ident}_next_stereo(&a, &b);",
-                 "    analogWrite(DAC0, a);   /* stereo yalnızca Due (DAC0 + DAC1) */",
-                 "    analogWrite(DAC1, b);"]
-    else:
-        write = [f"    analogWrite({P}_PIN, {ident}_next());"]
-    body = [
-        f"/* {APP_NAME} — \"{ident}\" Arduino örneği (Due / Zero / MKR / Uno R4).",
-        f" * {ident}.h ve {ident}.c dosyalarını bu taslağın klasörüne kopyalayın. */",
+    # dds
+    body = head + [
         f'#include "{ident}.h"',
         "",
-        "#if defined(ARDUINO_SAM_DUE)",
-        f"#define {P}_PIN DAC0",
-        "#else",
-        f"#define {P}_PIN A0   /* Zero / MKR / Uno R4: DAC çıkışı A0 */",
-        "#endif",
+        f"static {ident}_dds_t gen;",
         "",
-        "static uint32_t next_us;",
-        "static uint32_t frac_acc;",
-        "",
-        "void setup() {",
-        f"  analogWriteResolution({P}_DAC_BITS);",
-        "  next_us = micros();",
+        f"void dac_write({ident}_word_t code);   /* donanımınıza göre yazın (bkz. KULLANIM.md) */",
+        f"void dac_write({ident}_word_t code)",
+        "{",
+        "    (void)code;   /* ör. DAC->DHR12R1 = code; */",
         "}",
         "",
-        "void loop() {",
-        "  if ((int32_t)(micros() - next_us) >= 0) {",
-        *write,
-        f"    next_us += {P}_ARD_PERIOD_US;",
-        f"    frac_acc += {P}_ARD_PERIOD_REM;",
-        f"    if (frac_acc >= {P}_ARD_FS_HZ) {{",
-        f"      frac_acc -= {P}_ARD_FS_HZ;",
-        "      next_us++;",
-        "    }",
-        "  }",
+        f"void {ident}_example_init(void)",
+        "{",
+        f"    {ident}_dds_init(&gen);              /* tasarım frekansı: {P}_F_HZ */",
+        f"    {ident}_dds_set_freq(&gen, 440.0);   /* istediğiniz an, kesme açıkken de güvenli */",
+        "}",
+        "",
+        f"/* fs = {t.fs:.9g} Hz zamanlayıcı kesmesi */",
+        "void TIMx_IRQHandler(void)",
+        "{",
+        "    /* önce kesme bayrağını temizleyin */",
+        f"    dac_write({ident}_dds_next(&gen));",
         "}",
         "",
     ]
-    return GeneratedFile(f"{ident}_ornek.ino", "\n".join(body))
+    return GeneratedFile(f"{ident}_ornek.c", "\n".join(body))
 
 
 # ============================================================================ bellek raporu
@@ -827,8 +617,8 @@ def memory_report(table: Table, dac: DacSpec, target: str, *, interpolate: bool 
     hariç); kesin boyut derlenmiş nesne dosyasından ölçülmelidir.
 
     Anahtarlar: target, table_flash_bytes, table_ram_bytes_if_in_ram, dma_buffer_ram_bytes, state_ram_bytes,
-    ram_bytes, code_size_estimate_bytes, code_size_is_estimate (True), cpu_cycles_per_sample_estimate
-    (None: bilinmiyor), cpu_load_pct_estimate, cpu_clock_hz, notes (Türkçe).
+    ram_bytes, code_size_estimate_bytes, code_size_is_estimate (True), cpu_cycles_per_sample_estimate,
+    cpu_load_pct_estimate, cpu_clock_hz, notes (Türkçe).
     """
     if target not in TARGETS:
         raise SignalError(f"Bilinmeyen hedef '{target}'; geçerliler: {', '.join(TARGETS)}.")
@@ -836,21 +626,14 @@ def memory_report(table: Table, dac: DacSpec, target: str, *, interpolate: bool 
         raise SignalError("DacSpec tablonunkiyle aynı değil.")
     notes: list[str] = []
     tab = table.memory_bytes
-    dma = 0
-    state = {"stm32_hal_dma": 0, "generic_isr": 4, "dds": 8, "esp32": 4, "arduino": 12}[target]
-    if target == "esp32":
-        desc, buf = _esp_dma(table)
-        dma = desc * buf
-        notes.append(f"ESP32 sürücüsü tabloyu {desc} × {buf} baytlık DMA tamponlarına kopyalar (RAM).")
+    state = {"stm32_hal_dma": 0, "generic_isr": 4, "dds": 8}[target]
     code = _CODE_EST[target] + (_DDS_INTERP_EXTRA_CODE if (target == "dds" and interpolate) else 0)
     cycles = _CYCLES_EST[target]
-    if target == "dds" and interpolate and cycles is not None:
+    if target == "dds" and interpolate:
         cycles += _DDS_INTERP_EXTRA_CYCLES
     if target == "stm32_hal_dma":
         notes.append("DMA dairesel: örnek başına CPU yükü ≈ 0 (yalnızca veri yolu çevrimleri). HAL DAC/TIM/DMA "
                      "sürücüleri (birkaç kB) CubeMX projesinde zaten vardır, tahmine dahil değil.")
-    if target == "esp32":
-        notes.append("DMA döngüsel: CPU yükü ≈ 0. ESP-IDF DAC sürücüsü tahmine dahil değil.")
     if target == "generic_isr":
         notes.append("ISR ≈ 40 çevrim/örnek (Cortex-M kesme giriş/çıkış ≈ 24 + gövde); dac_write maliyeti hariç "
                      "(dahili DAC yazmacı birkaç çevrim, SPI DAC çok daha fazla).")
@@ -858,16 +641,14 @@ def memory_report(table: Table, dac: DacSpec, target: str, *, interpolate: bool 
         notes.append("DDS ≈ 50 çevrim/örnek kesme dahil (ara değerlemeyle ≈ 65); dac_write hariç. "
                      "dds_set_freq double kullanır: FPU'su tek hassasiyetli MCU'da yazılım kütüphanesi "
                      "(≈ 1–2 kB, başka yerde double yoksa) eklenir.")
-    if target == "arduino":
-        notes.append("analogWrite süresi kart çekirdeğine bağlıdır (µs mertebesi); CPU yükü ölçülmeli.")
-    load = cycles * table.fs / cpu_clock_hz * 100.0 if cycles is not None else None
+    load = cycles * table.fs / cpu_clock_hz * 100.0
     return {
         "target": target,
         "table_flash_bytes": tab,
         "table_ram_bytes_if_in_ram": tab,
-        "dma_buffer_ram_bytes": dma,
+        "dma_buffer_ram_bytes": 0,   # STM32 DMA tabloyu yerinde okur (ek tampon yok)
         "state_ram_bytes": state,
-        "ram_bytes": state + dma,
+        "ram_bytes": state,
         "code_size_estimate_bytes": code,
         "code_size_is_estimate": True,
         "cpu_cycles_per_sample_estimate": cycles,
@@ -940,19 +721,11 @@ def _usage(ctx: _Ctx, files: list[str], mem: dict[str, Any]) -> str:
               "(atlama/tıklama olmaz).",
               "- Dalga şeklini değiştirmek için tabloyu yeniden üretin."]
     else:
-        if tgt in ("stm32_hal_dma", "generic_isr"):
-            L += [f"- **ARR ile (tablo aynı):** f_çıkış = M · TIM_CLK / ((PSC+1)(ARR+1) · N). `{ident}_arr_for_hz(hz)`"
-                  " uygun ARR'yi verir"
-                  + (f", `{ident}_set_arr(&htim6, arr)` uygular" if tgt == "stm32_hal_dma" else "")
-                  + ". ARR önyükleme (ARPE) açıkken değişiklik kesintisizdir; çözünürlük ARR adımıyla sınırlıdır "
-                  "(yüksek frekansta kaba)."]
-        elif tgt == "esp32":
-            L += [f"- **freq_hz ile (tablo aynı):** f_çıkış = M · freq_hz / N. Değiştirmek için kanalı durdurup "
-                  f"(`{ident}_stop`) `{P}_ESP_FREQ_HZ` yerine yeni değerle yeniden başlatın (kısa kesinti olur)."]
-        else:
-            L += [f"- **Örnek periyodu ile (tablo aynı):** f_çıkış = M · fs / N; `{P}_ARD_PERIOD_US` / "
-                  f"`{P}_ARD_PERIOD_REM` / `{P}_ARD_FS_HZ` makrolarını yeni fs için değiştirin (1e6 / fs = "
-                  "PERIOD_US + PERIOD_REM / FS_HZ)."]
+        L += [f"- **ARR ile (tablo aynı):** f_çıkış = M · TIM_CLK / ((PSC+1)(ARR+1) · N). `{ident}_arr_for_hz(hz)`"
+              " uygun ARR'yi verir"
+              + (f", `{ident}_set_arr(&htim6, arr)` uygular" if tgt == "stm32_hal_dma" else "")
+              + ". ARR önyükleme (ARPE) açıkken değişiklik kesintisizdir; çözünürlük ARR adımıyla sınırlıdır "
+              "(yüksek frekansta kaba)."]
         L += ["- **Tabloyu yeniden üretmek:** farklı frekans için N/M yeniden seçilir (en hassas yol).",
               "- **İnce ve hızlı ayar gerekiyorsa** `dds` hedefini kullanın (fs/2^32 çözünürlük, faz sürekli)."]
     L += ["", "## Çıkış filtresi (yeniden yapılandırma)", "",
@@ -985,19 +758,13 @@ def _usage(ctx: _Ctx, files: list[str], mem: dict[str, Any]) -> str:
         L += ["- STM32 dahili DAC tamponu (Output Buffer = Enable) tipik olarak ≥ 5 kΩ / ≤ 50 pF yük sürer ve çıkış "
               "≈ 0.2 V … VDDA − 0.2 V aralığında doğrusaldır (F4 veri sayfası; ailenize göre doğrulayın). Tam 0 V / "
               "VREF gerekiyorsa tamponu kapatıp harici rail-to-rail op-amp kullanın."]
-    if tgt == "arduino":
-        L += ["- Arduino Due DAC çıkışı 1/6 … 5/6 · VREF (≈ 0.55 … 2.75 V) aralığındadır ve akım sınırlıdır; mutlaka "
-              "tamponlayın (DAC pinine doğrudan düşük empedans bağlamak pini bozabilir)."]
     L += ["", "## Bellek ve CPU maliyeti", "",
           f"- Tablo: **{mem['table_flash_bytes']} bayt flash** (RAM'e alınırsa aynı miktar RAM).",
-          f"- RAM: {mem['ram_bytes']} bayt (durum {mem['state_ram_bytes']} B"
-          + (f", DMA tamponları {mem['dma_buffer_ram_bytes']} B" if mem['dma_buffer_ram_bytes'] else "") + ").",
+          f"- RAM: {mem['ram_bytes']} bayt (durum {mem['state_ram_bytes']} B).",
           f"- Kod boyutu: ≈ {mem['code_size_estimate_bytes']} bayt (**tahmin**; kesin değer için derlenmiş nesne "
           "dosyasının boyutuna bakın)."]
     cyc = mem["cpu_cycles_per_sample_estimate"]
-    if cyc is None:
-        L.append("- CPU: ölçülmeli (analogWrite süresi karta bağlı).")
-    elif cyc == 0:
+    if cyc == 0:
         L.append("- CPU: DMA ile ≈ %0 (örnek başına yalnızca veri yolu çevrimleri).")
     else:
         L.append(f"- CPU: ≈ {cyc:.0f} çevrim/örnek (**tahmin**) → {ctx.cpu_clock_hz / 1e6:.4g} MHz çekirdekte "
@@ -1025,16 +792,6 @@ def _usage(ctx: _Ctx, files: list[str], mem: dict[str, Any]) -> str:
               "sayfanıza bakın.",
               "- Bazı ailelerde (ör. H7) DMA'nın erişebildiği bellek bölgeleri ve önbellek tutarlılığı dikkat ister; "
               f"gerekirse `-D{P}_TABLE_IN_RAM` ve uygun bölge."]
-    if tgt == "esp32":
-        L += ["- ESP32 dahili DAC'ı 8 bittir ve doğrusallığı sınırlıdır; yüksek kalite için harici I2S DAC kullanın.",
-              "- dac_continuous_write_cyclically döngü uzunluğunun tablo uzunluğuna eşit olduğunu ve freq_hz'nin "
-              "gerçekleşen değerini kendi IDF sürümünüzde osiloskopla doğrulayın; ALTER (stereo) modda freq_hz'nin "
-              "kanal başına mı toplam mı olduğu sürüme göre kontrol edilmeli."]
-    if tgt == "arduino":
-        L += ["- micros() tabanlı zamanlama yazılımsaldır: kesmeler (USB, Serial) titreşim ekler; pratik üst sınır "
-              "kart ve analogWrite süresine bağlı olarak ~10–50 kHz'tir (ölçün). Kesin zamanlama için donanım "
-              f"zamanlayıcı kesmesinde `{ident}_next()` çağırın (ör. Due için DueTimer kütüphanesi).",
-              "- AVR tabanlı kartlarda (Uno R3, Nano, Mega) gerçek DAC yoktur (analogWrite = PWM)."]
     if tgt == "dds":
         L += [f"- Faz kesme spurları ≈ −{6.02 * (t.table_bits or 0):.0f} dBc (ara değerleme ile belirgin biçimde "
               "daha düşük). fs/f küçüldükçe (periyot başına az örnek) bozulma artar."]
@@ -1094,42 +851,22 @@ def _usage_target(ctx: _Ctx) -> list[str]:
             lines.insert(2, f"   STM32 tarzı zamanlayıcıda TIM_CLK = {tc.timer_clock_hz:.9g} Hz için PSC = {tc.psc}, "
                             f"ARR = {tc.arr} (`{P}_TIM_PSC`, `{P}_TIM_ARR`).")
         return lines
-    if tgt == "dds":
-        lines = [
-            f"1. `{ident}.h` / `{ident}.c` dosyalarını projeye ekleyin.",
-            f"2. Bir üreteç tanımlayın ve başlatın: `static {ident}_dds_t g; {ident}_dds_init(&g);` "
-            f"(tasarım frekansı {t.f_real:.9g} Hz).",
-            f"3. fs = {t.fs:.9g} Hz zamanlayıcı kesmesinde: `dac_write({ident}_dds_next(&g));`.",
-            f"4. Frekansı istediğiniz an değiştirin: `{ident}_dds_set_freq(&g, 1234.5);`.",
-            "",
-            f"Ara değerleme: `-D{P}_DDS_INTERP=1` (ya da üretimde interpolate=True) ile komşu iki seviye arasında "
-            f"{dds_frac_bits(t.table_bits or 0)} bit kesirle doğrusal ara değer alınır (faz kesme spurları azalır, "
-            "≈ 15 çevrim ek maliyet).",
-        ]
-        if tc is not None:
-            lines.insert(3, f"   STM32 tarzı zamanlayıcıda PSC = {tc.psc}, ARR = {tc.arr} (TIM_CLK = "
-                            f"{tc.timer_clock_hz:.9g} Hz).")
-        return lines
-    if tgt == "esp32":
-        return [
-            "Kullanılan API: **ESP-IDF v5.1+ `driver/dac_continuous.h`** (yeni DAC sürücüsü, DMA ile sürekli çıkış; "
-            "eski `driver/dac.h` / `dac_digi_*` değil).", "",
-            f"1. `{ident}.h`, `{ident}.c` ve örnek dosyayı `main/` altına koyun; `main/CMakeLists.txt` → "
-            "`REQUIRES driver` (IDF 5.3+ için `esp_driver_dac`).",
-            f"2. `{ident}_start(&handle)` çağırın: kanal(lar) oluşturulur, etkinleştirilir ve tablo "
-            f"`dac_continuous_write_cyclically` ile döngüye alınır (freq_hz = {int(round(t.fs))}).",
-            "3. Çıkış: DAC_CHAN_0 = GPIO25, DAC_CHAN_1 = GPIO26 (ESP32; ESP32-S2'de GPIO17/18). "
-            "ESP32-S3/C3'te DAC yoktur.",
-        ]
-    fs_int, per, rem = _arduino_fs(t)
-    return [
-        f"1. `{ident}.h`, `{ident}.c` ve `{ident}_ornek.ino` dosyalarını aynı taslak klasörüne koyun.",
-        f"2. `analogWriteResolution({dac.bits})` ile çözünürlüğü ayarlayın (Due/Uno R4: 12, Zero/MKR: 10).",
-        f"3. `loop()` içinde micros() ile her {per} + {rem}/{fs_int} µs'de bir `analogWrite(pin, {ident}_next())` "
-        "(kesirli birikim ortalama fs'yi tam tutar).",
+    # dds
+    lines = [
+        f"1. `{ident}.h` / `{ident}.c` dosyalarını projeye ekleyin.",
+        f"2. Bir üreteç tanımlayın ve başlatın: `static {ident}_dds_t g; {ident}_dds_init(&g);` "
+        f"(tasarım frekansı {t.f_real:.9g} Hz).",
+        f"3. fs = {t.fs:.9g} Hz zamanlayıcı kesmesinde: `dac_write({ident}_dds_next(&g));`.",
+        f"4. Frekansı istediğiniz an değiştirin: `{ident}_dds_set_freq(&g, 1234.5);`.",
         "",
-        "Pin: Due → DAC0 / DAC1; Zero / MKR / Uno R4 → A0.",
+        f"Ara değerleme: `-D{P}_DDS_INTERP=1` (ya da üretimde interpolate=True) ile komşu iki seviye arasında "
+        f"{dds_frac_bits(t.table_bits or 0)} bit kesirle doğrusal ara değer alınır (faz kesme spurları azalır, "
+        "≈ 15 çevrim ek maliyet).",
     ]
+    if tc is not None:
+        lines.insert(3, f"   STM32 tarzı zamanlayıcıda PSC = {tc.psc}, ARR = {tc.arr} (TIM_CLK = "
+                        f"{tc.timer_clock_hz:.9g} Hz).")
+    return lines
 
 
 # ============================================================================ ana giriş
@@ -1137,7 +874,7 @@ def generate(spec: WaveSpec, dac: DacSpec, table: Table, target: str, name: str 
              fs: float | None = None, timer_clock_hz: float = 84e6, timer_bits: int = 16,
              cpu_clock_hz: float = 168e6, dac_channel: int = 1, interpolate: bool = False,
              image_atten_db: float = 40.0) -> list[GeneratedFile]:
-    """Hedef için dosyaları üretir: `<ad>.h`, `<ad>.c`, `<ad>_ornek.c` (arduino: `.ino`), `KULLANIM.md`.
+    """Hedef için dosyaları üretir: `<ad>.h`, `<ad>.c`, `<ad>_ornek.c`, `KULLANIM.md`.
 
     spec / dac, tabloyu üreten nesnelerle aynı olmalıdır (denetlenir). fs verilirse tablonun fs'iyle aynı
     olmalıdır. timer_clock_hz / timer_bits: STM32 tarzı PSC/ARR hesabı (stm32_hal_dma, generic_isr, dds).
@@ -1153,18 +890,12 @@ def generate(spec: WaveSpec, dac: DacSpec, table: Table, target: str, name: str 
         raise SignalError(f"fs ({fs:g} Hz) tablonun fs'inden ({table.fs:g} Hz) farklı; tabloyu bu fs ile üretin.")
     ident = _ident(name)
     notes: list[str] = []
-    tc = None
-    if target in ("stm32_hal_dma", "generic_isr", "dds"):
-        tc = timer_config(table.fs, timer_clock_hz, timer_bits)
-        if abs(tc.error_ppm) > 1.0:
-            f_out = table.f_real * tc.fs_real / table.fs
-            notes.append(f"Zamanlayıcı fs'yi tam üretemiyor: {tc.fs_real:.9g} Hz ({tc.error_ppm:+.2f} ppm) → çıkış "
-                         f"frekansı {f_out:.9g} Hz olur. Tabloyu make_table(..., fs=timer_config(...).fs_real) ile "
-                         "üretmek frekansı tam tutturur.")
-    if target == "esp32" and abs(table.fs - round(table.fs)) > 1e-9:
-        notes.append(f"ESP32 freq_hz tamsayıdır: {table.fs:g} → {int(round(table.fs))} Hz.")
-    if target == "arduino" and abs(table.fs - round(table.fs)) > 1e-9:
-        notes.append(f"Arduino zamanlaması tamsayı Hz kullanır: {table.fs:g} → {int(round(table.fs))} Hz.")
+    tc = timer_config(table.fs, timer_clock_hz, timer_bits)
+    if abs(tc.error_ppm) > 1.0:
+        f_out = table.f_real * tc.fs_real / table.fs
+        notes.append(f"Zamanlayıcı fs'yi tam üretemiyor: {tc.fs_real:.9g} Hz ({tc.error_ppm:+.2f} ppm) → çıkış "
+                     f"frekansı {f_out:.9g} Hz olur. Tabloyu make_table(..., fs=timer_config(...).fs_real) ile "
+                     "üretmek frekansı tam tutturur.")
     if target == "stm32_hal_dma" and table.fs > 1e6:
         notes.append("fs > 1 MHz: çoğu STM32 DAC'ının güncelleme hızını aşar (veri sayfasına bakın).")
     m = metrics(table, image_atten_db=image_atten_db, dds_interpolate=interpolate and table.mode == "dds")

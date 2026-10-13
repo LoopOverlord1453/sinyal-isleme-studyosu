@@ -19,7 +19,7 @@ Python'dan bilinçli farklar (hepsi yuvarlama düzeyinde; çift hassasiyette do�
   - step() dt ≤ 0 / NaN / sonsuz örneği atlar (0 döner, durum değişmez); Python run() sabit dt alır.
 
 Ayak izi (`footprint`): yerel derleyici varsa ÖLÇÜLÜR (nesne bölümleri, sizeof, libm dahil bağlanmış imaj farkı,
-disassembly'den en kötü yığın); IAR, Xtensa ve RISC-V için ölçülmüş bir değerden TAHMİN edilir (yöntem satırda yazar).
+disassembly'den en kötü yığın); IAR için ölçülmüş GCC değerinden TAHMİN edilir (yöntem satırda yazar).
 Maliyet (`cost`): adım başına işlem sayıları ana makinede C++ sayaç türüyle ÖLÇÜLÜR, çevrimler MCU profilindeki
 tablodan TAHMİN edilir.
 """
@@ -35,7 +35,7 @@ from pathlib import Path
 import numpy as np
 
 from spt.codegen import toolchain as tc
-from spt.codegen.mcu import (BASIC_OPS, COMPILERS, IAR_LIBM_FACTOR, IAR_SIZE_FACTOR, LIBRARY_OPS, MCU_PROFILES,
+from spt.codegen.mcu import (BASIC_OPS, COMPILERS, IAR_LIBM_FACTOR, IAR_SIZE_FACTOR, LIBRARY_OPS,
                              OPS, OPT_LEVELS, McuProfile, cycle_key, profile)
 from spt.dsp import fusion as fu
 
@@ -2013,8 +2013,8 @@ def _example(opts: CodegenOptions) -> str:
  *
  * {{BANNER}}
  *
- * Donanıma bağlı üç fonksiyon (imu_oku, ornek_bekle, sonuc_kullan) kullanıcı tarafından yazılır (STM32 HAL,
- * Zephyr, ESP-IDF …). fuzyon_gorevi() main() içinden ya da bir RTOS görevinden çağrılır ve geri dönmez.
+ * Donanıma bağlı üç fonksiyon (imu_oku, ornek_bekle, sonuc_kullan) kullanıcı tarafından yazılır (STM32 HAL / LL,
+ * FreeRTOS …). fuzyon_gorevi() main() içinden ya da bir RTOS görevinden çağrılır ve geri dönmez.
  */
 #include <stdint.h>
 #include <stddef.h>
@@ -2152,7 +2152,7 @@ def _layout(key: str, particles: int) -> tuple[int, int, int]:
 
 
 def state_size(key: str, real: str, particles: int = 600) -> int:
-    """sizeof(durum yapısı): ILP32 (ARM AAPCS, RISC-V ilp32, Xtensa) ve x86-64'te aynı (işaretçi alanı yok)."""
+    """sizeof(durum yapısı): ILP32 (ARM AAPCS) ve x86-64'te aynı (işaretçi alanı yok)."""
     r = 8 if real == "double" else 4
     reals, words, halves = _layout(key, particles)
     size = reals * r + words * 4 + halves * 2
@@ -2233,7 +2233,7 @@ def _measure(opts: CodegenOptions, prof: McuProfile, compiler: str) -> list[dict
     syms = tc.elf_symbols(build.objects["spt_sizeof_probe.c"])
     su = build.stack_usage()
     rows = []
-    linkable = gcc is not None and prof.gcc_flags is not None
+    linkable = gcc is not None
     base_flash = None
     if linkable:
         bfiles = {"spt_fusion_common.h": files["spt_fusion_common.h"],
@@ -2281,12 +2281,12 @@ _REF_OPT = {"-O0": 2.2, "-Os": 1.0, "-O2": 1.25, "-O3": 1.6}
 
 def _reference_row(opts: CodegenOptions, prof: McuProfile, compiler: str, key: str, why: str) -> FootprintRow:
     f, fl, st = _REFERENCE[key]
-    k = _REF_CORE[prof.fpu] * _REF_OPT[opts.opt] * prof.density
+    k = _REF_CORE[prof.fpu] * _REF_OPT[opts.opt]
     if opts.real == "double" and prof.double_is_soft() and prof.fpu != "none":
         k *= 1.5
     k *= {"gcc": 1.0, "clang": 1.0, "iar": IAR_SIZE_FACTOR}[compiler]
     return FootprintRow(key, compiler, int(round(f * k)), int(round(fl * k)),
-                        state_size(key, opts.real, _particles(opts)), int(round(st * prof.density)), False,
+                        state_size(key, opts.real, _particles(opts)), st, False,
                         f"tahmin: {why}; önceden ölçülmüş Cortex-M4F GCC -Os referansından ölçeklendi "
                         f"(×{k:.2f}); RAM durum = sizeof (yapı düzeninden kesin)")
 
@@ -2302,20 +2302,16 @@ def footprint(opts: CodegenOptions, compilers: tuple[str, ...] | None = None) ->
 
     def get(p: McuProfile, comp: str) -> list[dict] | None:
         if (p.key, comp) not in measured:
-            measured[(p.key, comp)] = _measure(opts, p, comp) if p.measurable else None
+            measured[(p.key, comp)] = _measure(opts, p, comp)
         return measured[(p.key, comp)]
 
     for comp in compilers:
         if comp not in COMPILERS:
             raise ValueError(f"Bilinmeyen derleyici: {comp!r}")
-        if comp == "iar" and prof.arch == "xtensa":
-            continue                                     # IAR'ın Xtensa derleyicisi yok
-        base_prof = prof if prof.measurable else MCU_PROFILES[prof.estimate_base]
         src_comp = "gcc" if comp == "iar" else comp
-        data = get(base_prof, src_comp)
+        data = get(prof, src_comp)
         if data is None:
-            why = f"{COMPILERS[src_comp]} bulunamadı" if base_prof.measurable else "derleyici yok"
-            rows += [_reference_row(opts, prof, comp, a, why) for a in algos]
+            rows += [_reference_row(opts, prof, comp, a, f"{COMPILERS[src_comp]} bulunamadı") for a in algos]
             continue
         tool = tc.cross_tool(src_comp)
         tool_label = f"{tool.label}" if tool else src_comp
@@ -2334,26 +2330,17 @@ def footprint(opts: CodegenOptions, compilers: tuple[str, ...] | None = None) ->
 
             if comp == "iar":
                 rows.append(FootprintRow(
-                    d["algorithm"], comp, int(round(d["flash_code"] * IAR_SIZE_FACTOR * prof.density)),
-                    scaled(d["flash_with_libm"], IAR_LIBM_FACTOR * prof.density), d["ram_state"],
-                    scaled(d["stack"], prof.density), False,
-                    f"tahmin: IAR yok — {tool_label} {opts.opt} ({base_prof.name}) ölçümü × {IAR_SIZE_FACTOR} "
+                    d["algorithm"], comp, int(round(d["flash_code"] * IAR_SIZE_FACTOR)),
+                    scaled(d["flash_with_libm"], IAR_LIBM_FACTOR), d["ram_state"], d["stack"], False,
+                    f"tahmin: IAR yok — {tool_label} {opts.opt} ({prof.name}) ölçümü × {IAR_SIZE_FACTOR} "
                     f"(yayımlanmış karşılaştırmalarda IAR genelde GCC'den %5–15 küçük)"
-                    + (f" × {prof.density} kod yoğunluğu" if not prof.measurable else "")
-                    + "; RAM durum = sizeof (ABI aynı, kesin)", scaled(d.get("stack_own"), prof.density)))
-            elif prof.measurable:
+                    "; RAM durum = sizeof (ABI aynı, kesin)", d.get("stack_own")))
+            else:
                 rows.append(FootprintRow(
                     d["algorithm"], comp, d["flash_code"], d["flash_with_libm"], d["ram_state"], d["stack"], True,
                     f"{tool_label} {opts.opt}, {prof.name}, {opts.real}: ölçüldü (nesne .text+.rodata+.data; "
                     f"libm: newlib-nano ile bağlanmış imaj − boş temel; RAM: sizeof){stack_note}",
                     d.get("stack_own")))
-            else:
-                k = prof.density
-                rows.append(FootprintRow(
-                    d["algorithm"], comp, int(round(d["flash_code"] * k)), scaled(d["flash_with_libm"], k),
-                    d["ram_state"], scaled(d["stack"], k), False,
-                    f"tahmin: {prof.arch} derleyicisi yok — {tool_label} {opts.opt} ({base_prof.name}) ölçümü × "
-                    f"{k} kod yoğunluğu; RAM durum = sizeof (ILP32 düzeni aynı, kesin)", scaled(d.get("stack_own"), k)))
     return rows
 
 
@@ -2754,7 +2741,7 @@ def usage_markdown(opts: CodegenOptions, footprint_rows: list[FootprintRow] | No
     fpu = {"none": "FPU yok: `-mfloat-abi=soft` (tüm kayan nokta yazılımda; float bile onlarca çevrim)",
            "sp": "tek hassasiyet FPU: `float` önerilir; `double` yazılım kayan noktadır (10–100× yavaş)",
            "dp": "çift hassasiyet FPU: `double` de donanımda (yine de `float` daha hızlı ve küçük)"}[prof.fpu]
-    flags = " ".join(prof.gcc_flags) if prof.gcc_flags else "(bu çekirdek için derleyici bayrakları üreticinin SDK'sına bakın)"
+    flags = " ".join(prof.gcc_flags)
     real_note = ""
     if opts.real == "double" and prof.double_is_soft():
         real_note = (f"\n> **Uyarı:** `double` seçildi ama {prof.name} çekirdeğinde çift hassasiyet donanımı yok; "
@@ -2839,10 +2826,6 @@ void fuzyon_adimi(const {P}_REAL gyro[3], const {P}_REAL acc[3], const {P}_REAL 
 3. *Language*: C99 (ya da Standard C), *Optimizations*: High / Size ya da Speed. Kaynak UTF-8'dir (yalnız
    yorumlarda Türkçe karakter var).
 4. IAR bu makinede olmadığından IAR boyutları **tahmindir** (GCC ölçümü × {IAR_SIZE_FACTOR}).
-
-### ESP32 (ESP-IDF) / RISC-V
-Dosyaları bir bileşenin `srcs` listesine ekleyin. ESP32'nin FPU'su tek hassasiyettir (`float` kullanın; bölme ve
-karekök yazılım yinelemesidir). FPU'suz RISC-V (RV32IMAC) çekirdeklerde tüm kayan nokta yazılımdadır.
 
 ## Sabit hızda çağırma ve dt
 

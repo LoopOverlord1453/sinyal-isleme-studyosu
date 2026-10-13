@@ -633,9 +633,29 @@ def test_add_to_workspace_and_colors(tab):
     # klasik görünümde her seri ayrı renkte (lejant)
     from PyQt6.QtCore import QCoreApplication, QEvent
     QCoreApplication.sendPostedEvents(None, QEvent.Type.DeferredDelete.value)
-    colors = [lab.text().split("color:")[1][:7] for lab in tab.classical.legend.findChildren(type(tab.status))]
+    colors = [t.color for t in tab.classical.legend.toggles()]
     assert len(colors) == len(set(colors)) >= 6
     assert set(colors) <= set(cp.PALETTE)
+    # lejanttan kapatılan seri görünümün bütün kartlarında gizlenir ve yeniden çizimde de kapalı kalır
+    from spt.gui.widgets.plot import series_color
+
+    def shown(color):
+        return [it for card in tab.classical.findChildren(cp.PlotCard) for it in card.plot.getPlotItem().items
+                if series_color(it) == color and it.isVisible()]
+
+    target = tab.classical.legend.toggles()[0]
+    color = target.color
+    assert shown(color)
+    target.click()
+    assert not shown(color)
+    tab.store_baseline()
+    tab.wait_idle()
+    QCoreApplication.sendPostedEvents(None, QEvent.Type.DeferredDelete.value)
+    assert not shown(color)
+    again = next(t for t in tab.classical.legend.toggles() if t.color == color)
+    assert not again.isChecked()
+    again.click()
+    assert shown(color)
 
 
 def test_save_restore_state(app, theme, tab, tmp_path):

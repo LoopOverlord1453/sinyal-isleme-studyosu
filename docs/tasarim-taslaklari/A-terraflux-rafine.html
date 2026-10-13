@@ -1,0 +1,545 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Taslak A · TerraFlux Rafine</title>
+<script src="ortak.js"></script>
+<style>
+  /* ---------------------------------------------------------------- Tokenlar */
+  :root {
+    color-scheme: light;
+    --font-ui: "Segoe UI Variable Text", "Segoe UI", Inter, system-ui, sans-serif;
+    --font-mono: "Cascadia Mono", Consolas, "Courier New", monospace;
+
+    --bg: #f3f0eb;
+    --surface: #fffdfa;
+    --surface-alt: #f8f5f0;
+    --elevated: #ffffff;
+    --hover: #f2ede6;
+    --pressed: #e9e2d9;
+    --border: #e7e0d6;
+    --border-strong: #d4cabd;
+    --text: #1d1a16;
+    --text-secondary: #554d44;
+    --text-muted: #776d62;
+    --accent: #e2731b;
+    --accent-text: #a14b06;
+    --accent-dark: #e0904f;
+    --accent-tint: #fcecdd;
+    --on-accent: #ffffff;
+    --good: #0b8a0b;
+    --warning: #b47700;
+    --critical: #c43333;
+    --glow: #fbe5cf;
+
+    --seri-1: #eb6834;
+    --seri-2: #2a78d6;
+    --grafik-zemin: #fffdfa;
+    --grafik-izgara: #f0eae2;
+    --grafik-eksen: #d4cabd;
+    --grafik-metin: #776d62;
+    --grafik-baslik: #554d44;
+    --grafik-imlec: #776d62;
+    --grafik-vurgu: #e2731b;
+    --grafik-ipucu-zemin: #ffffff;
+    --grafik-ipucu-kenar: #d4cabd;
+    --grafik-ipucu-metin: #1d1a16;
+    --grafik-ipucu-soluk: #554d44;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      color-scheme: dark;
+      --bg: #080808; --surface: #121110; --surface-alt: #171513; --elevated: #1b1917; --hover: #24211e;
+      --pressed: #2c2825; --border: #25221f; --border-strong: #38332f; --text: #fffdfb; --text-secondary: #b3aca5;
+      --text-muted: #8a837c; --accent: #ec7c22; --accent-text: #f59a4d; --accent-dark: #a4510e; --accent-tint: #2c1e12;
+      --on-accent: #1a0d02; --good: #0ca30c; --warning: #fab219; --critical: #d03b3b; --glow: #1c140c;
+      --seri-1: #d95926; --seri-2: #3987e5;
+      --grafik-zemin: #121110; --grafik-izgara: #1f1d1a; --grafik-eksen: #3a3531; --grafik-metin: #8a837c;
+      --grafik-baslik: #b3aca5; --grafik-imlec: #8a837c; --grafik-vurgu: #ec7c22; --grafik-ipucu-zemin: #1b1917;
+      --grafik-ipucu-kenar: #38332f; --grafik-ipucu-metin: #fffdfb; --grafik-ipucu-soluk: #b3aca5;
+    }
+  }
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    --bg: #080808; --surface: #121110; --surface-alt: #171513; --elevated: #1b1917; --hover: #24211e;
+    --pressed: #2c2825; --border: #25221f; --border-strong: #38332f; --text: #fffdfb; --text-secondary: #b3aca5;
+    --text-muted: #8a837c; --accent: #ec7c22; --accent-text: #f59a4d; --accent-dark: #a4510e; --accent-tint: #2c1e12;
+    --on-accent: #1a0d02; --good: #0ca30c; --warning: #fab219; --critical: #d03b3b; --glow: #1c140c;
+    --seri-1: #d95926; --seri-2: #3987e5;
+    --grafik-zemin: #121110; --grafik-izgara: #1f1d1a; --grafik-eksen: #3a3531; --grafik-metin: #8a837c;
+    --grafik-baslik: #b3aca5; --grafik-imlec: #8a837c; --grafik-vurgu: #ec7c22; --grafik-ipucu-zemin: #1b1917;
+    --grafik-ipucu-kenar: #38332f; --grafik-ipucu-metin: #fffdfb; --grafik-ipucu-soluk: #b3aca5;
+  }
+
+  /* ---------------------------------------------------------------- Temel */
+  * { box-sizing: border-box; }
+  html { height: 100%; overflow: auto; }
+  body {
+    margin: 0; height: 100vh; min-width: 1280px; min-height: 760px; display: flex; flex-direction: column;
+    background: var(--bg); color: var(--text); font: 13px/1.35 var(--font-ui); overflow: hidden;
+    --grafik-font: 11px "Segoe UI Variable Text", "Segoe UI", sans-serif;
+    --grafik-font-mono: 11px "Cascadia Mono", Consolas, monospace;
+  }
+  button, input { font: inherit; color: inherit; }
+  button { cursor: pointer; }
+  h1, h2, h3, p { margin: 0; }
+  .mono { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+  .ikon { font-size: 16px; }
+
+  /* ---------------------------------------------------------------- Menü + üst çubuk */
+  .menu { display: flex; gap: 2px; padding: 4px 10px 0; flex: none; }
+  .menu button { background: none; border: 0; padding: 4px 10px; border-radius: 6px; color: var(--text-secondary); }
+  .menu button:hover { background: var(--hover); color: var(--text); }
+
+  .ust { display: flex; align-items: center; gap: 10px; padding: 8px 12px; border-bottom: 1px solid var(--border); flex: none; }
+  .marka { display: flex; align-items: center; gap: 9px; font-weight: 600; font-size: 14px; padding-right: 6px; white-space: nowrap; }
+  .logo { width: 28px; height: 28px; border-radius: 8px; background: var(--accent); color: var(--on-accent); display: grid; place-items: center; }
+  .logo .ikon { font-size: 18px; stroke-width: 2.4; }
+  .arama { display: flex; align-items: center; gap: 8px; height: 34px; width: 250px; padding: 0 6px 0 10px; background: var(--elevated);
+    border: 1px solid var(--border); border-radius: 8px; color: var(--text-muted); }
+  .arama:hover { border-color: var(--border-strong); }
+  .arama input { flex: 1; min-width: 0; border: 0; outline: 0; background: transparent; }
+  .arama input::placeholder { color: var(--text-muted); }
+  kbd { font: 11px var(--font-ui); color: var(--text-secondary); background: var(--hover); border: 1px solid var(--border-strong); border-radius: 5px; padding: 1px 6px; }
+
+  .gezinti { display: flex; gap: 2px; padding: 3px; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; margin: 0 auto; }
+  .gezinti button { display: flex; align-items: center; gap: 7px; height: 30px; padding: 0 12px; border: 1px solid transparent; border-radius: 7px;
+    background: none; color: var(--text-secondary); white-space: nowrap; }
+  .gezinti button:hover { background: var(--hover); color: var(--text); }
+  .gezinti button.secili { background: var(--accent-tint); border-color: var(--accent-dark); color: var(--text); }
+  .gezinti button.secili .ikon { color: var(--accent); }
+  .gezinti kbd { display: none; }
+
+  .arac-grubu { display: flex; gap: 2px; padding: 3px; border: 1px solid var(--border); border-radius: 10px; background: var(--surface); }
+  .ikon-dugme { width: 32px; height: 32px; display: grid; place-items: center; border: 1px solid transparent; border-radius: 7px; background: none; color: var(--text-secondary); }
+  .ikon-dugme:hover { background: var(--hover); color: var(--text); }
+  .ikon-dugme.kenarli { background: var(--elevated); border-color: var(--border); }
+  .ikon-dugme.kenarli:hover { border-color: var(--border-strong); }
+  .ikon-dugme[aria-pressed="true"], .ikon-dugme.aktif { background: var(--accent-tint); border-color: var(--accent-dark); color: var(--accent); }
+  .ikon-dugme .kayit-ikon { color: var(--critical); font-size: 12px; }
+
+  /* ---------------------------------------------------------------- Ana yerleşim */
+  main {
+    flex: 1; min-height: 0; display: grid; grid-template-columns: 292px minmax(0, 1fr) 300px; gap: 10px; padding: 10px;
+    background: radial-gradient(ellipse 60% 55% at 26% 0%, var(--glow), transparent 70%);
+  }
+  .sutun { display: flex; flex-direction: column; gap: 10px; min-height: 0; min-width: 0; }
+
+  .kart { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; display: flex; flex-direction: column; min-height: 0; }
+  .kart-bas { display: flex; align-items: center; gap: 8px; height: 42px; padding: 0 10px 0 14px; flex: none; }
+  .kart-bas h2 { font-size: 13px; font-weight: 600; display: flex; align-items: center; gap: 8px; white-space: nowrap; }
+  .kart-bas h2 .ikon { color: var(--text-muted); }
+  .bosluk { flex: 1; }
+  .duz-ikon { width: 26px; height: 26px; display: grid; place-items: center; border: 0; border-radius: 6px; background: none; color: var(--text-muted); }
+  .duz-ikon:hover { background: var(--hover); color: var(--text); }
+  .duz-ikon .ikon { font-size: 15px; }
+  .kart-govde { padding: 0 14px 14px; min-height: 0; }
+
+  .cip { display: inline-flex; align-items: center; gap: 6px; height: 26px; padding: 0 10px; border: 1px solid var(--border); border-radius: 8px;
+    background: var(--elevated); color: var(--text-secondary); font-size: 12px; white-space: nowrap; }
+  .bolum-etiketi { font-size: 11px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; color: var(--text-muted); }
+
+  /* ---------------------------------------------------------------- Form öğeleri */
+  .form { display: grid; grid-template-columns: 86px 1fr 74px; gap: 6px 8px; }
+  .form label { font-size: 12px; color: var(--text-muted); }
+  .girdi, .secim { height: 32px; width: 100%; padding: 0 9px; background: var(--elevated); border: 1px solid var(--border); border-radius: 8px;
+    display: flex; align-items: center; justify-content: space-between; gap: 6px; text-align: left; white-space: nowrap; }
+  .girdi:hover, .secim:hover { border-color: var(--border-strong); }
+  .girdi:focus { outline: 0; border-color: var(--accent); }
+  .secim .ikon { color: var(--text-muted); font-size: 14px; }
+  .dugme { height: 34px; padding: 0 14px; border: 1px solid var(--border-strong); border-radius: 8px; background: var(--elevated);
+    display: inline-flex; align-items: center; justify-content: center; gap: 8px; white-space: nowrap; }
+  .dugme:hover { background: var(--hover); }
+  .dugme .ikon { color: var(--text-secondary); }
+  .dugme.birincil { background: var(--accent-tint); border-color: var(--accent-dark); color: var(--text); font-weight: 600; }
+  .dugme.birincil .ikon { color: var(--accent); }
+  .dugme.birincil:hover { border-color: var(--accent); }
+  .tam { width: 100%; }
+  .iki { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+
+  input[type="checkbox"] { appearance: none; width: 15px; height: 15px; margin: 0; border: 1px solid var(--border-strong); border-radius: 4px;
+    background: var(--elevated); display: inline-grid; place-items: center; flex: none; cursor: pointer; }
+  input[type="checkbox"]:checked { background: var(--accent); border-color: var(--accent); }
+  input[type="checkbox"]:checked::after { content: ""; width: 8px; height: 4px; border: solid var(--on-accent); border-width: 0 0 2px 2px; transform: translateY(-1px) rotate(-45deg); }
+  .onay { display: flex; align-items: center; gap: 8px; color: var(--text-secondary); cursor: pointer; }
+
+  /* ---------------------------------------------------------------- Kaynaklar */
+  .baglanti { display: grid; grid-template-columns: 78px 1fr 76px; gap: 4px 6px; }
+  .baglanti label { font-size: 12px; color: var(--text-muted); padding-left: 2px; }
+  .oynatma { margin-top: 10px; padding: 10px; background: var(--surface-alt); border: 1px solid var(--border); border-radius: 10px; }
+  .oynatma .dosya { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--text-secondary); white-space: nowrap; overflow: hidden; }
+  .oynatma .dosya span { overflow: hidden; text-overflow: ellipsis; }
+  .kaydirici { position: relative; height: 16px; margin: 6px 2px 4px; --ilerleme: 40%; }
+  .kaydirici::before { content: ""; position: absolute; left: 0; right: 0; top: 6px; height: 4px; border-radius: 2px; background: var(--border-strong); }
+  .kaydirici::after { content: ""; position: absolute; left: 0; width: var(--ilerleme); top: 6px; height: 4px; border-radius: 2px; background: var(--accent); }
+  .kaydirici i { position: absolute; left: var(--ilerleme); top: 2px; width: 12px; height: 12px; margin-left: -6px; border-radius: 50%;
+    background: var(--elevated); border: 2px solid var(--accent); z-index: 1; }
+  .oynatma .kontroller { display: flex; align-items: center; gap: 4px; }
+  .oynatma .kontroller .zaman { margin-left: 6px; color: var(--text-secondary); font-size: 12px; }
+  .oynatma .alt { display: flex; align-items: center; gap: 8px; margin-top: 8px; }
+  .oynatma .alt .secim { width: 92px; height: 28px; }
+
+  .akislar { margin-top: 14px; display: flex; flex-direction: column; gap: 2px; }
+  .akislar .bolum-etiketi { margin: 0 2px 6px; }
+  .agac-satir { display: flex; align-items: center; gap: 8px; height: 30px; padding: 0 8px; border-radius: 7px; white-space: nowrap; color: var(--text-secondary); }
+  .agac-satir:hover { background: var(--hover); }
+  .agac-satir .ikon { color: var(--text-muted); font-size: 14px; }
+  .agac-satir.akis { padding-left: 22px; color: var(--text); }
+  .agac-satir.akis .ikon { color: var(--accent); }
+  .agac-satir.kanal { padding-left: 40px; color: var(--text); }
+  .agac-satir .ad { overflow: hidden; text-overflow: ellipsis; }
+  .agac-satir .deger { margin-left: auto; font-size: 12px; color: var(--text-muted); }
+  .renk { width: 10px; height: 10px; border-radius: 3px; flex: none; }
+  .renk.s1 { background: var(--seri-1); } .renk.s2 { background: var(--seri-2); }
+
+  .bos-durum { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; gap: 8px; padding: 18px 22px; color: var(--text-muted); }
+  .bos-durum .ikon-kutu { width: 40px; height: 40px; border-radius: 12px; display: grid; place-items: center; background: var(--surface-alt); border: 1px solid var(--border); color: var(--text-muted); }
+  .bos-durum .ikon-kutu .ikon { font-size: 20px; }
+  .bos-durum h3 { font-size: 13px; font-weight: 600; color: var(--text); }
+  .bos-durum p { font-size: 12px; line-height: 1.5; max-width: 230px; }
+  .kart-alt { display: flex; gap: 6px; padding: 10px; border-top: 1px solid var(--border); flex: none; }
+  .kart-alt .dugme { height: 30px; padding: 0 10px; font-size: 12px; }
+
+  /* ---------------------------------------------------------------- Orta sütun */
+  .sayfa-bas { display: flex; align-items: flex-end; gap: 12px; padding: 2px 4px 0; flex: none; }
+  .sayfa-bas h1 { font-size: 22px; font-weight: 500; letter-spacing: -.01em; }
+  .sayfa-bas p { color: var(--text-muted); font-size: 12px; margin-top: 2px; }
+  .sayfa-bas .sag { margin-left: auto; display: flex; align-items: center; gap: 8px; }
+
+  .canli-rozet { display: inline-flex; align-items: center; gap: 7px; height: 26px; padding: 0 10px; border-radius: 8px; font-size: 12px; font-weight: 600;
+    background: var(--accent-tint); border: 1px solid var(--accent-dark); color: var(--accent-text); }
+  .canli-rozet .nokta { width: 7px; height: 7px; border-radius: 50%; background: var(--accent); animation: nabiz 1.6s ease-in-out infinite; }
+  html.donuk .canli-rozet { background: var(--elevated); border-color: var(--border-strong); color: var(--text-secondary); }
+  html.donuk .canli-rozet .nokta { animation: none; background: var(--text-muted); }
+  @keyframes nabiz { 50% { opacity: .25; } }
+  @media (prefers-reduced-motion: reduce) { .canli-rozet .nokta { animation: none; } }
+
+  .segment { display: inline-flex; gap: 2px; padding: 2px; border: 1px solid var(--border); border-radius: 8px; background: var(--elevated); }
+  .segment button { height: 22px; padding: 0 9px; border: 1px solid transparent; border-radius: 6px; background: none; color: var(--text-secondary); font-size: 12px; white-space: nowrap; }
+  .segment button:hover { color: var(--text); }
+  .segment button.secili { background: var(--accent-tint); border-color: var(--accent-dark); color: var(--text); }
+
+  .grafik-kart { flex: 1.25; }
+  .grafik-kart.spek { flex: 1; }
+  .grafik-kap { position: relative; flex: 1; min-height: 120px; margin: 0 8px 8px; }
+  .lejant { display: flex; gap: 4px; margin-left: 6px; }
+  .lejant label { display: inline-flex; align-items: center; gap: 6px; height: 24px; padding: 0 8px; border: 1px dashed transparent; border-radius: 6px; font-size: 12px; color: var(--text-secondary); cursor: pointer; }
+  .lejant label:hover { background: var(--hover); }
+  .lejant input { position: absolute; opacity: 0; pointer-events: none; }
+  .lejant .cizgi { width: 14px; height: 3px; border-radius: 2px; }
+  .lejant label:has(input:not(:checked)) { border-color: var(--border-strong); color: var(--text-muted); }
+  .lejant label:has(input:not(:checked)) .cizgi { opacity: .3; }
+  .lejant label:has(input:focus-visible) { outline: 2px solid var(--accent); }
+
+  .alt-sira { display: grid; grid-template-columns: 1.45fr 1fr; gap: 10px; height: 178px; flex: none; }
+  table { border-collapse: collapse; width: 100%; font-size: 12px; }
+  th { text-align: left; font-weight: 500; color: var(--text-muted); padding: 6px 10px; border-bottom: 1px solid var(--border); white-space: nowrap; }
+  td { padding: 0 10px; height: 36px; border-bottom: 1px solid var(--border); white-space: nowrap; }
+  td.sayi, th.sayi { text-align: right; font-variant-numeric: tabular-nums; }
+  .num-cip { display: inline-grid; place-items: center; min-width: 22px; height: 20px; border-radius: 10px; border: 1px solid var(--border); background: var(--elevated); font-size: 11px; color: var(--text-secondary); margin-right: 6px; }
+  .rozet { display: inline-flex; align-items: center; gap: 6px; height: 24px; padding: 0 9px; border-radius: 6px; background: var(--elevated); border-left: 2px solid var(--good); }
+  .rozet .ikon { color: var(--good); font-size: 13px; }
+  .gunluk { flex: 1; min-height: 0; overflow: auto; padding: 0 14px 10px; font: 12px/1.75 var(--font-mono); color: var(--text-secondary); }
+  .gunluk div { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .gunluk time { color: var(--text-muted); margin-right: 8px; }
+  .gunluk .iyi { color: var(--good); }
+
+  /* ---------------------------------------------------------------- Sağ sütun */
+  details { border-top: 1px solid var(--border); }
+  details:first-of-type { border-top: 0; }
+  summary { list-style: none; display: flex; align-items: center; gap: 6px; height: 36px; padding: 0 14px; font-weight: 600; cursor: pointer; }
+  summary::-webkit-details-marker { display: none; }
+  summary .ikon { font-size: 14px; color: var(--text-muted); transition: transform .15s; }
+  details:not([open]) summary .ikon { transform: rotate(-90deg); }
+  .ozellik { display: grid; grid-template-columns: 104px 1fr; gap: 6px 10px; align-items: center; padding: 0 14px 12px; }
+  .ozellik > label:not(.onay) { color: var(--text-muted); font-size: 12px; }
+  .ozellik .onay { grid-column: 2; font-size: 12px; }
+  .ozellik .girdi, .ozellik .secim { height: 30px; }
+  .ozellikler { flex: 1.6; }
+  .ozellikler .kaydir { overflow: auto; min-height: 0; flex: 1; }
+
+  .sekmeli { flex: 1; }
+  .sekme-bas { display: flex; gap: 2px; padding: 6px 8px 0; border-bottom: 1px solid var(--border); flex: none; }
+  .sekme-bas button { height: 32px; padding: 0 12px; background: none; border: 0; border-bottom: 2px solid transparent; color: var(--text-muted); margin-bottom: -1px; display: flex; align-items: center; gap: 7px; }
+  .sekme-bas button:hover { color: var(--text); }
+  .sekme-bas button.secili { color: var(--text); border-bottom-color: var(--accent); font-weight: 600; }
+  .sekme-bas button .ikon { font-size: 14px; }
+  .sekme-panel { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+  .sekme-panel[hidden] { display: none; }
+  .zincir-ust { display: flex; align-items: center; gap: 8px; padding: 12px 14px 0; }
+  .zincir-ust .secim { width: 132px; height: 28px; margin-left: auto; font-size: 12px; }
+  .olcum-tablo td:first-child { color: var(--text-muted); }
+  .olcum-tablo td { height: 32px; }
+  .olcum-tablo th .renk { display: inline-block; margin-right: 6px; vertical-align: -1px; }
+
+  /* ---------------------------------------------------------------- Durum çubuğu */
+  .durum { display: flex; align-items: center; gap: 4px; height: 30px; padding: 0 10px; border-top: 1px solid var(--border); color: var(--text-muted); font-size: 12px; flex: none; }
+  .durum > span { padding: 0 10px; white-space: nowrap; }
+  .durum .ayrac { width: 1px; height: 14px; padding: 0; background: var(--border-strong); }
+  .durum .durum-cip { display: inline-flex; align-items: center; gap: 7px; height: 22px; border: 1px solid var(--border); border-radius: 7px; background: var(--surface); color: var(--text-secondary); }
+  .durum .durum-cip i { width: 7px; height: 7px; border-radius: 50%; background: var(--accent); }
+  html.donuk .durum .durum-cip i { background: var(--text-muted); }
+  .durum .kapali i { width: 6px; height: 6px; border-radius: 50%; background: var(--text-muted); display: inline-block; margin-right: 6px; }
+</style>
+</head>
+<body>
+
+<nav class="menu" aria-label="Menü">
+  <button>Dosya</button><button>Düzen</button><button>Görünüm</button><button>Bağlantı</button>
+  <button>Analiz</button><button>Filtre</button><button>Araçlar</button><button>Yardım</button>
+</nav>
+
+<header class="ust">
+  <div class="marka"><span class="logo"><i data-ikon="sinus"></i></span>Sinyal İşleme Stüdyosu</div>
+  <label class="arama"><i data-ikon="arama"></i><input placeholder="Komut ara…" aria-label="Komut ara"><kbd>Ctrl K</kbd></label>
+  <nav class="gezinti" data-secim-grubu aria-label="Görünümler">
+    <button class="secili" aria-pressed="true"><i data-ikon="canli"></i>Canlı İzleme</button>
+    <button><i data-ikon="kar"></i>İnceleme</button>
+    <button><i data-ikon="sinus"></i>Sinyal Üreteci</button>
+    <button><i data-ikon="filtre"></i>Filtre Tasarımcısı</button>
+    <button><i data-ikon="pusula"></i>Sensör Füzyonu</button>
+    <button><i data-ikon="hedef"></i>Kontrol Tasarımı</button>
+  </nav>
+  <div class="arac-grubu" aria-label="Akış denetimi">
+    <button class="ikon-dugme" title="Dinlemeyi başlat (UDP)"><i data-ikon="anten"></i></button>
+    <button class="ikon-dugme" data-dondur title="Dondur / sürdür (F6)"><i data-ikon="duraklat" data-dondur-ikon></i></button>
+    <button class="ikon-dugme" title="Akışı .sptr olarak kaydet"><i class="kayit-ikon" data-ikon="kayit"></i></button>
+  </div>
+  <button class="ikon-dugme kenarli" data-tema-dugme><i data-tema-ikon data-ikon="ay"></i></button>
+</header>
+
+<main>
+  <!-- ============================================================ Sol -->
+  <div class="sutun">
+    <section class="kart">
+      <header class="kart-bas">
+        <h2><i data-ikon="anten"></i>Kaynaklar</h2><span class="bosluk"></span>
+        <button class="duz-ikon" title="Ayır"><i data-ikon="ayir"></i></button>
+        <button class="duz-ikon" title="Kapat"><i data-ikon="kapat"></i></button>
+      </header>
+      <div class="kart-govde">
+        <div class="baglanti">
+          <label>Protokol</label><label>Adres</label><label>Port</label>
+          <button class="secim">UDP<i data-ikon="asagi"></i></button>
+          <input class="girdi mono" value="0.0.0.0" aria-label="Adres">
+          <input class="girdi mono" value="50505" aria-label="Port">
+        </div>
+        <button class="dugme birincil tam" style="margin-top:10px"><i data-ikon="anten"></i>Dinlemeyi Başlat</button>
+        <div class="iki" style="margin-top:8px">
+          <button class="dugme"><i data-ikon="klasor"></i>Kayıt Aç…</button>
+          <button class="dugme"><i data-ikon="cip"></i>Simülatör…</button>
+        </div>
+
+        <div class="oynatma">
+          <div class="dosya"><i data-ikon="dosya"></i><span>01_sinus_50Hz_harmonik_2kanal_int16_10kHz.sptr</span></div>
+          <div class="kaydirici" data-canli="ilerleme"><i></i></div>
+          <div class="kontroller">
+            <button class="ikon-dugme" data-dondur title="Oynat / duraklat"><i data-ikon="duraklat" data-dondur-ikon></i></button>
+            <button class="ikon-dugme" title="Durdur"><i data-ikon="dur"></i></button>
+            <span class="zaman mono"><span data-canli="konum">00:04.0</span> / <span data-canli="sure">00:10.0</span></span>
+          </div>
+          <div class="alt">
+            <span style="color:var(--text-muted);font-size:12px">Hız</span>
+            <button class="secim">1×<i data-ikon="asagi"></i></button>
+            <label class="onay" style="margin-left:auto;font-size:12px"><input type="checkbox">Döngü</label>
+          </div>
+        </div>
+
+        <div class="akislar">
+          <div class="bolum-etiketi">Akışlar · 1</div>
+          <div class="agac-satir"><i data-ikon="asagi"></i><i data-ikon="dosya"></i><span class="ad">Kayıt · 01_sinus_50Hz_harmonik_2kanal_int16_10kHz</span></div>
+          <div class="agac-satir akis"><i data-ikon="asagi"></i><i data-ikon="sinus"></i><span class="ad">01 · sebeke-olcum</span><span class="deger mono">10 kHz</span></div>
+          <label class="agac-satir kanal"><input type="checkbox" data-kanal="0" checked><span class="renk s1"></span><span class="ad">faz_A</span><span class="deger mono"><span data-canli="rms-0">0.000</span> V<sub>rms</sub></span></label>
+          <label class="agac-satir kanal"><input type="checkbox" data-kanal="1" checked><span class="renk s2"></span><span class="ad">faz_B</span><span class="deger mono"><span data-canli="rms-1">0.000</span> V<sub>rms</sub></span></label>
+        </div>
+      </div>
+    </section>
+
+    <section class="kart" style="flex:1">
+      <header class="kart-bas">
+        <h2><i data-ikon="katman"></i>Çalışma Alanı</h2><span class="bosluk"></span>
+        <button class="duz-ikon" title="Ayır"><i data-ikon="ayir"></i></button>
+        <button class="duz-ikon" title="Kapat"><i data-ikon="kapat"></i></button>
+      </header>
+      <div class="bos-durum">
+        <span class="ikon-kutu"><i data-ikon="kar"></i></span>
+        <h3>Henüz sinyal yok</h3>
+        <p>Canlı akışı <b>Dondur (F6)</b> ile buraya alın; dondurulan veri canlı akış devam ederken değişmeden incelenir ve filtrelenir.</p>
+      </div>
+      <div class="kart-alt">
+        <button class="dugme"><i data-ikon="yakinlas"></i>İncele</button>
+        <button class="dugme"><i data-ikon="filtre"></i>Filtrele<i data-ikon="asagi"></i></button>
+        <span class="bosluk"></span>
+        <button class="duz-ikon" title="Sil"><i data-ikon="cop"></i></button>
+      </div>
+    </section>
+  </div>
+
+  <!-- ============================================================ Orta -->
+  <div class="sutun">
+    <div class="sayfa-bas">
+      <div>
+        <h1>Canlı İzleme</h1>
+        <p>Kayıt · 01_sinus_50Hz_harmonik_2kanal_int16_10kHz.sptr</p>
+      </div>
+      <div class="sag">
+        <span class="canli-rozet"><span class="nokta"></span><span data-canli="durum" data-metin-oynuyor="Canlı" data-metin-donuk="Donduruldu">Canlı</span></span>
+        <div class="segment" data-secim-grubu aria-label="Zaman penceresi">
+          <button data-pencere="50">50 ms</button><button class="secili" data-pencere="100">100 ms</button>
+          <button data-pencere="200">200 ms</button><button data-pencere="500">500 ms</button>
+        </div>
+        <span class="cip">1 akış · 2 kanal</span>
+        <button class="ikon-dugme kenarli aktif" title="Yakınlaştır"><i data-ikon="yakinlas"></i></button>
+        <button class="ikon-dugme kenarli" title="Kaydır"><i data-ikon="tasi"></i></button>
+      </div>
+    </div>
+
+    <section class="kart grafik-kart">
+      <header class="kart-bas">
+        <h2>Zaman Domeni</h2>
+        <div class="lejant">
+          <label><input type="checkbox" data-kanal="0" checked><span class="cizgi" style="background:var(--seri-1)"></span>faz_A</label>
+          <label><input type="checkbox" data-kanal="1" checked><span class="cizgi" style="background:var(--seri-2)"></span>faz_B</label>
+        </div>
+        <span class="bosluk"></span>
+        <button class="duz-ikon" title="Tam ekran"><i data-ikon="buyut"></i></button>
+        <button class="duz-ikon" title="Tablo görünümü"><i data-ikon="tablo"></i></button>
+        <button class="duz-ikon" title="Ayrı pencerede aç"><i data-ikon="ayir"></i></button>
+      </header>
+      <div class="grafik-kap"><canvas id="g-zaman"></canvas></div>
+    </section>
+
+    <section class="kart grafik-kart spek">
+      <header class="kart-bas">
+        <h2>Spektrum</h2>
+        <div class="segment" data-secim-grubu style="margin-left:6px">
+          <button class="secili">Tek taraflı</button><button>Çift taraflı</button>
+        </div>
+        <span class="cip">Hann · 8192 nokta · dB re 1 V</span>
+        <span class="bosluk"></span>
+        <button class="duz-ikon" title="Tam ekran"><i data-ikon="buyut"></i></button>
+        <button class="duz-ikon" title="Tablo görünümü"><i data-ikon="tablo"></i></button>
+        <button class="duz-ikon" title="Ayrı pencerede aç"><i data-ikon="ayir"></i></button>
+      </header>
+      <div class="grafik-kap"><canvas id="g-spektrum"></canvas></div>
+    </section>
+
+    <div class="alt-sira">
+      <section class="kart">
+        <header class="kart-bas"><h2><i data-ikon="liste"></i>Paket İstatistikleri</h2><span class="bosluk"></span>
+          <button class="duz-ikon" title="Ayır"><i data-ikon="ayir"></i></button></header>
+        <div style="padding:0 6px">
+          <table>
+            <thead><tr><th>Akış</th><th>Format</th><th class="sayi">Paket/s</th><th class="sayi">Veri hızı</th><th class="sayi">Kayıp</th><th>Durum</th></tr></thead>
+            <tbody><tr>
+              <td><span class="num-cip">01</span>sebeke-olcum</td>
+              <td>2 × int16 · 10 kHz</td>
+              <td class="sayi mono" data-canli="pps">27</td>
+              <td class="sayi mono"><span data-canli="kbps">38.4</span> kB/s</td>
+              <td class="sayi mono" data-canli="kayip">0</td>
+              <td><span class="rozet"><i data-ikon="onay"></i>Aktif</span></td>
+            </tr></tbody>
+          </table>
+        </div>
+      </section>
+      <section class="kart">
+        <header class="kart-bas"><h2><i data-ikon="terminal"></i>Günlük</h2><span class="bosluk"></span>
+          <button class="duz-ikon" title="Ayır"><i data-ikon="ayir"></i></button></header>
+        <div class="gunluk">
+          <div><time>11:18:02</time>Kayıt açıldı: 01_sinus_50Hz_harmonik…sptr</div>
+          <div><time>11:18:02</time>DESCRIPTOR · akış 01 · 2 kanal · int16 · 10 kHz</div>
+          <div><time>11:18:03</time><span class="iyi">Oynatma başladı</span> (1×, döngü kapalı)</div>
+          <div><time>11:18:03</time>Spektrum: Hann, 8192 nokta</div>
+        </div>
+      </section>
+    </div>
+  </div>
+
+  <!-- ============================================================ Sağ -->
+  <div class="sutun">
+    <section class="kart ozellikler">
+      <header class="kart-bas"><h2><i data-ikon="ayar"></i>Özellikler</h2><span class="bosluk"></span>
+        <button class="duz-ikon" title="Ayır"><i data-ikon="ayir"></i></button>
+        <button class="duz-ikon" title="Kapat"><i data-ikon="kapat"></i></button></header>
+      <div class="kaydir">
+        <details open>
+          <summary><i data-ikon="asagi"></i>Görüntü</summary>
+          <div class="ozellik">
+            <label>Zaman penceresi</label><button class="secim"><span data-canli="pencere">100 ms</span><i data-ikon="asagi"></i></button>
+            <label>Y ekseni</label><button class="secim">Otomatik<i data-ikon="asagi"></i></button>
+            <label>Y min</label><input class="girdi mono" value="−2.000 V" aria-label="Y min">
+            <label>Y max</label><input class="girdi mono" value="2.000 V" aria-label="Y max">
+            <label class="onay"><input type="checkbox" checked>Izgara</label>
+            <label class="onay"><input type="checkbox" checked>Tepe korumalı seyreltme</label>
+          </div>
+        </details>
+        <details open>
+          <summary><i data-ikon="asagi"></i>Spektrum (FFT)</summary>
+          <div class="ozellik">
+            <label>FFT boyutu</label><button class="secim">8192<i data-ikon="asagi"></i></button>
+            <label>Pencere</label><button class="secim">Hann<i data-ikon="asagi"></i></button>
+            <label>Gösterim</label><button class="secim">Tek taraflı (0 … fs/2)<i data-ikon="asagi"></i></button>
+            <label>Ortalama</label><button class="secim">Yok<i data-ikon="asagi"></i></button>
+          </div>
+        </details>
+      </div>
+    </section>
+
+    <section class="kart sekmeli" data-sekmeler>
+      <div class="sekme-bas" role="tablist">
+        <button data-sekme="olcum" class="secili" role="tab" aria-selected="true"><i data-ikon="olcum"></i>Ölçümler</button>
+        <button data-sekme="zincir" role="tab" aria-selected="false"><i data-ikon="zincir"></i>İşlem Zinciri</button>
+      </div>
+      <div class="sekme-panel" data-sekme-panel="olcum">
+        <div style="padding:4px 6px 0">
+          <table class="olcum-tablo">
+            <thead><tr><th></th><th class="sayi"><span class="renk s1"></span>faz_A</th><th class="sayi"><span class="renk s2"></span>faz_B</th></tr></thead>
+            <tbody>
+              <tr><td>RMS (V)</td><td class="sayi mono" data-canli="rms-0">–</td><td class="sayi mono" data-canli="rms-1">–</td></tr>
+              <tr><td>Tepe-tepe (V)</td><td class="sayi mono" data-canli="vpp-0">–</td><td class="sayi mono" data-canli="vpp-1">–</td></tr>
+              <tr><td>Ortalama (V)</td><td class="sayi mono" data-canli="ort-0">–</td><td class="sayi mono" data-canli="ort-1">–</td></tr>
+              <tr><td>Frekans (Hz)</td><td class="sayi mono" data-canli="f-0">–</td><td class="sayi mono" data-canli="f-1">–</td></tr>
+              <tr><td>THD (%)</td><td class="sayi mono" data-canli="thd-0">–</td><td class="sayi mono" data-canli="thd-1">–</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <div class="sekme-panel" data-sekme-panel="zincir" hidden>
+        <div class="zincir-ust">
+          <label class="onay" style="font-size:12px"><input type="checkbox">Canlı akışa uygula</label>
+          <button class="secim">Ham + filtreli<i data-ikon="asagi"></i></button>
+        </div>
+        <div class="bos-durum">
+          <span class="ikon-kutu"><i data-ikon="zincir"></i></span>
+          <h3>Zincir boş</h3>
+          <p>Filtre Tasarımcısı'nda (Ctrl+4) bir filtre tasarlayıp “Sinyale Uygula” deyin ya da kayıtlı bir zinciri açın.</p>
+        </div>
+      </div>
+    </section>
+  </div>
+</main>
+
+<footer class="durum">
+  <span class="durum-cip"><i></i><span data-canli="durum">Kayıt oynatılıyor</span></span>
+  <span>01_sinus_50Hz_harmonik_2kanal_int16_10kHz.sptr</span>
+  <span class="ayrac"></span>
+  <span class="mono"><span data-canli="pps">27</span> paket/s</span>
+  <span class="mono"><span data-canli="kbps">38.4</span> kB/s</span>
+  <span>Kayıp <span class="mono" data-canli="kayip">0</span> örnek</span>
+  <span class="bosluk"></span>
+  <span class="kapali"><i></i>Kayıt kapalı</span>
+  <span>v1.0.3</span>
+</footer>
+
+<script>
+  SPT.baslat({
+    taslak: { harf: 'A', ad: 'TerraFlux Rafine' },
+    grafikler: [
+      { el: '#g-zaman', tur: 'zaman', eksenBasligi: { x: 'Zaman (s)', y: 'Genlik (V)' }, y: { min: -1.6, max: 1.6, adim: 0.5 } },
+      { el: '#g-spektrum', tur: 'spektrum', eksenBasligi: { x: 'Frekans (kHz)', y: 'Genlik (dB)' }, y: { min: -120, max: 0, adim: 20 }, tepeler: true },
+    ],
+  });
+</script>
+</body>
+</html>

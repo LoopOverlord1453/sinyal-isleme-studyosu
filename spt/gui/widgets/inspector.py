@@ -6,6 +6,10 @@ Veri ipuçları (MATLAB "data tip" benzeri):
     örnekten okunur (örnek numarasıyla birlikte).
   - İşarete tekrar tıklamak onu kaldırır; sağ tık menüsündeki "Veri ipuçlarını temizle" hepsini kaldırır.
   - Çift tık grafiğin kendi işine (görünümü sıfırlama) ayrılmıştır: tek tık, çift tık süresi kadar beklenir.
+  - Yön (MATLAB "Location"): etiket kutusu işarete göre sağ üst / sol üst / sağ alt / sol alt çeyrekte durur.
+    Etiket sürüklenince imlecin işarete göre bulunduğu çeyreğe oturur; ipucuna sağ tıklayınca "Konum" menüsü.
+    Seçilen yönde grafiğe sığmayan etiket o an sığan yöne çevrilir (tercih saklanır). Etiket işaretten piksel
+    olarak sabit uzaklıktadır (yakınlaştırma / kaydırmada kaymaz). Son seçilen yön yeni ipuçlarının varsayılanıdır.
 
 Analiz tablosu: kartın altında açılan tablo; görünen x aralığı için eğri başına istatistikler (yakınlaştırınca
 güncellenir). İstatistikleri her grafik kendi türüne göre sağlar (`time_stats`, `spectrum_stats`, `curve_stats`).
@@ -21,13 +25,27 @@ import numpy as np
 import pyqtgraph as pg
 from scipy import fft as sp_fft
 from PyQt6.QtCore import QObject, QPointF, Qt, QTimer
-from PyQt6.QtGui import QColor, QKeySequence
-from PyQt6.QtWidgets import QAbstractItemView, QApplication, QHeaderView, QSplitter, QTableWidget, QTableWidgetItem
+from PyQt6.QtGui import QActionGroup, QColor, QKeySequence
+from PyQt6.QtWidgets import (
+    QAbstractItemView,
+    QApplication,
+    QHeaderView,
+    QMenu,
+    QSplitter,
+    QTableWidget,
+    QTableWidgetItem,
+)
 
+from spt.gui.settings import app_settings
 from spt.gui.theme import ThemeManager
 
 PICK_RADIUS_PX = 28
 TIP_HIT_PX = 12
+# Etiket yönü: kutunun işarete göre bulunduğu çeyrek (n/s: üst/alt, e/w: sağ/sol)
+ORIENTATIONS = {"ne": "Sağ üst", "nw": "Sol üst", "se": "Sağ alt", "sw": "Sol alt"}
+DEFAULT_ORIENTATION = "ne"
+ORIENTATION_KEY = "display/datatip_orientation"
+TIP_GAP_PX = 7                  # etiket köşesinin işaret merkezinden yatay ve dikey uzaklığı
 MAX_STATS_SAMPLES = 1_000_000   # analiz tablosunda en fazla bu kadar örnek (en yeni kısım)
 MAX_DOMINANT_FFT = 1 << 18      # baskın frekans FFT'si (hızlı uzunluk, en yeni kısım)
 
@@ -74,6 +92,67 @@ def fmt(value: float, unit: str = "", digits: int = 5) -> str:
     return f"{text} {unit}".strip()
 
 
+def saved_orientation() -> str:
+    """Yeni ipuçlarının yönü: kullanıcının en son seçtiği (ayarlarda), yoksa sağ üst."""
+    value = str(app_settings().value(ORIENTATION_KEY, DEFAULT_ORIENTATION))
+    return value if value in ORIENTATIONS else DEFAULT_ORIENTATION
+
+
+@dataclass(eq=False)
+class _Tip:
+    point: QPointF               # işaretin görünüm koordinatı (log x'te log10 x)
+    marker: pg.ScatterPlotItem
+    label: pg.TextItem
+    orientation: str             # kullanıcının tercihi
+    shown: str = ""              # gösterilen yön (tercih grafiğe sığmıyorsa çevrilmiş)
+
+
+class _TipMarker(pg.ScatterPlotItem):
+    """İpucu işareti: sağ tık ipucu menüsünü açar (sol tık DataTips'in kaldırma yolundan geçer)."""
+
+    def __init__(self, owner: DataTips, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._owner = owner
+
+    def mouseClickEvent(self, ev) -> None:
+        if ev.button() == Qt.MouseButton.RightButton and len(self.pointsAt(ev.pos())):
+            ev.accept()
+            self._owner._popup_menu(self, ev.screenPos())
+            return
+        super().mouseClickEvent(ev)
+
+
+class _TipLabel(pg.TextItem):
+    """İpucu etiketi: sürüklenince yönü değişir (grafik kaydırılmaz), sağ tık ipucu menüsünü açar."""
+
+    def __init__(self, owner: DataTips, **kwargs):
+        super().__init__(**kwargs)
+        self._owner = owner
+        self.setCursor(Qt.CursorShape.OpenHandCursor)
+        self.setToolTip("Sürükle: etiketin yönü · sağ tık: konum / kaldır")
+
+    def hoverEvent(self, ev) -> None:
+        if not ev.isExit():   # sürükleme ve sağ tık bu etikete gider (ViewBox'a değil)
+            ev.acceptDrags(Qt.MouseButton.LeftButton)
+            ev.acceptClicks(Qt.MouseButton.RightButton)
+
+    def mouseDragEvent(self, ev) -> None:
+        if ev.button() != Qt.MouseButton.LeftButton:
+            ev.ignore()
+            return
+        ev.accept()
+        if ev.isStart():
+            self.setCursor(Qt.CursorShape.ClosedHandCursor)
+        self._owner._drag(self, ev.scenePos(), ev.isFinish())
+        if ev.isFinish():
+            self.setCursor(Qt.CursorShape.OpenHandCursor)
+
+    def mouseClickEvent(self, ev) -> None:
+        if ev.button() == Qt.MouseButton.RightButton:
+            ev.accept()
+            self._owner._popup_menu(self, ev.screenPos())
+
+
 class DataTips(QObject):
     """Bir grafiğe veri ipucu davranışı ekler."""
 
@@ -82,7 +161,8 @@ class DataTips(QObject):
         self._plot = plot
         self._theme = theme
         self._traces = traces
-        self._tips: list[tuple[QPointF, pg.ScatterPlotItem, pg.TextItem]] = []
+        self._tips: list[_Tip] = []
+        self._menu: QMenu | None = None
         self._pending: QPointF | None = None
         self._timer = QTimer(self)
         self._timer.setSingleShot(True)
@@ -93,7 +173,11 @@ class DataTips(QObject):
         if vb.menu is not None:
             vb.menu.addSeparator()
             vb.menu.addAction("Veri ipuçlarını temizle", self.clear)
-        plot.setToolTip("Tıkla: noktanın değeri · işarete tekrar tıkla: kaldır · sağ tık: tümünü temizle")
+        # etiketler işaretten piksel olarak sabit uzaklıkta: görünüm değişince yeniden yerleştir
+        vb.sigRangeChanged.connect(self._relayout)
+        vb.sigResized.connect(self._relayout)
+        plot.setToolTip("Tıkla: noktanın değeri · işarete tekrar tıkla: kaldır · etiketi sürükle: yönü · "
+                        "ipucuna sağ tık: konum / kaldır")
 
     # ---------------------------------------------------------------- olaylar
     def _clicked(self, event) -> None:
@@ -113,6 +197,8 @@ class DataTips(QObject):
         pos, self._pending = self._pending, None
         if pos is None:
             return
+        if any(tip.label.isVisible() and tip.label.sceneBoundingRect().contains(pos) for tip in self._tips):
+            return  # etikete tıklamak ipucu eklemez / kaldırmaz (etiket sürüklenir; kaldırma: işaret ya da menü)
         if self._remove_near(pos):
             return
         self.add_at_scene(pos)
@@ -172,42 +258,127 @@ class DataTips(QObject):
         self.add(trace, x, y)
         return True
 
-    def add(self, trace: Trace, x: float, y: float) -> None:
+    def add(self, trace: Trace, x: float, y: float, orientation: str | None = None) -> None:
         t = self._theme.tokens
         xv = math.log10(x) if self._log_x() and x > 0 else x
-        marker = pg.ScatterPlotItem([xv], [y], symbol="o", size=11, pen=pg.mkPen(t.text, width=2),
-                                    brush=pg.mkBrush(trace.color))
+        marker = _TipMarker(self, [xv], [y], symbol="o", size=11, pen=pg.mkPen(t.text, width=2),
+                            brush=pg.mkBrush(trace.color))
         lines = trace.describe(x, y)
         html = (f'<div style="color:{t.text}; font-size:11px;">'
                 f'<span style="color:{trace.color}">●</span> <b>{trace.name}</b><br>' + "<br>".join(lines) + "</div>")
         fill = QColor(t.elevated)
         fill.setAlpha(235)
-        (x0, x1), (y0, y1) = self._plot.getPlotItem().getViewBox().viewRange()
-        right = (xv - x0) / max(x1 - x0, 1e-300) > 0.6
-        upper = (y - y0) / max(y1 - y0, 1e-300) > 0.5
-        anchor = (1.0 if right else 0.0, 0.0 if upper else 1.0)
-        label = pg.TextItem(html=html, anchor=anchor, fill=pg.mkBrush(fill), border=pg.mkPen(t.border_strong))
-        label.setPos(xv, y)
+        label = _TipLabel(self, html=html, fill=pg.mkBrush(fill), border=pg.mkPen(t.border_strong))
         for item in (marker, label):
             item.setZValue(50)
             self._plot.addItem(item, ignoreBounds=True)
-        self._tips.append((QPointF(xv, y), marker, label))
+        tip = _Tip(QPointF(xv, y), marker, label, orientation if orientation in ORIENTATIONS else saved_orientation())
+        self._tips.append(tip)
+        self._place(tip)
+
+    # ---------------------------------------------------------------- yön
+    def _place(self, tip: _Tip) -> None:
+        """Etiketi tercih edilen çeyreğe, köşesi işaretten TIP_GAP_PX uzakta yerleştirir. O yönde grafiğe sığmıyor ve
+        karşı yönde sığıyorsa (kenara yakın nokta) o eksende çevrilir."""
+        vb = self._plot.getPlotItem().getViewBox()
+        m = vb.mapViewToScene(tip.point)
+        area = vb.sceneBoundingRect()
+        box = tip.label.textItem.boundingRect()   # etiket dönüşümü ölçeği iptal eder: piksel
+        w, h, gap = box.width(), box.height(), TIP_GAP_PX
+        north, east = tip.orientation[0] == "n", tip.orientation[1] == "e"
+        fits_e, fits_w = m.x() + gap + w <= area.right(), m.x() - gap - w >= area.left()
+        fits_n, fits_s = m.y() - gap - h >= area.top(), m.y() + gap + h <= area.bottom()
+        if not (fits_e if east else fits_w) and (fits_w if east else fits_e):
+            east = not east
+        if not (fits_n if north else fits_s) and (fits_s if north else fits_n):
+            north = not north
+        tip.shown = ("n" if north else "s") + ("e" if east else "w")
+        corner = QPointF(m.x() + (gap if east else -gap), m.y() + (-gap if north else gap))
+        tip.label.setAnchor((0.0 if east else 1.0, 1.0 if north else 0.0))
+        tip.label.setPos(vb.mapSceneToView(corner))
+
+    def _relayout(self, *_) -> None:
+        for tip in self._tips:
+            self._place(tip)
+
+    def set_orientation(self, index: int, orientation: str) -> None:
+        """index. ipucunun yönü (ORIENTATIONS anahtarı); yeni ipuçlarının varsayılanı da olur."""
+        self._set_orientation(self._tips[index], orientation)
+
+    def _set_orientation(self, tip: _Tip, orientation: str, remember: bool = True) -> None:
+        if orientation not in ORIENTATIONS:
+            raise ValueError(f"Bilinmeyen yön: {orientation!r}")
+        if orientation != tip.orientation:
+            tip.orientation = orientation
+            self._place(tip)
+        if remember:
+            app_settings().setValue(ORIENTATION_KEY, orientation)
+
+    def orientations(self) -> list[str]:
+        """İpuçlarının tercih edilen yönleri (eklenme sırasıyla)."""
+        return [tip.orientation for tip in self._tips]
+
+    def shown_orientations(self) -> list[str]:
+        """Gösterilen yönler: tercih grafiğe sığmıyorsa çevrilmiş hâli."""
+        return [tip.shown for tip in self._tips]
+
+    def _drag(self, label: pg.TextItem, scene_pos: QPointF, finish: bool) -> None:
+        """Etiket sürükleniyor: imlecin işarete göre bulunduğu çeyrek yeni yön olur (MATLAB'daki gibi yapışır)."""
+        tip = next((t for t in self._tips if t.label is label), None)
+        if tip is None:
+            return
+        m = self._plot.getPlotItem().getViewBox().mapViewToScene(tip.point)
+        orientation = ("n" if scene_pos.y() < m.y() else "s") + ("e" if scene_pos.x() >= m.x() else "w")
+        self._set_orientation(tip, orientation, remember=finish)
+
+    # ---------------------------------------------------------------- bağlam menüsü
+    def menu_for(self, index: int) -> QMenu:
+        """index. ipucunun sağ tık menüsü: Konum (dört yön), bu ipucunu kaldır, tümünü temizle."""
+        tip = self._tips[index]
+        menu = QMenu(self._plot)
+        where = menu.addMenu("Konum")
+        group = QActionGroup(menu)
+        for key, text in ORIENTATIONS.items():
+            act = where.addAction(text)
+            act.setCheckable(True)
+            act.setChecked(key == tip.orientation)
+            act.setData(key)
+            group.addAction(act)
+            act.triggered.connect(lambda _=False, tip=tip, key=key: self._set_orientation(tip, key))
+        menu.addSeparator()
+        menu.addAction("Bu ipucunu kaldır", lambda tip=tip: self._remove(tip))
+        menu.addAction("Tüm ipuçlarını temizle", self.clear)
+        return menu
+
+    def _popup_menu(self, item, screen_pos) -> None:
+        tip = next((t for t in self._tips if item in (t.marker, t.label)), None)
+        if tip is None:
+            return
+        self._timer.stop()      # sağ tıktan önceki bekleyen sol tık işlenmesin
+        self._pending = None
+        self._menu = self.menu_for(self._tips.index(tip))
+        self._menu.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose)   # her sağ tıkta yeni menü: birikmesin
+        self._menu.popup(screen_pos.toPoint())
+
+    # ---------------------------------------------------------------- kaldırma
+    def _remove(self, tip: _Tip) -> None:
+        if tip in self._tips:
+            self._plot.removeItem(tip.marker)
+            self._plot.removeItem(tip.label)
+            self._tips.remove(tip)
 
     def _remove_near(self, scene_pos: QPointF) -> bool:
         vb = self._plot.getPlotItem().getViewBox()
-        for i, (point, marker, label) in enumerate(self._tips):
-            sp = vb.mapViewToScene(point)
-            if (sp - scene_pos).manhattanLength() <= TIP_HIT_PX * 1.5 or label.sceneBoundingRect().contains(scene_pos):
-                self._plot.removeItem(marker)
-                self._plot.removeItem(label)
-                del self._tips[i]
+        for tip in self._tips:
+            if (vb.mapViewToScene(tip.point) - scene_pos).manhattanLength() <= TIP_HIT_PX * 1.5:
+                self._remove(tip)
                 return True
         return False
 
     def clear(self) -> None:
-        for _, marker, label in self._tips:
-            self._plot.removeItem(marker)
-            self._plot.removeItem(label)
+        for tip in self._tips:
+            self._plot.removeItem(tip.marker)
+            self._plot.removeItem(tip.label)
         self._tips.clear()
 
     @property
@@ -215,7 +386,7 @@ class DataTips(QObject):
         return len(self._tips)
 
     def texts(self) -> list[str]:
-        return [label.textItem.toPlainText() for _, _, label in self._tips]
+        return [tip.label.textItem.toPlainText() for tip in self._tips]
 
 
 # ============================================================================ analiz tablosu

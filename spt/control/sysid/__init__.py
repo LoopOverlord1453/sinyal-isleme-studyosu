@@ -1,6 +1,6 @@
 """Sistem tanımlama (MATLAB System Identification Toolbox karşılığı) — Aşama 4.
 
-Mimari ve doğrulama ilkesi: docs/asamalar/Asama_4_Kontrol_Tasarimi.md. Hesaplar MATLAB R2025b ile
+Mimari ve doğrulama ilkesi: docs/SPT-DEV-001_Gelistirme_Asamalari.docx, Aşama 4. Hesaplar MATLAB R2025b ile
 karşılaştırılmıştır (tests/test_control_sysid_*.py, referanslar tests/data/matlab/sysid_*.json).
 
 Modüller: data (IDData, ön işleme, okuyucular) · models (idpoly/idss/idtf/idproc/idfrd) · linear (arx, armax, oe,

@@ -13,7 +13,7 @@ from PyQt6.QtGui import QAction, QCloseEvent, QKeySequence, QShortcut, QShowEven
 from PyQt6.QtWidgets import QDockWidget, QFrame, QHBoxLayout, QPushButton, QSplitter, QToolButton, QVBoxLayout, QWidget
 
 from spt import APP_NAME
-from spt.gui.icons import app_icon, icon
+from spt.gui.icons import app_icon, icon, primary_icon
 from spt.gui.theme import Tokens, style_native_titlebar
 from spt.gui.widgets.common import Card, icon_button, label
 
@@ -82,7 +82,7 @@ class _Placeholder(QFrame):
         lay.addWidget(self._title, 1)
         show = QPushButton(icon("ph.eye"), "  Pencereyi göster")
         show.clicked.connect(on_show)
-        back = QPushButton(icon("ph.arrow-square-in"), "  Buraya geri al")
+        back = QPushButton(primary_icon("ph.arrow-square-in"), "  Buraya geri al")
         back.setObjectName("Primary")
         back.clicked.connect(on_attach)
         self._buttons = ((show, "  Pencereyi göster"), (back, "  Buraya geri al"))

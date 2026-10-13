@@ -12,13 +12,16 @@ Olaylar:
 from __future__ import annotations
 
 import logging
+import math
 import struct
 import zlib
+from collections import deque
 from collections.abc import Callable
 from dataclasses import dataclass
 
-from spt.core.ring import SharedRing
 import numpy as np
+
+from spt.core.ring import SharedRing
 
 from spt.protocol.format import (
     CRC,
@@ -38,9 +41,20 @@ MAX_MARKER_EVENTS_PER_TICK = 50
 MAX_PENDING_MARKERS = 32   # tampon açılmadan (ilk DATA'dan önce) gelen işaretler, açılınca konumlanır
 MAX_ERROR_LOGS = 20
 RESTART_RUN = 4  # geriye düşen ama kendi içinde ardışık bu kadar çerçeve: reset çerçevesi kaybolmuş, yeniden başla
+GAP_MEMORY = 64  # geç gelen (sıra dışı) çerçeveyi tanımak için hatırlanan son kayıp aralıkları
+# Kaynak çakışması: aynı (IP, stream_id) iki göndericiden (ör. kartta iki görev / soket, ya da simülatör ve kart).
+PORT_HANDOVER_NS = 1_000_000_000      # asıl kaynak portu bu kadar sustuysa yeni port aynı akışın devamıdır (yeniden bağlanma)
+CONFLICT_HOLD_NS = 5_000_000_000      # çakışma son görüldükten bu kadar sonra temizlenir
+CONFLICT_WARN_NS = 30_000_000_000     # aynı akış için uyarı günlüğü en sık bu aralıkla
 
-# Hızlı yol: başlığın gereken alanları + DATA alt başlığı tek okumada (seq, reserved, timestamp atlanır)
-_FAST_UNPACK = struct.Struct("<IBBHIHH16xQI").unpack_from
+# Varış zamanlaması (alıcı saati). Paket arası süre histogramı kenarları, µs: 1 µs … 10 s, dekad başına 20 kutu
+# (kutu genişliği ≈ %12). Kutu 0: < 1 µs, son kutu: ≥ 10 s.
+TIMING_EDGES_US = np.logspace(0, 7, 141)
+PDV_WINDOW = 2048        # gecikme değişimi bu kadar son paketten
+RATE_MIN_S = 2.0         # etkin örnekleme hızı / saat farkı bu kadar gözlem süresinden sonra raporlanır
+
+# Hızlı yol: başlığın gereken alanları + DATA alt başlığı tek okumada (seq ve reserved atlanır)
+_FAST_UNPACK = struct.Struct("<IBBHIHH8xQQI").unpack_from
 _MAGIC_U32 = struct.unpack("<I", MAGIC)[0]
 _FAST_MIN = HEADER.size + DATA.size
 _CRC_UNPACK = CRC.unpack_from
@@ -54,6 +68,26 @@ class StreamInfo:
     descriptor: Descriptor
     shm_name: str
     t0: float  # tampondaki ilk örneğin oturum başlangıcına göre zamanı (s)
+
+
+@dataclass(frozen=True)
+class LinkTiming:
+    """Akışın varış zamanlaması ve hız doğruluğu, alıcının saatine göre. Süreler µs; ölçülemeyen değer NaN."""
+    intervals: int              # oturumda ölçülen paket arası sayısı
+    mean_us: float              # paket arası süre, oturum ortalaması
+    std_us: float               # titreşim (standart sapma), oturum
+    max_us: float               # en büyük boşluk, oturum
+    recent_mean_us: float       # son istatistik aralığındaki (≈ 0.25 s) paketler
+    recent_std_us: float
+    recent_p99_us: float
+    recent_max_us: float
+    expected_us: float          # çerçeve başına ortalama örnek / fs: düzenli gönderimde beklenen aralık
+    hist: tuple[int, ...]       # oturum histogramı; kutular TIMING_EDGES_US (ilk: < 1 µs, son: ≥ 10 s)
+    rate_hz: float              # etkin örnekleme hızı: first_sample ilerlemesi / alıcı süresi
+    rate_ppm: float             # nominal fs'e göre sapma (+: cihaz hızlı)
+    rate_ppm_err: float         # ± belirsizlik (varış titreşimi / gözlem süresi)
+    pdv_us: float               # gecikme değişimi: son PDV_WINDOW pakette (alım − gönderici zamanı) p99 − en küçük
+    sender_ppm: float           # gönderici saati − PC saati (alım − gönderim farkının alt zarf eğimi)
 
 
 @dataclass
@@ -70,6 +104,146 @@ class StreamStats:
     duplicates: int
     restarts: int
     idle_s: float
+    port: int = 0               # göndericinin UDP kaynak portu (bilinmiyorsa 0)
+    sample_rate: float = 0.0    # nominal fs
+    loss_events: int = 0        # kayıp olayı (first_sample boşluğu) sayısı
+    max_loss_burst: int = 0     # tek seferde kaybolan en çok örnek
+    late_packets: int = 0       # sıra dışı: daha önce kayıp sayılan aralığa sonradan düşen çerçeve (çizilmez)
+    late_samples: int = 0
+    timing: LinkTiming | None = None
+    collisions: int = 0         # asıl kaynak etkinken başka kaynak portundan gelen datagram (oturum)
+    source_ports: tuple[int, ...] = ()   # asıl port + son CONFLICT_HOLD_NS içinde görülen yabancı portlar
+    conflict: str = ""          # "" | "port" (iki kaynak portu) | "sıra" (aynı porttan tutarsız first_sample dizisi)
+
+
+def hist_percentile(hist, q: float) -> float:
+    """TIMING_EDGES_US histogramından q. yüzdelik (0–100), µs; kutu içinde log-doğrusal ara değerleme. Boşsa NaN."""
+    h = np.asarray(hist, dtype=np.float64)
+    total = h.sum()
+    if total <= 0:
+        return math.nan
+    cum = np.cumsum(h)
+    target = q / 100.0 * total
+    i = int(np.searchsorted(cum, target, side="left"))
+    i = min(i, len(h) - 1)
+    edges = TIMING_EDGES_US
+    if i == 0:
+        return float(edges[0])
+    if i >= len(edges):
+        return float(edges[-1])
+    lo, hi = math.log10(edges[i - 1]), math.log10(edges[i])
+    below = cum[i - 1] if i > 0 else 0.0
+    frac = (target - below) / h[i] if h[i] else 0.0
+    return float(10 ** (lo + (hi - lo) * min(max(frac, 0.0), 1.0)))
+
+
+def _pdv(t_s: np.ndarray, owd: np.ndarray) -> float:
+    """Gecikme değişimi (ns): (alım − gönderim) farkının p99'u − en küçüğü, saat kayması (iki saatin hız farkından
+    doğan doğrusal eğim) çıkarılarak. Eğim alt zarftan: pencerenin iki yarısının en küçük noktaları arası (kuyruk
+    gecikmesi yalnız ekler, en küçük değerler kaymayı izler)."""
+    h = len(owd) // 2
+    resid = owd
+    if h >= 8:
+        i, j = int(np.argmin(owd[:h])), h + int(np.argmin(owd[h:]))
+        if t_s[j] > t_s[i]:
+            resid = owd - (owd[j] - owd[i]) / (t_s[j] - t_s[i]) * (t_s - t_s[i])
+    return float(np.percentile(resid, 99) - resid.min())
+
+
+class _Timing:
+    """Akış başına varış günlüğü ve birikmiş zamanlama istatistiği. Sıcak yol yalnız iki listeye ekler (alım ve
+    gönderici zamanı, ns; ölçüm: datagram başına ≈ 0.1 µs, array('q')'dan hızlı); hesap `drain` / `summary` içinde
+    (≈ 4 Hz) numpy ile yapılır."""
+
+    def __init__(self) -> None:
+        self.rx: list[int] = []
+        self.ts: list[int] = []
+        self.prev_rx = 0
+        self.n = 0
+        self.mean = 0.0
+        self.m2 = 0.0
+        self.max = 0.0
+        self.hist = np.zeros(len(TIMING_EDGES_US) + 1, np.int64)
+        self.recent = (math.nan,) * 4
+        self.owd_ref: int | None = None          # alım − gönderim farkının başlangıç değeri (ns, taşma önlemi)
+        self.t_ref = 0                           # owd_rx'in sıfırı (alım ns)
+        self.owd = np.empty(0)                   # son PDV_WINDOW fark, ns (owd_ref'e göre)
+        self.owd_rx = np.empty(0)                # aynı paketlerin alım zamanı, s (eğim düzeltmesi için)
+        self.env_ref: tuple[int, float] | None = None   # (alım ns, en küçük fark): saat farkının başlangıcı
+        self.env_now: tuple[int, float] | None = None
+        self.rate_ref: tuple[int, int] | None = None    # (son alım ns, next_sample): etkin hızın başlangıcı
+        self.rate_now: tuple[int, int] | None = None
+        self.restarts = 0
+
+    def restart(self) -> None:
+        """Cihaz resetlendi: gönderici saati ve örnek sayacı yeniden başladı; hız / saat referansları silinir."""
+        self.owd_ref = self.env_ref = self.env_now = self.rate_ref = self.rate_now = None
+        self.owd = self.owd_rx = np.empty(0)
+        self.prev_rx = 0
+
+    def drain(self, next_sample: int | None) -> None:
+        if not self.rx:
+            self.recent = (math.nan,) * 4
+            return
+        rx = np.array(self.rx, dtype=np.int64)
+        ts = np.array(self.ts, dtype=np.uint64).astype(np.int64)   # protokolde u64
+        self.rx.clear()
+        self.ts.clear()
+        d = np.diff(rx, prepend=self.prev_rx) if self.prev_rx else np.diff(rx)
+        self.prev_rx = int(rx[-1])
+        if len(d):
+            d_us = d.astype(np.float64) / 1e3
+            nb, mb = len(d_us), float(d_us.mean())
+            m2b = float(((d_us - mb) ** 2).sum())
+            n = self.n + nb                                  # Chan: iki grubun ortalama / varyans birleşimi
+            delta = mb - self.mean
+            self.mean += delta * nb / n
+            self.m2 += m2b + delta * delta * self.n * nb / n
+            self.n = n
+            self.max = max(self.max, float(d_us.max()))
+            self.hist += np.bincount(np.searchsorted(TIMING_EDGES_US, d_us, side="right"),
+                                     minlength=len(self.hist))[:len(self.hist)]
+            self.recent = (mb, float(d_us.std()), float(np.percentile(d_us, 99)), float(d_us.max()))
+        else:
+            self.recent = (math.nan,) * 4
+        if next_sample is not None:
+            now = (self.prev_rx, next_sample)
+            self.rate_now = now
+            if self.rate_ref is None:
+                self.rate_ref = now
+        if ts.all():                                         # gönderici zamanı biliniyor (0 değil)
+            if self.owd_ref is None:
+                self.owd_ref = int(rx[0] - ts[0])
+                self.t_ref = int(rx[0])
+            owd = ((rx - ts) - self.owd_ref).astype(np.float64)
+            self.owd = np.concatenate((self.owd, owd))[-PDV_WINDOW:]
+            self.owd_rx = np.concatenate((self.owd_rx, (rx - self.t_ref) / 1e9))[-PDV_WINDOW:]
+            k = int(np.argmin(owd))
+            point = (int(rx[k]), float(owd[k]))
+            self.env_now = point
+            if self.env_ref is None:
+                self.env_ref = point
+
+    def summary(self, fs: float, expected_us: float) -> LinkTiming:
+        std = math.sqrt(self.m2 / (self.n - 1)) if self.n > 1 else math.nan
+        rate = ppm = err = math.nan
+        if self.rate_ref is not None and self.rate_now is not None:
+            elapsed = self.rate_now[0] - self.rate_ref[0]
+            if elapsed >= RATE_MIN_S * 1e9:
+                rate = (self.rate_now[1] - self.rate_ref[1]) / elapsed * 1e9
+                ppm = (rate / fs - 1.0) * 1e6
+                jitter_ns = (self.recent[2] if math.isfinite(self.recent[2]) else self.mean) * 1e3
+                err = jitter_ns / elapsed * 1e6
+        pdv = sender = math.nan
+        if len(self.owd) > 1:
+            pdv = _pdv(self.owd_rx, self.owd) / 1e3
+        if self.env_ref is not None and self.env_now is not None:
+            elapsed = self.env_now[0] - self.env_ref[0]
+            if elapsed >= RATE_MIN_S * 1e9:
+                sender = -(self.env_now[1] - self.env_ref[1]) / elapsed * 1e6
+        mean = self.mean if self.n else math.nan
+        return LinkTiming(self.n, mean, std, self.max if self.n else math.nan, *self.recent, expected_us,
+                          tuple(int(v) for v in self.hist), rate, ppm, err, pdv, sender)
 
 
 class _Stream:
@@ -92,6 +266,20 @@ class _Stream:
         self._back_run = 0
         self.packets = self.bytes = self.samples = 0
         self.lost = self.duplicates = self.restarts = 0
+        self.loss_events = self.max_loss_burst = 0
+        self.late_packets = self.late_samples = 0
+        self.gaps: deque[tuple[int, int]] = deque(maxlen=GAP_MEMORY)  # son kayıp aralıkları [başlangıç, bitiş)
+        self.port = 0
+        self.collisions = 0
+        self.foreign_packets = 0                    # çakışan kaynaktan gelip atılan DATA çerçeveleri
+        self.foreign_ports: dict[int, int] = {}     # yabancı kaynak portu → son görülme (alım ns)
+        self.conflict = ""
+        self.conflict_ns = 0
+        self.warned_ns: int | None = None
+        self.prev_counts = (0, 0, 0)                # (paket, yineleme, reset): önceki istatistik anında
+        self.timing = _Timing()
+        self.rx_log = self.timing.rx                # sıcak yol: bağlı liste nesneleri
+        self.ts_log = self.timing.ts
         self.last_rx_ns = 0
         self.pending_markers: list[tuple[int, int, str]] = []  # (örnek indeksi, kod, metin)
 
@@ -120,8 +308,8 @@ class StreamStore:
         self._dropped_markers = 0
 
     # ---------------------------------------------------------------- giriş noktaları
-    def handle_datagram(self, mv: memoryview, n: int, source: str, rx_ns: int) -> None:
-        """Bir UDP datagramındaki tüm çerçeveleri işler.
+    def handle_datagram(self, mv: memoryview, n: int, source: str, rx_ns: int, port: int = 0) -> None:
+        """Bir UDP datagramındaki tüm çerçeveleri işler. `port`: göndericinin kaynak portu (yalnız bilgi).
 
         Gigabit hızlarında saniyede ~80 bin datagram gelir; bu yüzden en sık durum olan "tanımlı,
         interleaved akışın sıradaki DATA çerçevesi" burada numpy'ye uğramadan işlenir. Geri kalan her
@@ -133,11 +321,11 @@ class StreamStore:
         off = 0
         while off < n:
             if n - off >= _FAST_MIN:
-                magic, version, ftype, flags, flen, sid, rev, first, count = _FAST_UNPACK(mv, off)
+                magic, version, ftype, flags, flen, sid, rev, ts, first, count = _FAST_UNPACK(mv, off)
                 if (ftype == 2 and flags <= FLAG_CRC32 and magic == _MAGIC_U32 and version == 1
                         and off + flen <= n):
                     st = fast.get(sid)
-                    if st is not None and st.rev == rev and st.source == source:
+                    if st is not None and st.rev == rev and st.source == source and st.port == port:
                         crc = flags * 4
                         nbytes = flen - _FAST_MIN - crc
                         if (first == st.next_sample and nbytes == count * st.bytes_per_sample
@@ -155,6 +343,8 @@ class StreamStore:
                             st.bytes += nbytes
                             st.samples += count
                             st.last_rx_ns = rx_ns
+                            st.rx_log.append(rx_ns)
+                            st.ts_log.append(ts)
                             if self.recorder is not None:
                                 self.recorder.write(mv[off:off + flen], rx_ns)
                             off += flen
@@ -162,7 +352,7 @@ class StreamStore:
             if mv[off] == 0 and not any(mv[off:n]):
                 return  # datagram sonundaki sıfır dolgu: hata değil
             try:
-                off += self.handle_frame(mv, off, n, source, rx_ns)
+                off += self.handle_frame(mv, off, n, source, rx_ns, port)
             except FrameError as exc:
                 self.report_frame_error(source, exc)
                 return  # datagramın geri kalanı güvenilir değil
@@ -170,16 +360,15 @@ class StreamStore:
                 self.report_frame_error(source, FrameError(f"beklenmeyen hata ({type(exc).__name__}): {exc}"))
                 return
 
-    def handle_frame(self, mv, off: int, end: int, source: str, rx_ns: int) -> int:
+    def handle_frame(self, mv, off: int, end: int, source: str, rx_ns: int, port: int = 0) -> int:
         """Tek bir çerçeveyi işler, çerçeve uzunluğunu döndürür. Hatalıysa FrameError fırlatır."""
         ftype, flags, flen, sid, rev, seq, ts = check_frame(mv, off, end)
         pstart = off + HEADER.size
         pend = off + flen - (CRC.size if flags & FLAG_CRC32 else 0)
         if ftype == FrameType.DATA:
-            self._data(mv, pstart, pend, source, sid, rev, rx_ns)
+            self._data(mv, pstart, pend, source, sid, rev, rx_ns, ts, port)
         elif ftype == FrameType.DESCRIPTOR:
-            self._descriptor(unpack_descriptor(mv, pstart, pend, sid, rev), source, rx_ns)
-            st = self._streams.get((source, sid))
+            st = self._descriptor(unpack_descriptor(mv, pstart, pend, sid, rev), source, rx_ns, port)
             if st is not None:
                 st.raw_descriptor = bytes(mv[off:off + flen])
         elif ftype == FrameType.MARKER:
@@ -192,11 +381,13 @@ class StreamStore:
         return flen
 
     # ---------------------------------------------------------------- çerçeve tipleri
-    def _data(self, mv, pstart: int, pend: int, source: str, sid: int, rev: int, rx_ns: int) -> None:
+    def _data(self, mv, pstart: int, pend: int, source: str, sid: int, rev: int, rx_ns: int, ts: int = 0,
+              port: int = 0) -> None:
         st = self._streams.get((source, sid))
         if st is None or st.desc.desc_rev != rev:
             self.no_descriptor += 1  # tanımlayıcı henüz gelmedi; protokol gereği atılır
             return
+        own = self._own_port(st, port, rx_ns)
         if pend - pstart < DATA.size:
             raise FrameError("DATA payload'ı çok kısa")
         first, count, _res = DATA.unpack_from(mv, pstart)
@@ -205,6 +396,11 @@ class StreamStore:
         nbytes = pend - pstart - DATA.size
         if nbytes != count * st.bytes_per_sample:
             raise FrameError(f"DATA boyutu {nbytes} bayt, {count} örnek için {count * st.bytes_per_sample} olmalı")
+        if not own:
+            # Kaynak çakışması: ikinci göndericinin örnekleri tampona yazılırsa iki farklı sinyal aynı kanalda
+            # parça parça karışır ("üst üste birkaç sinyal"). Sayılır ve uyarılır (_own_port), çizilmez.
+            st.foreign_packets += 1
+            return
 
         if st.ring is None:
             self._open_ring(st, rx_ns, count)
@@ -214,11 +410,20 @@ class StreamStore:
                 if first - expected > MAX_SAMPLE_JUMP:
                     raise FrameError(f"first_sample sıçraması çok büyük: {expected} → {first}")
                 st.lost += first - expected
+                st.loss_events += 1
+                st.max_loss_burst = max(st.max_loss_burst, first - expected)
+                st.gaps.append((expected, first))
                 st.ring.skip(first - expected)
                 st._back_run = 0
+            elif first != 0 and self._late(st, first, count):
+                st.late_packets += 1   # kayıp sayılan aralığa sonradan düştü: sıra dışı varış (tampon geçti)
+                st.late_samples += count
+                return
             elif first == 0 or self._backward_run(st, first, count):
                 st.restarts += 1
                 st._back_run = 0
+                st.gaps.clear()
+                st.timing.restart()
                 why = "" if first == 0 else " (reset çerçevesi kaybolmuş; ardışık geri çerçevelerden anlaşıldı)"
                 self._emit(("log", logging.WARNING, f"{st.desc.name}: akış yeniden başladı (cihaz reset?){why}"))
             else:
@@ -235,7 +440,44 @@ class StreamStore:
         st.packets += 1
         st.bytes += nbytes
         st.samples += count
-        st.last_rx_ns = rx_ns
+        if own:   # yabancı kaynağın varışları zamanlamaya ve boşta süresine karışmaz (asıl kaynağın susması görülsün)
+            st.last_rx_ns = rx_ns
+            st.rx_log.append(rx_ns)
+            st.ts_log.append(ts)
+
+    def _own_port(self, st: _Stream, port: int, rx_ns: int) -> bool:
+        """Çerçeve akışın asıl kaynak portundan mı? Asıl port bir süredir susmuşsa yeni port devralır (cihaz yeniden
+        bağlandı, yeni yerel port); asıl kaynak etkinken başka porttan gelen çerçeve kaynak çakışmasıdır: sayılır,
+        bir kez uyarılır; verisi tampona yazılmaz (bkz. _data)."""
+        if not port or port == st.port:
+            return True
+        if not st.port or rx_ns - st.last_rx_ns > PORT_HANDOVER_NS:
+            if st.port:
+                self._emit(("log", logging.INFO, f"{st.desc.name}: kaynak portu değişti {st.port} → {port} "
+                                                 "(cihaz yeniden bağlandı?)"))
+            st.port = port
+            st.foreign_ports.pop(port, None)
+            return True
+        st.collisions += 1
+        st.foreign_ports[port] = rx_ns
+        self._conflict(st, "port", rx_ns,
+                       f"{st.desc.name}: aynı akış kimliği (sid {st.desc.stream_id}) iki kaynaktan geliyor: "
+                       f"{st.source}:{st.port} ve {st.source}:{port} — kartta stream_id'leri ayırın ya da simülatörü "
+                       "durdurun")
+        return False
+
+    def _conflict(self, st: _Stream, kind: str, now_ns: int, message: str) -> None:
+        st.conflict = kind
+        st.conflict_ns = now_ns
+        if st.warned_ns is None or now_ns - st.warned_ns >= CONFLICT_WARN_NS:
+            st.warned_ns = now_ns
+            self._emit(("log", logging.WARNING, message))
+
+    @staticmethod
+    def _late(st: _Stream, first: int, count: int) -> bool:
+        """Geriye düşen çerçeve, yakın zamanda kayıp sayılan bir aralığın içinde mi (yeniden sıralanmış datagram)?"""
+        end = first + count
+        return any(g0 <= first and end <= g1 for g0, g1 in st.gaps)
 
     @staticmethod
     def _backward_run(st: _Stream, first: int, count: int) -> bool:
@@ -252,20 +494,26 @@ class StreamStore:
         """Bilinen akışların son tanımlayıcı çerçeveleri (kayıt ortada başladığında dosyanın başına)."""
         return [st.raw_descriptor for st in self._streams.values() if st.raw_descriptor]
 
-    def _descriptor(self, desc: Descriptor, source: str, rx_ns: int) -> None:
+    def _descriptor(self, desc: Descriptor, source: str, rx_ns: int, port: int = 0) -> _Stream | None:
+        """Tanımlayıcıyı uygular; kabul edilen akışı döndürür. Asıl kaynak etkinken başka porttan gelen farklı
+        tanımlayıcı (kaynak çakışması) akışı yeniden kurmaz (aksi halde iki gönderici akışı sürekli sıfırlardı)."""
         key = (source, desc.stream_id)
         st = self._streams.get(key)
         if st is not None:
+            if port and st.port and port != st.port and not self._own_port(st, port, rx_ns):
+                return None
             if st.desc == desc:
-                return  # periyodik tekrar
+                return st  # periyodik tekrar
             if self._fast.get(desc.stream_id) is st:
                 del self._fast[desc.stream_id]
             st.close()
             self._emit(("stream_removed", st.key))
             self._emit(("log", logging.INFO, f"{desc.name}: yapılandırma değişti (rev {desc.desc_rev})"))
         st = _Stream(f"{source}#{desc.stream_id}", source, desc, self.ring_seconds, self.max_ring_bytes)
+        st.port = port
         self._streams[key] = st
         self._emit(("log", logging.INFO, f"Yeni akış: {desc.name or desc.stream_id} — {desc.format_text()} ({source})"))
+        return st
 
     def _marker(self, mv, pstart: int, pend: int, source: str, sid: int) -> None:
         sample_index, code, text = unpack_marker(mv, pstart, pend)
@@ -310,10 +558,39 @@ class StreamStore:
         self._marker_budget = MAX_MARKER_EVENTS_PER_TICK
         out = []
         for st in self._streams.values():
+            if now_ns is not None:
+                self._check_sequence(st, now_ns)
             idle = (now_ns - st.last_rx_ns) / 1e9 if st.last_rx_ns and now_ns is not None else float("inf")
+            fs = st.desc.sample_rate
+            st.timing.drain(st.next_sample)
+            expected = st.samples / st.packets / fs * 1e6 if st.packets else math.nan
             out.append(StreamStats(st.key, st.desc.stream_id, st.desc.name, st.source, st.desc.format_text(),
-                                   st.packets, st.bytes, st.samples, st.lost, st.duplicates, st.restarts, idle))
+                                   st.packets, st.bytes, st.samples, st.lost, st.duplicates, st.restarts, idle,
+                                   st.port, fs, st.loss_events, st.max_loss_burst, st.late_packets,
+                                   st.late_samples, st.timing.summary(fs, expected), st.collisions,
+                                   (st.port, *sorted(st.foreign_ports)) if st.port else tuple(sorted(st.foreign_ports)),
+                                   st.conflict))
         return out
+
+    def _check_sequence(self, st: _Stream, now_ns: int) -> None:
+        """Aynı kaynak portundan iki göndericinin karışık first_sample dizisi: aralıkta sık reset ya da çerçevelerin
+        ≥ %5'i yineleme. Çakışma CONFLICT_HOLD_NS boyunca görülmezse temizlenir."""
+        for port, seen in list(st.foreign_ports.items()):
+            if now_ns - seen > CONFLICT_HOLD_NS:
+                del st.foreign_ports[port]
+        packets, dups, restarts = st.prev_counts
+        d_pk, d_dup, d_rs = st.packets - packets, st.duplicates - dups, st.restarts - restarts
+        st.prev_counts = (st.packets, st.duplicates, st.restarts)
+        if d_rs >= 2 or (d_dup >= 5 and d_dup * 20 >= d_pk):
+            if st.foreign_ports:
+                st.conflict_ns = now_ns          # nedeni zaten görülen ikinci kaynak portu
+            else:
+                self._conflict(st, "sıra", now_ns,
+                               f"{st.desc.name}: first_sample dizisi tutarsız ({d_dup} yineleme, {d_rs} yeniden "
+                               f"başlama / {d_pk} çerçeve) — aynı akış kimliğiyle (sid {st.desc.stream_id}) iki "
+                               "kaynak gönderiyor olabilir; kartta stream_id'leri ayırın ya da simülatörü durdurun")
+        if st.conflict and now_ns - st.conflict_ns > CONFLICT_HOLD_NS:
+            st.conflict = ""
 
     def reset(self, session_start_ns: int | None = None) -> None:
         """Tüm tamponları kapatır; tanımlayıcılar korunur, sonraki veriyle tamponlar yeniden açılır."""
@@ -323,6 +600,10 @@ class StreamStore:
         for st in self._streams.values():
             st.close()
             st.next_sample = None
+            st.gaps.clear()
+            st.timing.restart()
+            st.timing.rx.clear()
+            st.timing.ts.clear()
         self._emit(("streams_reset",))
 
     def close(self) -> None:

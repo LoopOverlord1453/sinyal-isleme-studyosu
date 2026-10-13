@@ -22,10 +22,15 @@ from PyQt6.QtCore import QPointF, QRectF, Qt
 from PyQt6.QtGui import QBrush, QColor, QMouseEvent, QPainter, QPainterPath, QPen, QPolygonF, QWheelEvent
 from PyQt6.QtWidgets import QSizePolicy, QWidget
 
-from spt.gui.theme import mono_font, ui_font
+from spt.gui.theme import ThemedColors, mono_font, themed, ui_font
 
-AXIS_COLORS = ("#f25555", "#48d16b", "#4d8dfa")  # gövde x, y, z (geleneksel RGB)
-HULL = "#b9b2ab"  # dolu gövdenin nötr rengi: algoritma rengi kenarda; RGB gövde eksenleri her algoritmada seçilir
+# Gövde x, y, z (geleneksel RGB); açık temada zemine ≥ 3.5:1 kontrast için koyulaştırıldı
+AXIS_COLORS = ThemedColors(dark=("#f25555", "#48d16b", "#4d8dfa"), light=("#d63a3a", "#1f9a4a", "#2f6fe0"))
+
+
+def hull_color() -> str:
+    """Dolu gövdenin nötr rengi: algoritma rengi kenarda; RGB gövde eksenleri her algoritmada seçilir."""
+    return themed("#b9b2ab", "#a39b93")
 
 
 def rotation(q) -> np.ndarray:
@@ -177,7 +182,7 @@ class Orientation3D(QWidget):
         for body in self.bodies:
             R = rotation(body.q)
             if body.solid:
-                base = QColor(HULL)
+                base = QColor(hull_color())
                 tint = QColor(body.color)
                 for verts, role in MODEL:
                     world = verts @ R.T

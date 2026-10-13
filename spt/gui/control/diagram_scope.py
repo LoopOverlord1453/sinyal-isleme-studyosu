@@ -2,9 +2,11 @@
 veri denetçisi) ayrı kartta, ölçülerek seçilmiş zıt renklerle, veri ipuçlarıyla.
 
 Renkler: ilk altı renk Sensör Füzyonu görünümünde ölçülen paletten (kırmızı, sarı, yeşil, camgöbeği, mavi, eflatun;
-normal görüşte her çift OKLab ΔE ≥ 19), sonra açık nötr (#f5f5f5); daha fazla seri gerekirse renkler OKLab'da en uzak
-nokta seçimiyle (zemin #121110 ve önceki tüm renklerden en uzak, açıklık 0.62–0.92 bandında) eklenir. Aynı görünümde
-(tüm skop kartları birlikte) hiçbir renk iki seride kullanılmaz; renk seriye (skop + kanal) bağlıdır.
+açık temada sarı yerine turuncu; normal görüşte her çift OKLab ΔE ≥ 19), sonra metin rengine yakın nötr (koyu temada
+#f5f5f5, açık temada #1d1a16); daha fazla seri gerekirse renkler OKLab'da en uzak nokta seçimiyle (kart yüzeyinden ve
+önceki tüm renklerden en uzak; açıklık koyu temada 0.62–0.92, açık temada 0.30–0.62 bandında, ikisi de yüzeye ≥ 3:1)
+eklenir. Aynı görünümde (tüm skop kartları birlikte) hiçbir renk iki seride kullanılmaz; renk seriye (skop + kanal)
+bağlıdır.
 """
 from __future__ import annotations
 
@@ -15,12 +17,21 @@ import pyqtgraph as pg
 from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import QScrollArea, QVBoxLayout, QWidget
 
-from spt.gui.widgets.common import Card, label, legend_chip
+from spt.gui.theme import ThemedColors, active, themed
+from spt.gui.widgets.common import Card, LegendBar, label
 from spt.gui.widgets.inspector import DataTips, PlotAnalysis, Trace, curve_stats, fmt, visible_slice
 from spt.gui.widgets.plot import make_plot, pen
 
-BASE_COLORS = ("#f54748", "#dfa11a", "#45f27f", "#4cd1ee", "#488bfb", "#e03fc7", "#f5f5f5")
-SURFACE = "#121110"
+BASE_COLORS = ThemedColors(
+    dark=("#f54748", "#dfa11a", "#45f27f", "#4cd1ee", "#488bfb", "#e03fc7", "#f5f5f5"),
+    light=("#b31319", "#ea6a09", "#17a664", "#5391cc", "#1a4eda", "#af1da0", "#1d1a16"),
+)
+_LIGHTNESS_BAND = {"dark": (0.62, 0.92), "light": (0.30, 0.62)}  # genişletme renklerinin OKLab açıklık bandı
+
+
+def surface() -> str:
+    """Kart yüzeyi (etkin tema): genişletme renkleri bundan uzak seçilir."""
+    return themed("#121110", "#fffdfa")
 PLOT_MIN_HEIGHT = 170   # zaman ekseni ve etiketleri kesilmeden okunur
 
 
@@ -48,18 +59,25 @@ def delta_e(a: str, b: str) -> float:
     return float(np.linalg.norm(la - lb) * 100.0)
 
 
-@lru_cache(maxsize=8)
 def distinct_colors(n: int) -> tuple[str, ...]:
-    """n farklı seri rengi: önce ölçülmüş taban palet, sonra OKLab'da en uzak nokta seçimiyle genişletme."""
-    out = list(BASE_COLORS[:n])
+    """n farklı seri rengi (etkin tema): önce ölçülmüş taban palet, sonra OKLab'da en uzak nokta seçimiyle
+    genişletme."""
+    return _distinct_colors(n, active().name)
+
+
+@lru_cache(maxsize=16)
+def _distinct_colors(n: int, theme: str) -> tuple[str, ...]:
+    base = BASE_COLORS.dark if theme == "dark" else BASE_COLORS.light
+    out = list(base[:n])
     if n <= len(out):
         return tuple(out)
+    lo, hi = _LIGHTNESS_BAND[theme]
     steps = np.linspace(0.0, 1.0, 18)
     grid = np.stack(np.meshgrid(steps, steps, steps, indexing="ij"), axis=-1).reshape(-1, 3)
     lab = _srgb_to_oklab(grid)
-    ok = (lab[:, 0] >= 0.62) & (lab[:, 0] <= 0.92) & (np.hypot(lab[:, 1], lab[:, 2]) >= 0.06)
+    ok = (lab[:, 0] >= lo) & (lab[:, 0] <= hi) & (np.hypot(lab[:, 1], lab[:, 2]) >= 0.06)
     grid, lab = grid[ok], lab[ok]
-    ref = [_srgb_to_oklab(_hex_rgb(c)) for c in out + [SURFACE]]
+    ref = [_srgb_to_oklab(_hex_rgb(c)) for c in out + ["#121110" if theme == "dark" else "#fffdfa"]]
     dmin = np.min(np.stack([np.linalg.norm(lab - r, axis=1) for r in ref]), axis=0)
     while len(out) < n:
         k = int(np.argmax(dmin))
@@ -160,12 +178,14 @@ class ScopePanel(QWidget):
             plot.setMinimumHeight(PLOT_MIN_HEIGHT)
             card.body.addWidget(plot, 1)
             traces: list[Trace] = []
+            legend = LegendBar(lambda p=plot: [p])
             for _scope, sname, t, y in mine:
                 color = colors[k]
                 k += 1
                 item = plot.plot(t, y, pen=pen(color), name=sname)
                 traces.append(Trace(item, sname, color, self._describe(sname)))
-                card.add_left(legend_chip(color, sname), optional=True)
+            legend.set_items([(tr.color, tr.name) for tr in traces])
+            card.add_left(legend, optional=True)
             if result.cancelled:
                 card.add_right(label("İptal edildi: kısmi sonuç", "Muted"))
             self._tips.append(DataTips(plot, self._theme, lambda trs=traces: trs))

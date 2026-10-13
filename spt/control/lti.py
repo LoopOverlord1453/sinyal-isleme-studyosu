@@ -1,7 +1,7 @@
 """LTI modelleri: transfer fonksiyonu (tf), sıfır-kutup-kazanç (zpk) ve durum uzayı (ss).
 
 MATLAB Control System Toolbox'ın `tf`, `zpk`, `ss` nesnelerinin karşılığı. Sözleşme
-(docs/asamalar/Asama_4_Kontrol_Tasarimi.md):
+(docs/SPT-DEV-001_Gelistirme_Asamalari.docx, Aşama 4):
 
 - `Ts = 0.0` sürekli, `Ts > 0` ayrık zaman (saniye). Farklı Ts'li modeller birleştirilemez; statik kazanç (dinamiği ve
   gecikmesi olmayan model) her Ts'ye uyar (MATLAB gibi).

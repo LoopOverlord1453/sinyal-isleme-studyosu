@@ -767,7 +767,7 @@ def test_runtime_gain_change():
 
 
 # ============================================================================ çapraz derleme, ayak izi, maliyet
-CORTEX = [k for k, p in MCU_PROFILES.items() if p.measurable]
+CORTEX = list(MCU_PROFILES)
 
 
 @needs_cross

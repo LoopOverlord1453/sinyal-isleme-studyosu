@@ -7,8 +7,12 @@ yalnız çizer. Kütüphane fonksiyonlarına erişim tek yerde (`calc_*` uyarlay
 Renk: her seri (sistem) tek renk taşır; renkleri çağıran verir (`PALETTE`'ten, görünüm içinde benzersiz). Kılavuzlar
 (−1 noktası, birim çember, sanal eksen, Nyquist frekansı) seri renklerinden ayrışan nötr gri ile çizilir.
 
-PALETTE ölçümü (OKLab, #121110 kart yüzeyinde): 8 rengin her çifti normal görüşte ΔE ≥ 19.1, döteranopi /
-protanopi simülasyonunda (Machado 2009) ΔE ≥ 9.8; yüzeye kontrast ≥ 5.1:1; kılavuz grisinden (#8a837c) ΔE ≥ 13.
+PALETTE her tema için ayrı ölçüldü (OKLab ΔE ×100; döteranopi / protanopi Machado 2009, şiddet 1.0):
+- koyu (#121110 kart yüzeyi): 8 rengin her çifti normal görüşte ΔE ≥ 19.1, renk körlüğünde ≥ 9.8; yüzeye kontrast
+  ≥ 5.1:1; kılavuz grisinden (#8a837c) ΔE ≥ 13.
+- açık (#fffdfa): her çift normal görüşte ΔE ≥ 19.0, renk körlüğünde ≥ 9.8; yüzeye kontrast ≥ 3.1:1; kılavuz
+  grisinden (#7c7670) ΔE ≥ 14. Açık zeminde sarı okunmadığından dördüncü renk turuncu, sekizinci (koyu temadaki
+  buz beyazının karşılığı) koyu arduvaz.
 İlk altısı Sensör Füzyonu paletidir; son ikisi bu ölçütle aranarak eklendi.
 
 Veri ipuçları (tıkla): adımda t / y; Bode'de ω (rad/s ve Hz), genlik (dB ve mutlak), faz; Nyquist'te ω ve L(jω);
@@ -26,16 +30,28 @@ from PyQt6.QtCore import Qt, pyqtSignal
 from PyQt6.QtWidgets import QSplitter, QVBoxLayout, QWidget
 
 from spt.control.errors import ControlError
-from spt.gui.theme import ThemeManager
-from spt.gui.widgets.common import Card, FlowLayout, label, legend_chip
+from spt.gui.theme import ThemeManager, ThemedColors, themed
+from spt.gui.widgets.common import Card, LegendBar, label
 from spt.gui.widgets.inspector import DataTips, PlotAnalysis, Trace, curve_stats, fmt, visible_slice
 from spt.gui.widgets.plot import make_plot, pen, set_si_prefix
 
 log = logging.getLogger("spt.gui")
 
-PALETTE = ("#f54748", "#488bfb", "#45f27f", "#dfa11a", "#e03fc7", "#4cd1ee", "#03a27f", "#e3fafe")
-GUIDE = "#8a837c"          # kılavuz çizgileri (seri değildir)
-CRITICAL = "#fffdfb"       # −1 noktası / (−180°, 0 dB) işareti: metin rengi, seri renklerinden ayrı
+PALETTE = ThemedColors(
+    dark=("#f54748", "#488bfb", "#45f27f", "#dfa11a", "#e03fc7", "#4cd1ee", "#03a27f", "#e3fafe"),
+    light=("#b31319", "#1a4eda", "#17a664", "#ea6a09", "#af1da0", "#5391cc", "#0a684e", "#282d3d"),
+)
+
+
+def guide() -> str:
+    """Kılavuz çizgilerinin nötr grisi (seri değildir)."""
+    return themed("#8a837c", "#7c7670")
+
+
+def critical_mark() -> str:
+    """−1 noktası / (−180°, 0 dB) işareti: metin rengi, seri renklerinden ayrı (işaret biçimi de farklı: +)."""
+    return themed("#fffdfb", "#1d1a16")
+
 CHANNEL_STYLES = (Qt.PenStyle.SolidLine, Qt.PenStyle.DashLine, Qt.PenStyle.DotLine, Qt.PenStyle.DashDotLine)
 MAX_SERIES = len(PALETTE)
 CARD_MIN_HEIGHT = 170
@@ -200,22 +216,34 @@ def _finite(*arrays) -> np.ndarray:
 
 
 # ============================================================================ temel kart
-class SeriesLegend(QWidget):
-    """Seri lejantı (renk çizgisi + ad); dar alanda satır kaydırır."""
+class SeriesLegend(LegendBar):
+    """Görünümün seri lejantı (renk çizgisi + ad; dar alanda satır kaydırır). Tıklanabilir: seri, lejantın bulunduğu
+    görünümdeki bütün grafik kartlarında gizlenir / gösterilir (görünümde her seri tek renk taşır) ve kart yeniden
+    çizildiğinde de kapalı kalır."""
 
     def __init__(self, parent: QWidget | None = None):
-        super().__init__(parent)
-        self._lay = FlowLayout(self, spacing=12)
+        super().__init__(self._card_plots, wrap=True, parent=parent)
 
     def set_series(self, items: list[tuple[str, str]]) -> None:
-        while self._lay.count():
-            w = self._lay.takeAt(0).widget()
-            if w is not None:
-                w.deleteLater()
-        for color, name in items:
-            self._lay.addWidget(legend_chip(color, name))
-        self.setVisible(bool(items))
-        self.updateGeometry()
+        self.set_items(items)
+
+    def _cards(self) -> list:
+        """Lejantı içeren en yakın üst öğedeki grafik kartları (kendi sekmesi / görünümü)."""
+        w = self.parentWidget()
+        while w is not None:
+            cards = w.findChildren(PlotCard)
+            if cards:
+                return cards
+            w = w.parentWidget()
+        return []
+
+    def _card_plots(self) -> list:
+        cards = self._cards()
+        for card in cards:
+            if not card.property("sptLegendWatch"):
+                card.setProperty("sptLegendWatch", True)
+                card.drawn.connect(self.apply)
+        return [card.plot for card in cards]
 
 
 class PlotCard(Card):
@@ -292,8 +320,9 @@ class PlotCard(Card):
         trace = Trace(item, name, color, describe, extra={"points": True}) if describe is not None else None
         return self.add_item(item, trace, bounds)
 
-    def guide_line(self, pos: float, angle: int, color: str = GUIDE, style=Qt.PenStyle.DashLine,
+    def guide_line(self, pos: float, angle: int, color: str | None = None, style=Qt.PenStyle.DashLine,
                    text: str = "") -> pg.InfiniteLine:
+        color = color or guide()
         p = pg.mkPen(color, width=1, style=style)
         line = pg.InfiniteLine(pos, angle=angle, pen=p, movable=False)
         if text:
@@ -512,7 +541,7 @@ class LsimPlot(StepPlot):
         if len(self.t) > 1:
             def describe(x, v):
                 return [f"t = {fmt(x, 's', 6)}", f"u = {v:.6g}"]
-            self.curve(self.t, self.u, GUIDE, self.input_name, describe, width=1.5)
+            self.curve(self.t, self.u, guide(), self.input_name, describe, width=1.5)
             if self.measured is not None:
                 name, color, y = self.measured
                 self.curve(self.t, y, color, name, lambda x, v: [f"t = {fmt(x, 's', 6)}", f"y = {v:.6g}"],
@@ -586,7 +615,7 @@ class BodePlot(QWidget):
                 errors.append(f"{s.name}: hesaplanamadı ({exc})")
         for w in sorted(nyq):
             for card in (mc, pc):
-                card.guide_line(math.log10(w), 90, GUIDE, Qt.PenStyle.DotLine, "π/Ts" if card is mc else "")
+                card.guide_line(math.log10(w), 90, guide(), Qt.PenStyle.DotLine, "π/Ts" if card is mc else "")
         for card in (mc, pc):
             card.errors = errors
             card.note.setText("<br>".join(errors))
@@ -670,10 +699,10 @@ class BodePlot(QWidget):
             pc.curve([wcp, wcp], [base, ph], c, f"{s.name} · faz payı",
                      lambda *_a, pm=pm, wcp=wcp: [f"faz payı = {pm:.4f}°", f"kazanç geçiş frekansı = {wcp:.6g} rad/s"],
                      style=Qt.PenStyle.DashLine, width=1.5, bounds=False)
-            pc.guide_line(base, 0, GUIDE, Qt.PenStyle.DotLine)
+            pc.guide_line(base, 0, guide(), Qt.PenStyle.DotLine)
             mc.points([wcp], [0.0], c, f"{s.name} · 0 dB geçişi",
                       lambda *_a: [f"kazanç geçişi ω = {wcp:.6g} rad/s"], symbol="o", size=8)
-        mc.guide_line(0.0, 0, GUIDE, Qt.PenStyle.DotLine)
+        mc.guide_line(0.0, 0, guide(), Qt.PenStyle.DotLine)
 
     def data(self, key: str):
         return self._data.get(key)
@@ -721,12 +750,13 @@ class NyquistPlot(PlotCard):
 
     def _finish(self, **opts) -> None:
         theta = np.linspace(0, 2 * np.pi, 361)
-        p = pg.mkPen(GUIDE, width=1, style=Qt.PenStyle.DashLine)
+        p = pg.mkPen(guide(), width=1, style=Qt.PenStyle.DashLine)
         circle = pg.PlotDataItem(np.cos(theta), np.sin(theta), pen=p)
         self.add_item(circle, bounds=False)
         self.guide_line(0.0, 0)
         self.guide_line(0.0, 90)
-        self.points([-1.0], [0.0], CRITICAL, "−1 noktası", lambda *_: ["kritik nokta −1 + j0"], symbol="+", size=16)
+        self.points([-1.0], [0.0], critical_mark(), "−1 noktası", lambda *_: ["kritik nokta −1 + j0"],
+                    symbol="+", size=16)
         e = self._extent
         self.plot.getPlotItem().setRange(xRange=(-e - 0.2, e + 0.2), yRange=(-e, e), padding=0.05)
 
@@ -757,9 +787,9 @@ class NicholsPlot(PlotCard):
                            CHANNEL_STYLES[(i * mag.shape[1] + j) % len(CHANNEL_STYLES)])
 
     def _finish(self, **opts) -> None:
-        self.guide_line(0.0, 0, GUIDE, Qt.PenStyle.DotLine)
-        self.guide_line(-180.0, 90, GUIDE, Qt.PenStyle.DotLine)
-        self.points([-180.0], [0.0], CRITICAL, "kritik nokta", lambda *_: ["kritik nokta (−180°, 0 dB)"],
+        self.guide_line(0.0, 0, guide(), Qt.PenStyle.DotLine)
+        self.guide_line(-180.0, 90, guide(), Qt.PenStyle.DotLine)
+        self.points([-180.0], [0.0], critical_mark(), "kritik nokta", lambda *_: ["kritik nokta (−180°, 0 dB)"],
                     symbol="+", size=16, bounds=False)
         super()._finish(**opts)
 
@@ -812,7 +842,7 @@ class _PlanePlot(PlotCard):
     def _finish(self, **opts) -> None:
         if self._discrete:
             theta = np.linspace(0, 2 * np.pi, 361)
-            circle = pg.PlotDataItem(np.cos(theta), np.sin(theta), pen=pg.mkPen(GUIDE, width=1,
+            circle = pg.PlotDataItem(np.cos(theta), np.sin(theta), pen=pg.mkPen(guide(), width=1,
                                                                                  style=Qt.PenStyle.DashLine))
             self.add_item(circle, bounds=False)
         self.guide_line(0.0, 0)

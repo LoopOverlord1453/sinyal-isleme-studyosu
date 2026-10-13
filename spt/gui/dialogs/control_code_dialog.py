@@ -34,7 +34,7 @@ from spt.codegen import control_c as cc
 from spt.codegen import mcu
 from spt.control.errors import ControlError, ControlWarning
 from spt.gui.dialogs.code_dialog import CodeDialog
-from spt.gui.theme import TERRAFLUX_DARK, Tokens
+from spt.gui.theme import Tokens, tokens as active_tokens
 from spt.gui.widgets.common import CollapsibleSection, combo, label
 
 log = logging.getLogger("spt.gui")
@@ -48,7 +48,7 @@ _TR = str.maketrans("çğıöşüÇĞİÖŞÜ", "cgiosuCGIOSU")
 
 
 def _tokens(parent) -> Tokens:
-    """Ebeveyn zincirindeki tema belirteçleri (bulunamazsa varsayılan koyu tema)."""
+    """Ebeveyn zincirindeki tema belirteçleri (bulunamazsa etkin tema)."""
     w = parent
     while w is not None:
         theme = getattr(w, "_theme", None) or getattr(w, "theme", None)
@@ -56,7 +56,7 @@ def _tokens(parent) -> Tokens:
         if isinstance(tokens, Tokens):
             return tokens
         w = w.parent() if hasattr(w, "parent") and callable(w.parent) else None
-    return TERRAFLUX_DARK
+    return active_tokens()
 
 
 def prefix_from_name(name: str) -> str:
@@ -396,8 +396,8 @@ class ControlCodeDialog(CodeDialog):
                       "<tr><th>Kip</th><th>Çevrim (ort.)</th><th>Çevrim (en kötü)</th><th>µs</th><th>CPU yükü</th>"
                       "<th>En yüksek hız (Hz)</th><th>Not</th></tr>" + "".join(crow) + "</table>")
         notes = ("<p><b>Notlar:</b> Kod boyutu makinedeki araç zinciriyle gerçekten derlenerek ölçülür (GCC: "
-                 "arm-none-eabi-gcc, Clang: Arm Compiler 6 / Keil MDK ile aynı altyapı); IAR ve yerel derleyicisi "
-                 "olmayan çekirdekler <i>tahmin</i>dir. RAM = durum yapısının boyutu (malloc yok; katsayılar "
+                 "arm-none-eabi-gcc, Clang: Arm Compiler 6 / Keil MDK ile aynı altyapı); IAR ve makinede bulunmayan "
+                 "derleyiciler <i>tahmin</i>dir. RAM = durum yapısının boyutu (malloc yok; katsayılar "
                  "flash'ta). Çevrim sayıları, ölçülen işlem sayıları × çekirdeğin komut çevrim tablosu — gerçek "
                  "donanımda DWT->CYCCNT ile doğrulayın. CPU yükü %100'ü aşarsa bu hızda gerçek zamanlı çalışamaz.</p>")
         details = "<ol>" + "".join(f"<li>{html.escape(m)}</li>" for m in methods) + "</ol>"

@@ -8,7 +8,7 @@ Sen gömülü sistem haberleşme protokolleri konusunda uzman bir test mühendis
 yazılacağı için doküman ile kodun birebir aynı olması kritik.
 
 ## Kontrol listesi
-- `docs/SPTF_Protokol_v1.md` ↔ `spt/protocol/*`: her alanın boyutu, sırası, endian'ı, bayrakları, CRC kapsamı,
+- `docs/SPT-PRT-001_SPTF_Cerceve_Formati.docx` ↔ `spt/protocol/*`: her alanın boyutu, sırası, endian'ı, bayrakları, CRC kapsamı,
   tanımlayıcı / veri / işaret çerçeveleri, örnek tipleri (int24 paketli, karmaşık tipler), test vektörü. Dokümandaki
   C yapılarını derleyici olmadan bayt bayt elle doğrula (struct boyutları, hizalama / packing uyarıları).
 - `spt/core/stream_store.py` + `spt/sources/receiver.py`: kayıp sayımı (sıra atlama, tekrar, cihaz reseti),

@@ -504,7 +504,7 @@ class BlockItem(QGraphicsObject):
         self._paint_port_labels(painter, r)
         # ad (altta)
         painter.setFont(ui_font(11))
-        painter.setPen(QColor(t.accent if sel else t.text_secondary))
+        painter.setPen(QColor(t.accent_text if sel else t.text_secondary))
         painter.drawText(QRectF(r.center().x() - self._label_w / 2, r.bottom() + 3, self._label_w, 16),
                          int(Qt.AlignmentFlag.AlignHCenter | Qt.AlignmentFlag.AlignTop), self.block.name)
         self._paint_lin_marks(painter)
@@ -604,7 +604,7 @@ class BlockItem(QGraphicsObject):
             painter.setPen(QPen(QColor(t.accent), 1.0))
             painter.setBrush(QColor(t.accent_tint))
             painter.drawRoundedRect(rect, 4, 4)
-            painter.setPen(QColor(t.accent))
+            painter.setPen(QColor(t.accent_text))
             painter.drawText(rect, int(Qt.AlignmentFlag.AlignCenter), text)
 
     # ---------------------------------------------------------------- konum

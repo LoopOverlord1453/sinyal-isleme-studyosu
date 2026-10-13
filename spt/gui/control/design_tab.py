@@ -63,7 +63,7 @@ from spt.gui.control.design_widgets import scroll_area as _scroll
 from spt.gui.control.design_widgets import spin_box as _spin
 from spt.gui.control.models_tab import C2D_METHODS
 from spt.gui.control.workspace import SOURCE_DESIGN, ModelWorkspace
-from spt.gui.theme import ThemeManager
+from spt.gui.theme import ThemedMap, ThemeManager
 from spt.gui.widgets.common import Card, CollapsibleSection, combo, label
 
 log = logging.getLogger("spt.gui")
@@ -72,8 +72,9 @@ MODES = (("comp", "Kompansatör"), ("pid", "PID"), ("modern", "Durum uzayı"), (
 INTEGRATOR = "__integrator__"
 NONE = None
 # Klasik görünümde her seri tek renk (aynı görünümde tekrar yok; PALETTE ölçümü control_plots'ta)
-COLORS = {"T": cp.PALETTE[0], "L": cp.PALETTE[1], "GS": cp.PALETTE[2], "KS": cp.PALETTE[3], "comp": cp.PALETTE[4],
-          "T_base": cp.PALETTE[5], "T2": cp.PALETTE[6], "T_cont": cp.PALETTE[7]}
+COLORS = ThemedMap(lambda: {"T": cp.PALETTE[0], "L": cp.PALETTE[1], "GS": cp.PALETTE[2], "KS": cp.PALETTE[3],
+                            "comp": cp.PALETTE[4], "T_base": cp.PALETTE[5], "T2": cp.PALETTE[6],
+                            "T_cont": cp.PALETTE[7]})
 NAMES = {"L": "L = C·G (açık çevrim)", "T": "T: r → y", "GS": "d → y (giriş bozucusu)", "KS": "r → u (kontrol)",
          "T_base": "T: karşılaştırma", "T2": "T2: iç çevrim ω_ref → ω", "T_cont": "T: sürekli eşdeğer"}
 PLOTS = (("rlocus", "Kök yer eğrisi"), ("bode", "Bode"), ("step", "Referans izleme"), ("dist", "Bozucu reddi"),

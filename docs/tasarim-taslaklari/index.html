@@ -1,0 +1,234 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Arayüz Taslakları</title>
+<script>
+  (function () {
+    var t = null;
+    try { t = localStorage.getItem('spt-taslak-tema'); } catch (e) {}
+    if (t !== 'light' && t !== 'dark') t = matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+    document.documentElement.dataset.theme = t;
+  })();
+</script>
+<style>
+  :root {
+    color-scheme: light;
+    --bg: #f4f4f2; --surface: #ffffff; --surface-alt: #f8f8f6; --border: #e3e2de; --border-strong: #cfcdc7;
+    --text: #141413; --text-secondary: #4d4c47; --text-muted: #6e6c66; --hover: #efeee9; --ters: #141413; --ters-metin: #ffffff;
+    --font: "Segoe UI Variable Text", "Segoe UI", Inter, system-ui, sans-serif;
+    --font-display: "Segoe UI Variable Display", "Segoe UI", Inter, system-ui, sans-serif;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      color-scheme: dark;
+      --bg: #0b0b0b; --surface: #141414; --surface-alt: #191919; --border: #262626; --border-strong: #383838;
+      --text: #f2f2f0; --text-secondary: #bdbcb6; --text-muted: #8f8d87; --hover: #1f1f1f; --ters: #f2f2f0; --ters-metin: #0b0b0b;
+    }
+  }
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    --bg: #0b0b0b; --surface: #141414; --surface-alt: #191919; --border: #262626; --border-strong: #383838;
+    --text: #f2f2f0; --text-secondary: #bdbcb6; --text-muted: #8f8d87; --hover: #1f1f1f; --ters: #f2f2f0; --ters-metin: #0b0b0b;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text); font: 14px/1.55 var(--font); }
+  a { color: inherit; }
+  .sayfa { max-width: 1280px; margin: 0 auto; padding: 36px 16px 64px; }
+  @media (min-width: 720px) { .sayfa { padding: 44px 32px 72px; } }
+
+  header { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 16px 24px; }
+  header .ust-yazi { font-size: 12px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: var(--text-muted); }
+  h1 { font: 600 30px/1.15 var(--font-display); letter-spacing: -.02em; margin: 6px 0 0; }
+  header p { margin: 10px 0 0; max-width: 680px; color: var(--text-secondary); }
+  .tema-sec { margin-left: auto; display: inline-flex; gap: 2px; padding: 3px; border: 1px solid var(--border); border-radius: 10px; background: var(--surface); }
+  .tema-sec button { height: 32px; padding: 0 14px; border: 0; border-radius: 7px; background: none; color: var(--text-secondary); font: inherit; font-size: 13px; cursor: pointer; }
+  .tema-sec button[aria-pressed="true"] { background: var(--ters); color: var(--ters-metin); font-weight: 600; }
+
+  .ipuclari { display: flex; flex-wrap: wrap; gap: 8px; margin: 22px 0 0; padding: 0; list-style: none; }
+  .ipuclari li { padding: 6px 12px; border: 1px solid var(--border); border-radius: 999px; background: var(--surface); color: var(--text-secondary); font-size: 13px; }
+  .ipuclari kbd { font: 11.5px "Cascadia Mono", Consolas, monospace; padding: 0 5px; border: 1px solid var(--border-strong); border-radius: 4px; }
+
+  .izgara { display: grid; grid-template-columns: 1fr; gap: 20px; margin-top: 28px; }
+  @media (min-width: 980px) { .izgara { grid-template-columns: 1fr 1fr; } }
+
+  .kart { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; overflow: hidden; display: flex; flex-direction: column; }
+  .onizleme { position: relative; display: block; aspect-ratio: 1600 / 960; overflow: hidden; border-bottom: 1px solid var(--border); background: var(--surface-alt); }
+  .onizleme iframe { position: absolute; top: 0; left: 0; width: 1600px; height: 960px; border: 0; transform-origin: 0 0; transform: scale(var(--olcek, .37)); pointer-events: none; }
+  .onizleme::after { content: "Tam ekran aç →"; position: absolute; right: 12px; bottom: 12px; padding: 6px 12px; border-radius: 8px; background: var(--ters); color: var(--ters-metin);
+    font-size: 12.5px; font-weight: 600; opacity: 0; transform: translateY(4px); transition: opacity .15s, transform .15s; }
+  .onizleme:hover::after, .onizleme:focus-visible::after { opacity: 1; transform: none; }
+  .govde { padding: 18px 20px 20px; display: flex; flex-direction: column; gap: 12px; flex: 1; }
+  .bas { display: flex; align-items: baseline; gap: 12px; }
+  .harf { display: inline-grid; place-items: center; width: 30px; height: 30px; border-radius: 9px; background: var(--ters); color: var(--ters-metin); font-weight: 700; flex: none; align-self: center; }
+  h2 { margin: 0; font: 600 19px/1.2 var(--font-display); letter-spacing: -.01em; }
+  .renkler { margin-left: auto; display: flex; gap: 4px; align-self: center; }
+  .renkler i { width: 14px; height: 14px; border-radius: 4px; border: 1px solid var(--border-strong); }
+  .ozet { margin: 0; color: var(--text-secondary); }
+  ul.madde { margin: 0; padding-left: 18px; color: var(--text-secondary); font-size: 13.5px; }
+  ul.madde li { margin: 3px 0; }
+  .alt { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: auto; padding-top: 6px; }
+  .efor { font-size: 12.5px; color: var(--text-muted); margin-right: auto; }
+  .efor b { color: var(--text); font-weight: 600; }
+  .dugme { display: inline-flex; align-items: center; height: 34px; padding: 0 14px; border: 1px solid var(--border-strong); border-radius: 9px; text-decoration: none; font-size: 13px; font-weight: 500; background: var(--surface); }
+  .dugme:hover { background: var(--hover); }
+
+  h3 { font: 600 18px/1.2 var(--font-display); margin: 44px 0 12px; }
+  .tablo-kap { overflow-x: auto; border: 1px solid var(--border); border-radius: 12px; background: var(--surface); }
+  table { width: 100%; border-collapse: collapse; font-size: 13.5px; min-width: 760px; }
+  th, td { text-align: left; padding: 10px 14px; border-bottom: 1px solid var(--border); vertical-align: top; }
+  thead th { font-weight: 600; color: var(--text-muted); font-size: 12.5px; background: var(--surface-alt); }
+  tbody th { font-weight: 600; white-space: nowrap; color: var(--text); }
+  tbody tr:last-child > * { border-bottom: 0; }
+  td { color: var(--text-secondary); }
+  .not { margin-top: 16px; color: var(--text-muted); font-size: 13px; max-width: 900px; }
+</style>
+</head>
+<body>
+<div class="sayfa">
+  <header>
+    <div>
+      <div class="ust-yazi">Sinyal İşleme Stüdyosu · Arayüz yenileme</div>
+      <h1>Dört tasarım taslağı</h1>
+      <p>Hepsi aynı ekranı (Canlı İzleme, 01_sinus_50Hz kaydı) farklı bir tasarım yönüyle gösterir. Her taslağın açık ve koyu teması var;
+        grafikler canlı akar ve spektrum gerçek FFT ile hesaplanır. Beğendiğinizi seçin, PyQt6 arayüzüne o uygulanacak.</p>
+    </div>
+    <div class="tema-sec" role="group" aria-label="Önizleme teması">
+      <button type="button" data-tema="light">Açık</button>
+      <button type="button" data-tema="dark">Koyu</button>
+    </div>
+  </header>
+
+  <ul class="ipuclari">
+    <li>Grafiğin üzerine gelin: artı imleç ve değerler</li>
+    <li><kbd>F6</kbd> veya “Dondur”: akışı durdurur / sürdürür</li>
+    <li>Lejanttaki kanala tıklayın: kanalı gizler</li>
+    <li>Her taslağın içinde tema düğmesi var</li>
+  </ul>
+
+  <div class="izgara">
+    <article class="kart">
+      <a class="onizleme" href="A-terraflux-rafine.html" data-taslak><iframe src="A-terraflux-rafine.html?onizleme=1" title="Taslak A önizlemesi" loading="lazy" tabindex="-1"></iframe></a>
+      <div class="govde">
+        <div class="bas"><span class="harf">A</span><h2>TerraFlux Rafine</h2>
+          <span class="renkler" title="Vurgu ve kanal renkleri"><i style="background:#ec7c22"></i><i style="background:#d95926"></i><i style="background:#3987e5"></i></span></div>
+        <p class="ozet">Bugünkü arayüzün olgunlaştırılmış hâli. Turuncu kimlik, kart düzeni ve paneller yerinde kalır; açık tema eklenir.</p>
+        <ul class="madde">
+          <li>Görünüm düğmeleri tek bir segment kabında, akış denetimi (dinle / dondur / kaydet) ayrı grupta</li>
+          <li>Sayfa başlığında “Canlı” rozeti ve 50–500 ms pencere seçimi</li>
+          <li>Kanal satırlarında anlık RMS; sağda yeni “Ölçümler” sekmesi</li>
+          <li>Açık temada sıcak kâğıt tonları, koyu tema bugünküyle aynı</li>
+        </ul>
+        <div class="alt">
+          <span class="efor">Qt'ye uyarlama: <b>düşük</b> · alışkanlık değişmez</span>
+          <a class="dugme" href="A-terraflux-rafine.html?tema=light">Açık</a><a class="dugme" href="A-terraflux-rafine.html?tema=dark">Koyu</a>
+        </div>
+      </div>
+    </article>
+
+    <article class="kart">
+      <a class="onizleme" href="B-enstruman.html" data-taslak><iframe src="B-enstruman.html?onizleme=1" title="Taslak B önizlemesi" loading="lazy" tabindex="-1"></iframe></a>
+      <div class="govde">
+        <div class="bas"><span class="harf">B</span><h2>Enstrüman</h2>
+          <span class="renkler"><i style="background:#2bb3c0"></i><i style="background:#c98500"></i><i style="background:#3987e5"></i></span></div>
+        <p class="ozet">Osiloskop gibi davranan, yoğun ve ölçüm odaklı bir laboratuvar aracı. Kart yok; paneller ince çizgilerle bölünür.</p>
+        <ul class="madde">
+          <li>Solda simge çubuğu (VS Code tarzı), görünüm adları ipucunda</li>
+          <li>Bölmeli ızgara, kanal başına V/div ve ofset, tetik işareti, A/B imleçleri</li>
+          <li>Grafiğin altında Vpp / RMS / frekans / THD ölçüm şeridi</li>
+          <li>Paket istatistikleri ve günlük alttaki sekmeli panelde</li>
+        </ul>
+        <div class="alt">
+          <span class="efor">Qt'ye uyarlama: <b>orta–yüksek</b> · osiloskop ızgarası özel çizim ister</span>
+          <a class="dugme" href="B-enstruman.html?tema=light">Açık</a><a class="dugme" href="B-enstruman.html?tema=dark">Koyu</a>
+        </div>
+      </div>
+    </article>
+
+    <article class="kart">
+      <a class="onizleme" href="C-is-akisi.html" data-taslak><iframe src="C-is-akisi.html?onizleme=1" title="Taslak C önizlemesi" loading="lazy" tabindex="-1"></iframe></a>
+      <div class="govde">
+        <div class="bas"><span class="harf">C</span><h2>İş Akışı</h2>
+          <span class="renkler"><i style="background:#5b50e0"></i><i style="background:#2a78d6"></i><i style="background:#eb6834"></i></span></div>
+        <p class="ozet">README'deki “İzle → Tasarla → Aktar” akışını arayüze taşır. Ferah, büyük yazılı, yeni kullanıcıya yol gösteren bir düzen.</p>
+        <ul class="madde">
+          <li>Görünümler adımlara göre gruplanmış yan menüde; kaynak oynatıcı menünün altında</li>
+          <li>Üstte KPI kutuları: paket hızı, veri hızı, kayıp, kanal RMS</li>
+          <li>“Sonraki adım” kartı veriye göre öneri sunar (ör. 1.23 kHz parazit → filtre)</li>
+          <li>Zaman ekseni “şimdi = 0” olarak göreli ms</li>
+        </ul>
+        <div class="alt">
+          <span class="efor">Qt'ye uyarlama: <b>orta</b> · menü çubuğu komut paletine taşınır</span>
+          <a class="dugme" href="C-is-akisi.html?tema=light">Açık</a><a class="dugme" href="C-is-akisi.html?tema=dark">Koyu</a>
+        </div>
+      </div>
+    </article>
+
+    <article class="kart">
+      <a class="onizleme" href="D-monokrom-konsol.html" data-taslak><iframe src="D-monokrom-konsol.html?onizleme=1" title="Taslak D önizlemesi" loading="lazy" tabindex="-1"></iframe></a>
+      <div class="govde">
+        <div class="bas"><span class="harf">D</span><h2>Monokrom Konsol</h2>
+          <span class="renkler"><i style="background:#0a0a0a"></i><i style="background:#f2f2f2"></i><i style="background:#d95926"></i><i style="background:#3987e5"></i></span></div>
+        <p class="ozet">IDE düzeni ve gri tonlarda arayüz: renk yalnızca veride ve durum göstergelerinde kullanılır, sinyal en çok öne çıkan öğe olur.</p>
+        <ul class="madde">
+          <li>Solda gezgin ağacı: kaynaklar, çalışma alanı, 13 örnek kayıt</li>
+          <li>Grafikler belge sekmelerinde, zaman ve spektrum bölünmüş görünümde</li>
+          <li>Sağda Özellikler / İşlem zinciri sekmeleri, altta Günlük / İstatistik / Ölçümler</li>
+          <li>Ters renkli durum çubuğu, panel göster/gizle düğmeleri</li>
+        </ul>
+        <div class="alt">
+          <span class="efor">Qt'ye uyarlama: <b>orta</b> · dock'lar sekmeli panellere döner</span>
+          <a class="dugme" href="D-monokrom-konsol.html?tema=light">Açık</a><a class="dugme" href="D-monokrom-konsol.html?tema=dark">Koyu</a>
+        </div>
+      </div>
+    </article>
+  </div>
+
+  <h3>Karşılaştırma</h3>
+  <div class="tablo-kap">
+    <table>
+      <thead><tr><th></th><th>A · TerraFlux Rafine</th><th>B · Enstrüman</th><th>C · İş Akışı</th><th>D · Monokrom Konsol</th></tr></thead>
+      <tbody>
+        <tr><th>Gezinme</th><td>Üst çubukta segment düğmeler</td><td>Sol simge çubuğu</td><td>Adımlara göre gruplu yan menü</td><td>Üstte metin sekmeleri</td></tr>
+        <tr><th>Yoğunluk</th><td>Orta</td><td>Yüksek</td><td>Düşük, ferah</td><td>Yüksek</td></tr>
+        <tr><th>Vurgu rengi</th><td>Turuncu (bugünkü)</td><td>Camgöbeği</td><td>Çivit</td><td>Yok, siyah / beyaz</td></tr>
+        <tr><th>Paneller</th><td>Yuvarlak kartlar</td><td>Çizgiyle bölünmüş, kartsız</td><td>Yuvarlak kartlar + KPI</td><td>Çizgiyle bölünmüş, sekmeli</td></tr>
+        <tr><th>Öne çıkan</th><td>Tanıdık, az risk</td><td>Ölçüm şeridi, imleçler, V/div</td><td>Yönlendirme, ilk kullanım kolaylığı</td><td>Verinin öne çıkması, örnek kayıt listesi</td></tr>
+        <tr><th>Qt eforu</th><td>Düşük</td><td>Orta–yüksek</td><td>Orta</td><td>Orta</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p class="not">Kanal renkleri her temanın yüzeyine göre ayrı seçildi ve renk körlüğü simülasyonundan geçirildi (normal görüşte ve protan / deutan
+    simülasyonunda ayrışma, yüzeye ≥ 3:1 kontrast). Taslaklar gölge, bulanıklık gibi QSS'in desteklemediği efektler kullanmaz; hepsi QSS + pyqtgraph ile kurulabilir.
+    Taslaklardan parçalar birleştirilebilir (ör. A'nın görünümü + B'nin ölçüm şeridi).</p>
+</div>
+
+<script>
+  (function () {
+    var KEY = 'spt-taslak-tema';
+    var cerceveler = Array.prototype.slice.call(document.querySelectorAll('.onizleme iframe'));
+    function uygula(t, kaydet) {
+      document.documentElement.dataset.theme = t;
+      if (kaydet) { try { localStorage.setItem(KEY, t); } catch (e) {} }
+      document.querySelectorAll('[data-tema]').forEach(function (b) { b.setAttribute('aria-pressed', String(b.dataset.tema === t)); });
+      cerceveler.forEach(function (f) { try { f.contentWindow.postMessage({ sptTema: t }, '*'); } catch (e) {} });
+      document.querySelectorAll('a[data-taslak]').forEach(function (a) { a.href = a.getAttribute('href').split('?')[0] + '?tema=' + t; });
+    }
+    cerceveler.forEach(function (f) {
+      var t = document.documentElement.dataset.theme;
+      f.src = f.getAttribute('src') + '&tema=' + t;
+      f.addEventListener('load', function () { f.contentWindow.postMessage({ sptTema: document.documentElement.dataset.theme }, '*'); });
+    });
+    document.querySelectorAll('[data-tema]').forEach(function (b) {
+      b.addEventListener('click', function () { uygula(b.dataset.tema, true); });
+    });
+    var ro = new ResizeObserver(function (girdiler) {
+      girdiler.forEach(function (g) { g.target.style.setProperty('--olcek', (g.contentRect.width / 1600).toFixed(4)); });
+    });
+    document.querySelectorAll('.onizleme').forEach(function (el) { ro.observe(el); });
+    uygula(document.documentElement.dataset.theme, false);
+  })();
+</script>
+</body>
+</html>

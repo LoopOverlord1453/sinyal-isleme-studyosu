@@ -453,7 +453,9 @@ def test_repeated_channel_colors_are_dashed_and_raw_gray_adapts(app, win, theme)
     key = snap.handle().key
     styles = [lv._time_curves[(key, ch, 0)].opts["pen"].style() for ch in range(10)]
     assert styles[:8] == [_Qt.PenStyle.SolidLine] * 8 and styles[8:] == [_Qt.PenStyle.DashLine] * 2
-    assert theme.raw_trace_for(["#d95926"]) == "#8a837c" and theme.raw_trace_for(colors) == "#b3aca5"
+    # yalnız ilk iki kanal rengi görünürken daha sakin gri, aksi hâlde her kanaldan ayrışan gri (tema başına ölçülü)
+    assert theme.raw_trace_for([theme.series[0]]) == theme.theme.raw_trace_soft
+    assert theme.raw_trace_for(colors) == theme.raw_trace
     lv.remove_stream(key)
     assert not any(k[0] == key for k in lv._colors)
 
@@ -719,8 +721,8 @@ def test_orientation3d_math_matches_fusion_conventions():
 
 def test_signal_generator_audit_regressions(app, win):
     v = win.siggen_view
-    # Arduino hedefinde CPU yükü tahmini yok: yeniden hesap çökmeden sürmeli ve tablo güncellenmeli
-    v.target.setCurrentIndex(v.target.findData("arduino"))
+    # yeniden hesap tabloyu ve ölçüm tablosunu güncellemeli (DDS dışı her hedefte)
+    v.target.setCurrentIndex(v.target.findData("generic_isr"))
     v.kind.setCurrentIndex(v.kind.findData("sine"))
     v._spec_fields["freq"].setValue(2000.0)
     v.recompute()
@@ -742,6 +744,28 @@ def test_signal_generator_audit_regressions(app, win):
     data = np.load(paths[-1])
     assert len(data) % v.table.N == 0
     v.target.setCurrentIndex(v.target.findData("stm32_hal_dma"))
+
+
+def test_signal_generator_drops_removed_platform_settings(app, win):
+    """Yalnız STM32: eski ayarlardaki Arduino hazır ayarı ve ESP32 hedefi çökmeden ilk STM32 ayarına düşer."""
+    import json
+
+    from spt.dsp import siggen as sg
+    from spt.gui.settings import app_settings
+    s = app_settings()
+    s.setValue("siggen/dac", json.dumps({"preset": "Arduino Due 12 bit (VREF/6 … 5·VREF/6)", "bits": 12,
+                                         "vref": 3.3, "out_min": 0.55, "out_max": 2.75, "coding": "unsigned",
+                                         "align": "right", "word": "16"}))
+    s.setValue("siggen/opts", json.dumps({"fs": 48_000.0, "mode": "exact", "target": "esp32"}))
+    s.sync()
+    v = win.siggen_view
+    v._load_settings()
+    first = next(iter(sg.DAC_PRESETS))
+    assert v.target.currentData() == "stm32_hal_dma"
+    assert v.preset.currentText() == first
+    assert (v.dac_spec().out_min, v.dac_spec().out_max) == (0.0, 3.3)   # Arduino Due aralığı taşınmadı
+    v.recompute()
+    assert v.table is not None and v.code_button.isEnabled()
 
 
 def test_fusion_code_dialog_for_generic_scenario(app, win):
@@ -1010,3 +1034,199 @@ def test_signal_generator_ui_audit_round2_regressions(app, win, theme):
     v.max_len.setValue(4096)
     v.recompute()
     win._show_view(0)
+
+
+def test_theme_choice_is_saved_and_offers_restart(app, win, monkeypatch):
+    """Görünüm › Tema: tercih kaydedilir, etkin temadan farklıysa yeniden başlatma önerilir; etkin temaya dönmek
+    (üst çubuktaki düğme) soru sormaz."""
+    from PyQt6.QtWidgets import QMessageBox
+
+    from spt.gui.theme import saved_theme
+
+    asked = []
+    monkeypatch.setattr(QMessageBox, "exec", lambda self: asked.append(self.text()) or 0)  # "Sonra"
+    current = win.theme.name
+    other = "dark" if current == "light" else "light"
+    win.registry[f"view.theme_{other}"].trigger()
+    assert saved_theme() == other and len(asked) == 1 and "yeniden başlatılınca" in asked[0]
+    assert win.registry[f"view.theme_{other}"].isChecked()
+    assert not win.registry[f"view.theme_{current}"].isChecked()
+    win.theme_button.click()
+    assert saved_theme() == current and len(asked) == 1
+    assert win.registry[f"view.theme_{current}"].isChecked()
+
+
+def test_live_header_badge_and_window_menu(app, win):
+    """Canlı İzleme başlığı: durum rozeti (Canlı / Durduruldu) ve Özellikler'le eş zamanlı pencere seçimi."""
+    from spt.core.local_ring import StaticRing
+    from spt.core.snapshot import Snapshot
+    from spt.protocol.format import SAMPLE_TYPES_BY_NAME, ChannelInfo, Descriptor, Layout
+
+    lv, box = win.live_view, win.properties_panel.time_window
+    assert not lv.live_badge.isVisible()                       # akış yokken rozet yok
+    desc = Descriptor(1, 1, 1000.0, SAMPLE_TYPES_BY_NAME["float64"], Layout.INTERLEAVED, "rozet",
+                      (ChannelInfo("a"),))
+    snap = Snapshot(1, "rozet", "test", desc, 0.0, StaticRing(np.zeros((2000, 1)), 0))
+    lv.add_stream(snap.handle(), [win.theme.series_color(0)], [True])
+    pump(app, 0.1)
+    assert lv.live_badge.isVisible() and "Canlı" in lv.live_badge.text()
+    # canlı eğriler 1 px ve yumuşatmalı (tırtıksız; 1 px'te yumuşatma neredeyse bedava)
+    assert all(c.opts["antialias"] for c in lv._time_curves.values())
+    assert all(c.opts["pen"].widthF() <= 1 for c in lv._time_curves.values())
+    actions = lv._window_menu.actions()
+    assert [a.text() for a in actions] == [box.itemText(i) for i in range(box.count())]
+    next(a for a in actions if a.text() == "1 s").trigger()
+    assert box.currentText() == "1 s" and lv.window_s == 1.0 and win._window_user_set
+    assert lv.window_chip.text() == "Pencere: 1 s" and [a.text() for a in actions if a.isChecked()] == ["1 s"]
+    lv.set_running(False)
+    assert "Durduruldu" in lv.live_badge.text() and lv.live_badge.property("state") == "paused"
+    lv.set_running(True)
+    assert lv.live_badge.property("state") == "live"
+    lv.remove_stream(snap.handle().key)
+
+
+def test_plot_axis_labels_readable_on_short_axes(app, theme):
+    """Dikey eksen sayıları alçak kartlarda üst üste binmez (en az bir satır aralık); yeterince yüksek eksende
+    pyqtgraph'ın seçtiği aralık aynen kalır. Eksen yazıları 12 px, ikincil metin renginde."""
+    import pyqtgraph as pg
+    from PyQt6.QtGui import QFontMetricsF
+
+    from spt.gui.widgets.plot import AXIS_FONT_PX, ReadableAxis, make_plot
+
+    pw = make_plot(theme, "Zaman", "Genlik")
+    ax = pw.getPlotItem().getAxis("left")
+    assert isinstance(ax, ReadableAxis) and ax.style["tickFont"].pixelSize() == AXIS_FONT_PX
+    assert ax.textPen().color().name() == theme.tokens.text_secondary
+    line = QFontMetricsF(ax.style["tickFont"]).height()
+    assert ax.tickSpacing(0.0, 1.0, 400) == pg.AxisItem.tickSpacing(ax, 0.0, 1.0, 400)
+    for size in (40, 70, 120):
+        major = ax.tickSpacing(-0.03, 1.03, size)[0][0]
+        assert major * size / 1.06 >= line * ReadableAxis.MIN_TOUCH
+    assert ax.tickSpacing(-0.03, 1.03, 70)[0][0] == pytest.approx(0.5)   # 0.2 adımda sayılar çakışıyordu
+    assert ax.tickSpacing(-0.03, 1.03, 120)[0][0] == pytest.approx(0.2)  # yer varsa sık aralık korunur
+    pw.deleteLater()
+
+
+def test_spectrum_extrema_and_hold_traces(app, win):
+    """Spektrumda anlık max / min her yenilemede işaretlenir; max / min-hold izleri pencereler boyunca birikir, lejantla
+    gizlenir, sıfırlanır, FFT ayarı değişince baştan başlar ve seçimler ayarlarda saklanır."""
+    from spt.core.local_ring import StaticRing
+    from spt.core.snapshot import Snapshot
+    from spt.protocol.format import SAMPLE_TYPES_BY_NAME, ChannelInfo, Descriptor, Layout
+
+    lv = win.live_view
+    fs = 1000.0
+    t = np.arange(8000) / fs
+    amp = np.where(t < 4.0, 1.0, 0.25)                         # 50 Hz: önce 0 dB, sonra −12 dB
+    x = amp * np.sin(2 * np.pi * 50 * t) + 1e-3 * np.random.default_rng(2).standard_normal(t.size)
+    desc = Descriptor(1, 1, fs, SAMPLE_TYPES_BY_NAME["float64"], Layout.INTERLEAVED, "iz", (ChannelInfo("a"),))
+    snap = Snapshot(1, "iz", "test", desc, 0.0, StaticRing(x[:, None], 0))
+    handle = snap.handle()
+    lv.set_fft(1024, "Flat-top", 8.6)
+    lv.add_stream(handle, [win.theme.series_color(0)], [True])
+    lv.refresh(force=True)
+    pump(app, 0.1)
+    ext = lv.extrema_readout()
+    assert set(ext) == {"Max", "Min"} and round(ext["Max"][0]) == 50 and abs(ext["Max"][1] + 12.04) < 0.05
+    assert ext["Min"][1] < -60 and [round(f) for f, _, _ in lv.peak_readout()] == [50]
+    assert len(lv._peak_marks.data) == 2                       # max tepeyle aynı bin: tek işaret, "Max" etiketi
+
+    lv.set_running(False)
+    for end in range(1024, 8001, 500):                         # farklı pencereler: izler birikir
+        lv._frozen[handle.key] = end
+        lv._draw_spectra()
+    hold = lv._holds[(handle.key, 0)]
+    i = int(np.argmin(np.abs(hold.freqs - 50)))
+    assert hold.count >= 15 and abs(hold.max[i]) < 0.05 and abs(hold.min[i] + 12.04) < 0.05
+    hmax, hmin = (lv._hold_curves[(handle.key, 0, m)] for m in ("max", "min"))
+    assert hmax.isVisible() and hmin.isVisible() and len(hmax.xData) == len(hold.freqs)
+    assert lv.spec_legend.texts() == ["Max-hold", "Min-hold"]
+    toggle = lv.spec_legend.toggles()[0]
+    toggle.click()
+    assert not hmax.isVisible() and hmin.isVisible() and lv._spec_curves[(handle.key, 0)].isVisible()
+    toggle.click()
+    assert hmax.isVisible()
+
+    lv.set_hold("min", False)
+    assert not hmin.isVisible() and lv.spec_legend.texts() == ["Max-hold"] and lv.hold.get("max")
+    assert not lv._hold_actions["min"].isChecked()
+    win._save_display_state()
+    lv.hold_reset.click()
+    assert hold.count == 0 and (hmax.xData is None or len(hmax.xData) == 0)
+    lv._draw_spectra()
+    assert hold.count == 1
+    lv.set_fft(2048, "Flat-top", 8.6)                          # yeni ızgara: eski birikim silinir
+    assert hold.count <= 1 and (hold.freqs is None or len(hold.freqs) == 1025)
+    lv.set_show_extrema(False)
+    assert lv.extrema_readout() == {} and not lv._extrema_action.isChecked()
+    lv.set_hold("max", False)
+    assert not lv.hold_reset.isVisible() and lv.spec_legend.texts() == []
+
+    s = win._settings()
+    assert s.value("display/min_hold", type=bool) is False and s.value("display/max_hold", type=bool) is True
+    assert s.value("display/extrema", type=bool) is True
+    win._load_display_state()                                  # kayıttan geri: max açık, min kapalı, max / min açık
+    assert lv.hold == {"max": True, "min": False} and lv.show_extrema and lv._extrema_action.isChecked()
+    lv.set_hold("min", True)
+    lv.set_fft(8192, "Hann", 8.6)
+    lv.set_running(True)
+    lv.remove_stream(handle.key)
+    assert not lv._holds and not lv._hold_curves and lv.spec_legend.texts() == []
+
+
+def test_legend_click_hides_and_shows_series(app, win):
+    """Lejant öğesine tıklayınca seri o grafikte gizlenir, yeniden tıklayınca görünür. Canlı İzleme'de yalnız zaman
+    grafiği etkilenir: spektrum tek renktir ve kanal lejantından bağımsızdır."""
+    from spt.core.local_ring import StaticRing
+    from spt.core.snapshot import Snapshot
+    from spt.protocol.format import SAMPLE_TYPES_BY_NAME, ChannelInfo, Descriptor, Layout
+
+    lv = win.live_view
+    t = np.arange(4000) / 1000.0
+    data = np.stack([np.sin(2 * np.pi * 50 * t), 0.5 * np.sin(2 * np.pi * 120 * t)], axis=1)
+    desc = Descriptor(1, 1, 1000.0, SAMPLE_TYPES_BY_NAME["float64"], Layout.INTERLEAVED, "lejant",
+                      (ChannelInfo("a"), ChannelInfo("b")))
+    snap = Snapshot(1, "lejant", "test", desc, 0.0, StaticRing(data, 0))
+    key = snap.handle().key
+    lv.add_stream(snap.handle(), [win.theme.series_color(0), win.theme.series_color(1)], [True, True])
+    lv.refresh(force=True)
+    pump(app, 0.1)
+    toggles = lv.legend.toggles()
+    assert [b.text() for b in toggles] == ["lejant · a", "lejant · b"] or len(toggles) == 2
+    toggles[1].click()
+    assert not lv._time_curves[(key, 1, 0)].isVisible() and lv._time_curves[(key, 0, 0)].isVisible()
+    assert lv._spec_curves[(key, 1)].isVisible()                       # spektrum etkilenmez
+    lv.refresh(force=True)                                             # canlı yenileme gizliliği bozmaz
+    assert not lv._time_curves[(key, 1, 0)].isVisible()
+    toggles[1].click()
+    assert lv._time_curves[(key, 1, 0)].isVisible()
+    # spektrum tek renk: kanal renginden bağımsız
+    pens = {lv._spec_curves[(key, ch)].opts["pen"].color().name() for ch in (0, 1)}
+    assert pens == {win.theme.tokens.accent}
+    # tepeler canlı: 50 Hz (0 dB) ve 120 Hz (−6 dB)
+    peaks = sorted(lv.peak_readout())
+    assert [round(f) for f, _, _ in peaks] == [50, 120]
+    assert abs(peaks[0][1]) < 0.15 and abs(peaks[1][1] - 20 * np.log10(0.5)) < 0.15
+    lv.remove_stream(key)
+
+    # Filtre Tasarımcısı: genlik ve kutup-sıfır lejantları
+    fv = win.filter_view
+    design = fv.mag_legend.toggles()[0]
+    assert design.text() == "Tasarım"
+    design.click()
+    assert not fv._mag_curve.isVisible()
+    design.click()
+    assert fv._mag_curve.isVisible()
+    poles = fv.pz_legend.toggles()[0]
+    poles.click()
+    assert not fv._poles.isVisible()
+    poles.click()
+    assert fv._poles.isVisible()
+
+    # Sinyal Üreteci: ideal eğri
+    sv = win.siggen_view
+    ideal = next(b for b in sv.time_legend.toggles() if b.text() == "ideal")
+    ideal.click()
+    assert not sv._ideal_curve.isVisible() and sv._out_curve.isVisible()
+    ideal.click()
+    assert sv._ideal_curve.isVisible()

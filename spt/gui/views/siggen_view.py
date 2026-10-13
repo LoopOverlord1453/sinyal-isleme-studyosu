@@ -3,13 +3,16 @@ ve spektrumunu gösterir, MCU için C kodu üretir.
 
 - Hazır dalga türleri (sinüs, kare, üçgen, testere, darbe, chirp, gürültü, AM / FM, EKG …) ve özel tasarım:
   formül (güvenli ifade), sürüklenebilir noktalarla eğri, harmonikler (Fourier serisi), CSV örnek dizisi.
-- DAC modeli: çözünürlük, referans / çıkış aralığı, kodlama, hizalama, kelime genişliği (hazır ayarlar: STM32,
-  ESP32, Arduino, I2S kodek …). Kırpılan örnekler her zaman sayılır ve gösterilir.
+- DAC modeli: çözünürlük, referans / çıkış aralığı, kodlama, hizalama, kelime genişliği (hazır ayarlar: STM32
+  dahili DAC, STM32'ye bağlanan harici SPI / I2C DAC ve I2S kodek). Kırpılan örnekler her zaman sayılır ve
+  gösterilir.
 - Tablo: tam periyot (DMA dairesel; frekans hatası en küçük tablo boyu) ya da DDS (faz akümülatörü).
 - Ölçümler: THD, SFDR, SNR, ENOB, nicemleme SNR'si, en büyük eğim, görüntü frekansı ve önerilen yeniden
   yapılandırma (alçak geçiren) filtresi, bellek, STM32 zamanlayıcı PSC / ARR.
 - "Simülatörle Gönder": nicemlenmiş çıkışı simülatör üzerinden UDP akışı olarak gönderir; Canlı İzleme'de
   diğer sinyaller gibi incelenir / filtrelenir.
+- "Karta Gönder…": tabloyu çalışan karta Ethernet üzerinden gönderir; kart derleme ve yükleme olmadan DAC'tan
+  çalar (`spt.protocol.sptg`, kart yazılımı: stm32f4_examples/001_signal_generator).
 
 Hesaplar `spt.dsp.siggen`, C kodu `spt.codegen.dac_c` içindedir (Qt'siz, testli).
 """
@@ -48,10 +51,21 @@ from PyQt6.QtWidgets import (
 from spt.codegen import dac_c
 from spt.dsp import siggen as sg
 from spt.dsp.filters import format_hz
+from spt.gui.dialogs.board_send_dialog import BoardSendDialog
 from spt.gui.dialogs.code_dialog import CodeDialog
 from spt.gui.settings import app_settings
 from spt.gui.theme import ThemeManager, mono_font
-from spt.gui.widgets.common import Card, CollapsibleSection, PageHeader, chip, combo, hbox, icon_button, label
+from spt.gui.widgets.common import (
+    Card,
+    CollapsibleSection,
+    LegendBar,
+    PageHeader,
+    chip,
+    combo,
+    hbox,
+    icon_button,
+    label,
+)
 from spt.gui.widgets.inspector import DataTips, PlotAnalysis, Trace, fmt, visible_slice
 from spt.gui.widgets.plot import Crosshair, make_plot, pen
 
@@ -73,9 +87,8 @@ INTEGER = {"steps": (2, 4096), "seed": (0, 2_147_483_647)}
 EDITOR_FIELDS = ("expr", "points", "tones", "harmonics", "samples")
 
 
-# Ölçüm çekirdeği: platforma göre makinede derlenebilen en yakın profil (ESP32: Xtensa derleyicisi yok → tahmin)
-MEASURE_PROFILE = {"stm32_hal_dma": "cortex-m4f", "generic_isr": "cortex-m4f", "dds": "cortex-m4f",
-                   "arduino": "cortex-m3", "esp32": None}
+# Kod boyutu ölçümünün çekirdeği (STM32F4 / G4 / L4 sınıfı)
+MEASURE_PROFILE = "cortex-m4f"
 
 
 class _SizeBridge(QObject):
@@ -83,13 +96,10 @@ class _SizeBridge(QObject):
     done = pyqtSignal(int, object)  # nesil, [(derleyici adı, Sizes | None, açıklama)]
 
 
-def _measure_sizes(bridge: _SizeBridge, generation: int, files, source: str, profile_key: str | None) -> None:
+def _measure_sizes(bridge: _SizeBridge, generation: int, files, source: str, profile_key: str) -> None:
     """Üretilen <ad>.c dosyasını makinedeki ARM derleyicileriyle derleyip gerçek boyutu ölçer (daemon iş parçacığı:
     beklenmez, kapanışı geciktirmez)."""
     from spt.codegen import mcu, toolchain
-    if profile_key is None:
-        bridge.done.emit(generation, [("—", None, "Bu platformun derleyicisi (Xtensa) makinede yok: değerler tahmin")])
-        return
     rows = []
     prof = mcu.MCU_PROFILES[profile_key]
     for compiler in ("gcc", "clang"):
@@ -124,6 +134,7 @@ class SignalGeneratorView(QWidget):
         self._samples: tuple[float, ...] = ()
         self._spec_fields: dict[str, QWidget] = {}
         self._code_dialog: CodeDialog | None = None
+        self._board_dialog: BoardSendDialog | None = None
         self._time_x = np.empty(0)
         self._time_ideal = np.empty(0)
         self._time_out = np.empty(0)
@@ -271,6 +282,12 @@ class SignalGeneratorView(QWidget):
                                    "(Canlı İzleme'de incelemek / filtrelemek için)")
         self.sim_button.clicked.connect(self._simulate)
         card.body.addWidget(hbox(self.code_button, self.sim_button, spacing=8))
+        self.board_button = QPushButton("Karta Gönder…")
+        self.board_button.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.board_button.setToolTip("Tabloyu çalışan karta Ethernet (UDP) ile gönderir; kart derleme ve yükleme "
+                                     "olmadan DAC'tan çalar (kartta 001_signal_generator yazılımı olmalı)")
+        self.board_button.clicked.connect(self.show_board_dialog)
+        card.body.addWidget(self.board_button)
 
         for w in (self.amplitude, self.offset, self.bits, self.vref, self.out_min, self.out_max, self.fs,
                   self.max_len, self.timer_clock, self.cpu_clock, self.dac_channel):
@@ -604,9 +621,10 @@ class SignalGeneratorView(QWidget):
         self.ideal_color, self.out_color = t.text_muted, self._theme.series_color(0)
 
         self.time_card = Card("DAC Çıkışı (zaman)")
-        self.time_card.add_left(label(f'<span style="color:{self.out_color}">▬</span>&nbsp;DAC çıkışı (nicemlenmiş)'
-                                      f'&nbsp;&nbsp;<span style="color:{self.ideal_color}">┅</span>&nbsp;ideal',
-                                      "Readout"), optional=True)
+        self.time_legend = LegendBar(lambda: [self.time_plot])
+        self.time_legend.set_items([(self.out_color, "DAC çıkışı (nicemlenmiş)"),
+                                    (self.ideal_color, "ideal", Qt.PenStyle.DashLine)])
+        self.time_card.add_left(self.time_legend, optional=True)
         self.time_readout = label("", "Readout")
         self.time_card.add_right(self.time_readout, optional=True)
         self.time_plot = make_plot(self._theme, "Zaman", "Çıkış", x_units="s", y_units="V")
@@ -680,11 +698,13 @@ class SignalGeneratorView(QWidget):
             self._set_status(html.escape(str(exc)), "critical")
             self.code_button.setEnabled(False)
             self.sim_button.setEnabled(False)
+            self.board_button.setEnabled(False)
             self.summary_chip.setText("Geçersiz tasarım")
             return
         self.table, self.metrics, self.error = table, m, None
         self.code_button.setEnabled(True)
         self.sim_button.setEnabled(True)
+        self.board_button.setEnabled(True)
         self._draw_time(table)
         self._draw_spectrum(table, m)
         self._fill_metrics(table, m)
@@ -820,14 +840,12 @@ class SignalGeneratorView(QWidget):
         try:
             mem = dac_c.memory_report(table, table.dac, self.target.currentData(),
                                       interpolate=self.interpolate.isChecked(), cpu_clock_hz=self.cpu_clock.value() * 1e6)
-            load = mem.get("cpu_load_pct_estimate")
             code = mem.get("code_size_estimate_bytes")
             rows += [("— MCU maliyeti —", ""),
                      ("Flash (tablo)", f"{mem['table_flash_bytes']} B"),
                      ("RAM", f"{mem['ram_bytes']} B"),
                      ("Kod boyutu", (f"~{code} B tahmin · " if code else "") + "kesin değer C Kodu penceresinde ölçülür"),
-                     ("CPU yükü (tahmin)", f"%{load:.3g}" if isinstance(load, (int, float)) else
-                      "platforma bağlı — donanımda ölçülmeli")]
+                     ("CPU yükü (tahmin)", f"%{mem['cpu_load_pct_estimate']:.3g}")]
         except (sg.SignalError, ValueError, KeyError, TypeError) as exc:
             rows.append(("MCU maliyeti", f"hesaplanamadı: {exc}"))
         t = self._theme.tokens
@@ -836,7 +854,7 @@ class SignalGeneratorView(QWidget):
             a, b = QTableWidgetItem(name), QTableWidgetItem(value)
             b.setToolTip(value)  # dar sütunda kesilen değerin tamamı
             if name.startswith("—"):
-                a.setForeground(pg.mkColor(t.accent))
+                a.setForeground(pg.mkColor(t.accent_text))
                 a.setText(name.strip("— ").upper())
             self.metrics_table.setItem(r, 0, a)
             self.metrics_table.setItem(r, 1, b)
@@ -908,6 +926,12 @@ class SignalGeneratorView(QWidget):
         self._code_dialog.show()
         self._code_dialog.raise_()
 
+    def show_board_dialog(self) -> None:
+        if self._board_dialog is None:
+            self._board_dialog = BoardSendDialog(self._theme.tokens, lambda: self.table, self)
+        self._board_dialog.show()
+        self._board_dialog.raise_()
+
     def _render_code(self) -> None:
         dlg, table = self._code_dialog, self.table
         target = self.target.currentData()
@@ -947,9 +971,9 @@ class SignalGeneratorView(QWidget):
             self._size_bridge = _SizeBridge(self)
             self._size_bridge.done.connect(self._sizes_measured)
         self.shutdown()  # önceki ölçümün sonucu gelirse yok sayılır (arayüz beklemez)
-        files_map = {f.name: f.text for f in files if not f.name.endswith((".md", ".ino"))}
+        files_map = {f.name: f.text for f in files if not f.name.endswith(".md")}
         threading.Thread(target=_measure_sizes, args=(self._size_bridge, self._size_generation, files_map, source,
-                                                      MEASURE_PROFILE.get(self.target.currentData())),
+                                                      MEASURE_PROFILE),
                          name="spt-dac-size", daemon=True).start()
 
     def _sizes_measured(self, generation: int, rows) -> None:
@@ -966,8 +990,8 @@ class SignalGeneratorView(QWidget):
         table = ("<h4>Kod boyutu — derlenerek ölçüldü (bayt)</h4><table border='1' cellspacing='0' cellpadding='4'>"
                  "<tr><th>Derleyici / çekirdek</th><th>Kod (.text)</th><th>Sabitler + tablo (.rodata)</th>"
                  "<th>RAM (.data + .bss)</th><th>Flash toplam</th></tr>" + "".join(body) + "</table>"
-                 "<p>Ölçüm yalnız üretilen <code>.c</code> dosyasının nesnesidir: HAL / ESP-IDF sürücü kodu ve "
-                 "<code>USE_HAL_DRIVER</code> / <code>ESP_PLATFORM</code> ile korunan başlat / durdur yardımcıları "
+                 "<p>Ölçüm yalnız üretilen <code>.c</code> dosyasının nesnesidir: HAL sürücü kodu ve "
+                 "<code>USE_HAL_DRIVER</code> ile korunan başlat / durdur yardımcıları "
                  "(ör. <code>_start</code>, <code>_stop</code>) dahil değildir; "
                  "IAR için GCC değerinin ~%90'ı beklenebilir (tahmin).</p>")
         dlg.set_summary(getattr(self, "_summary_base", "") + table)
@@ -1036,7 +1060,9 @@ class SignalGeneratorView(QWidget):
             dac = json.loads(str(s.value("siggen/dac", "{}")) or "{}")
             preset = dac.get("preset", next(iter(sg.DAC_PRESETS)))
             index = self.preset.findText(preset)
-            self.preset.setCurrentIndex(index if index >= 0 else 1)
+            if index < 0:   # kaldırılmış hazır ayar (ör. eski ESP32 / Arduino): kayıtlı alanlar yerine ilk STM32 ayarı
+                index, dac = 1, {}
+            self.preset.setCurrentIndex(index)
             if dac:
                 self.bits.setValue(int(dac.get("bits", 12)))
                 self.vref.setValue(float(dac.get("vref", 3.3)))
